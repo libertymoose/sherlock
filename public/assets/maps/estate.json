@@ -836,7 +836,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_steward"
-      }
+      },
+      "height": "short",
+      "color": "#71491e"
     },
     {
       "id": "npc_voss",
@@ -847,7 +849,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_voss"
-      }
+      },
+      "height": "tall",
+      "color": "#3f474e"
     },
     {
       "id": "npc_kestrel",
@@ -858,7 +862,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_kestrel"
-      }
+      },
+      "height": "short",
+      "color": "#ef7d0d"
     },
     {
       "id": "npc_marrow",
@@ -869,7 +875,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_marrow"
-      }
+      },
+      "height": "tall",
+      "color": "#d6e0f0"
     },
     {
       "id": "npc_ashgate",
@@ -880,7 +888,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_ashgate"
-      }
+      },
+      "height": "tall",
+      "color": "#6b2fbb"
     },
     {
       "id": "npc_corwin",
@@ -891,7 +901,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_corwin"
-      }
+      },
+      "height": "tall",
+      "color": "#38b0a6"
     },
     {
       "id": "npc_flynn",
@@ -902,7 +914,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_flynn"
-      }
+      },
+      "height": "short",
+      "color": "#50ef39"
     },
     {
       "id": "npc_reyes",
@@ -913,7 +927,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_reyes"
-      }
+      },
+      "height": "short",
+      "color": "#132ed1"
     },
     {
       "id": "evidence_reyes",
@@ -935,7 +951,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_maid"
-      }
+      },
+      "height": "short",
+      "color": "#ed54ba"
     },
     {
       "id": "evidence_maid",
@@ -957,7 +975,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_guest_a1"
-      }
+      },
+      "height": "short",
+      "color": "#c51111"
     },
     {
       "id": "npc_guest_a2",
@@ -968,7 +988,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_guest_a2"
-      }
+      },
+      "height": "tall",
+      "color": "#117f2d"
     },
     {
       "id": "npc_guest_b1",
@@ -979,7 +1001,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_guest_b1"
-      }
+      },
+      "height": "short",
+      "color": "#e5df3a"
     },
     {
       "id": "npc_guest_b2",
@@ -990,7 +1014,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_guest_b2"
-      }
+      },
+      "height": "tall",
+      "color": "#c51111"
     },
     {
       "id": "npc_guest_c1",
@@ -1001,7 +1027,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_guest_c1"
-      }
+      },
+      "height": "short",
+      "color": "#117f2d"
     },
     {
       "id": "npc_guest_c2",
@@ -1012,7 +1040,9 @@
       "interaction": {
         "kind": "dialogue",
         "dialogueId": "npc_guest_c2"
-      }
+      },
+      "height": "tall",
+      "color": "#38b0a6"
     },
     {
       "id": "study_desk",
