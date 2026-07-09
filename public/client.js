@@ -24,17 +24,19 @@ let state = {
   myColor: PALETTE[0].hex,
 };
 
-const sprites = { short: new Image(), tall: new Image() };
+const sprites = { short: new Image(), tall: new Image(), orc: new Image() };
 let spritesReady = false;
 
 function loadSprites() {
   return new Promise((resolve) => {
     let loaded = 0;
-    const done = () => { loaded++; if (loaded === 2) { spritesReady = true; resolve(); } };
+    const done = () => { loaded++; if (loaded === 3) { spritesReady = true; resolve(); } };
     sprites.short.onload = done;
     sprites.tall.onload = done;
+    sprites.orc.onload = done;
     sprites.short.src = "/images/avatar-short.png";
     sprites.tall.src = "/images/avatar-tall.png";
+    sprites.orc.src = "/images/avatar-orc.png";
   });
 }
 
@@ -46,7 +48,7 @@ function drawAvatar(canvas, height, colorHex) {
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const img = height === "tall" ? sprites.tall : sprites.short;
+  const img = sprites[height] || sprites.short;
   if (!img.complete || img.naturalWidth === 0) return;
 
   const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight) * 0.85;

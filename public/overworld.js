@@ -5,7 +5,7 @@
 window.Overworld = (function () {
   const TILE = 16;
   const RENDER_SCALE = 3; // how big each 16px tile appears on screen
-  const MOVE_SPEED = 62; // px/sec in world space
+  const MOVE_SPEED = 78; // px/sec in world space (bumped up for the larger map)
   const INTERACT_RADIUS = 22; // px
 
   const TILE_SRC = {
@@ -18,7 +18,8 @@ window.Overworld = (function () {
   let socket = null;
   let mapData = null;
   let images = {};
-  let charSprites = { short: null, tall: null }; // walk-strip images
+  let charSprites = { short: null, tall: null, orc: null }; // walk-strip images
+  const CELL_SIZE = { short: 24, tall: 32, orc: 48 };
   let running = false;
   let rafId = null;
   let lastTime = 0;
@@ -61,6 +62,7 @@ window.Overworld = (function () {
     await Promise.all([
       loadImage("/assets/characters/walk-short.png").then((img) => (charSprites.short = img)),
       loadImage("/assets/characters/walk-tall.png").then((img) => (charSprites.tall = img)),
+      loadImage("/assets/characters/walk-orc.png").then((img) => (charSprites.orc = img)),
     ]);
 
     me.x = mapData.spawn.x * TILE + TILE / 2;
@@ -183,7 +185,7 @@ window.Overworld = (function () {
 
   function drawCharSprite(sprite, height, color, x, y, dir, frame) {
     if (!sprite) return;
-    const cell = height === "tall" ? 32 : 24;
+    const cell = CELL_SIZE[height] || 24;
     let row = 0; // down
     let flip = false;
     if (dir === "up") row = 2;
@@ -224,7 +226,7 @@ window.Overworld = (function () {
   }
 
   function spriteScreenPos(height, worldX, worldY, camX, camY) {
-    const cell = height === "tall" ? 32 : 24;
+    const cell = CELL_SIZE[height] || 24;
     return {
       x: worldX * RENDER_SCALE - camX,
       y: worldY * RENDER_SCALE - camY - cell * RENDER_SCALE + 8 * RENDER_SCALE,

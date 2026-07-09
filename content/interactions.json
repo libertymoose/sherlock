@@ -46,7 +46,7 @@
     "lines": [
       "He looks you up and down, then leans in close.",
       "\"You lot look like you're about to get blamed for somethin' you didn't do. Happens to the best of us.\"",
-      "\"If it comes to it, there's an old smuggler's route under this city. Count every oak on these grounds, big and small. That number's a key you'll need later.\""
+      "\"If it comes to it, there's an old smuggler's route under this city. There's a marker among the oaks around the old fountain. Count only those, mind, not every tree on the grounds. That number's a key you'll need later.\""
     ]
   },
   "npc_flynn": {
@@ -162,10 +162,10 @@
   "oak_count": {
     "type": "puzzle",
     "render": "text",
-    "title": "Beneath the Oldest Oak",
-    "prompt": "A small carved marker at the base of the estate's oldest tree reads: 'Count us all, the tall and the small, and you'll have your number.' How many oak trees, full-sized and small, grow on these grounds?",
+    "title": "Beneath the Fountain Oaks",
+    "prompt": "A small carved marker at the base of one of the oaks ringing the old fountain reads: 'Count us all, the tall and the small, and you'll have your number.' There are more oaks scattered across the grounds, but this marker only cares about the ones planted right around the fountain. How many is that?",
     "answer": "4",
-    "hint": "Walk the grounds and count every oak tree you can see, big or small."
+    "hint": "Just the oaks in the ring around the fountain itself, not the ones elsewhere on the grounds."
   },
 
   "chest_lock": {
