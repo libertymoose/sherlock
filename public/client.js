@@ -279,7 +279,7 @@ function renderReveal(container, act) {
 
   const btn = document.createElement("button");
   btn.className = "btn btn-primary";
-  btn.textContent = "I'm Ready — Continue";
+  btn.textContent = "I'm Ready. Continue";
   btn.addEventListener("click", () => {
     btn.disabled = true;
     btn.textContent = "Waiting for the rest of the table...";
@@ -400,7 +400,7 @@ socket.on("act:result", (res) => {
     fb.textContent = "Correct!";
   } else {
     fb.className = "feedback incorrect";
-    fb.textContent = "Not quite — try again.";
+    fb.textContent = "Not quite. Try again.";
     currentAnswerWrap._inputEl.value = "";
   }
 });
@@ -432,6 +432,7 @@ initCharacterCreator();
 let interactionsCache = null;
 let activePuzzleObj = null;
 let activePuzzleEntry = null;
+let isNearInteractable = false;
 
 async function getInteractions() {
   if (interactionsCache) return interactionsCache;
@@ -452,8 +453,11 @@ async function enterExplore(act) {
     mapUrl: act.mapUrl,
     myHeight: state.myHeight,
     myColor: state.myColor,
+    myName: (currentPlayers.find((p) => p.id === socket.id) || {}).name || "",
     onNearbyChange: (obj) => {
-      document.getElementById("btn-interact").classList.toggle("hidden", !obj);
+      isNearInteractable = !!obj;
+      const panelOpen = !document.getElementById("vn-panel").classList.contains("hidden");
+      document.getElementById("btn-interact").classList.toggle("hidden", !obj || panelOpen);
     },
     onInteract: (obj) => handleObjectInteract(obj),
   });
@@ -487,9 +491,9 @@ async function handleObjectInteract(obj) {
 
   if (kind === "dialogue") {
     const entry = data[obj.interaction.dialogueId];
-    if (entry) openDialogueModal(entry.title, entry.lines);
+    if (entry) openDialogueModal(entry.title, entry.lines, obj);
   } else if (kind === "note") {
-    openDialogueModal(obj.name, [obj.interaction.text]);
+    openDialogueModal(obj.name, [obj.interaction.text], obj);
   } else if (kind === "puzzle") {
     const entry = data[obj.interaction.puzzleId];
     if (entry) openPuzzleModal(obj, entry);
@@ -500,7 +504,25 @@ async function handleObjectInteract(obj) {
   }
 }
 
-function openDialogueModal(title, lines) {
+function setVnPortrait(obj) {
+  const canvas = document.getElementById("vn-portrait");
+  if (obj && obj.height && obj.color) {
+    canvas.classList.remove("hidden");
+    if (spritesReady) {
+      drawAvatar(canvas, obj.height, obj.color);
+    } else {
+      loadSprites().then(() => drawAvatar(canvas, obj.height, obj.color));
+    }
+  } else {
+    canvas.classList.add("hidden");
+  }
+}
+
+function openDialogueModal(title, lines, obj) {
+  document.getElementById("vn-puzzle-set").classList.add("hidden");
+  document.getElementById("vn-dialogue-set").classList.remove("hidden");
+  setVnPortrait(obj);
+
   document.getElementById("dialogue-title").textContent = title;
   const container = document.getElementById("dialogue-lines");
   container.innerHTML = "";
@@ -510,11 +532,13 @@ function openDialogueModal(title, lines) {
     p.textContent = line;
     container.appendChild(p);
   });
-  document.getElementById("modal-dialogue").classList.remove("hidden");
+  document.getElementById("vn-panel").classList.remove("hidden");
+  document.getElementById("btn-interact").classList.add("hidden");
 }
 
 document.getElementById("btn-close-dialogue").addEventListener("click", () => {
-  document.getElementById("modal-dialogue").classList.add("hidden");
+  document.getElementById("vn-panel").classList.add("hidden");
+  document.getElementById("btn-interact").classList.toggle("hidden", !isNearInteractable);
 });
 
 socket.on("explore:dialogue", (data) => {
@@ -524,6 +548,11 @@ socket.on("explore:dialogue", (data) => {
 function openPuzzleModal(obj, entry) {
   activePuzzleObj = obj;
   activePuzzleEntry = entry;
+
+  document.getElementById("vn-dialogue-set").classList.add("hidden");
+  document.getElementById("vn-puzzle-set").classList.remove("hidden");
+  setVnPortrait(obj);
+
   document.getElementById("puzzle-title").textContent = entry.title;
   document.getElementById("puzzle-prompt").textContent = entry.prompt;
   document.getElementById("puzzle-feedback").textContent = "";
@@ -557,7 +586,8 @@ function openPuzzleModal(obj, entry) {
     hintToggle.style.textDecoration = "none";
   };
 
-  document.getElementById("modal-puzzle").classList.remove("hidden");
+  document.getElementById("vn-panel").classList.remove("hidden");
+  document.getElementById("btn-interact").classList.add("hidden");
 }
 
 function buildLetterGrid(grid, highlightPath) {
@@ -590,7 +620,8 @@ function buildLetterGrid(grid, highlightPath) {
 }
 
 document.getElementById("btn-close-puzzle").addEventListener("click", () => {
-  document.getElementById("modal-puzzle").classList.add("hidden");
+  document.getElementById("vn-panel").classList.add("hidden");
+  document.getElementById("btn-interact").classList.toggle("hidden", !isNearInteractable);
 });
 
 function submitPuzzleAnswer() {
@@ -612,10 +643,13 @@ socket.on("explore:result", (data) => {
     const successText = activePuzzleEntry && activePuzzleEntry.successText;
     fb.textContent = successText || "Correct! Logged to the case file.";
     const delay = successText ? 4000 : 1200;
-    setTimeout(() => document.getElementById("modal-puzzle").classList.add("hidden"), delay);
+    setTimeout(() => {
+      document.getElementById("vn-panel").classList.add("hidden");
+      document.getElementById("btn-interact").classList.toggle("hidden", !isNearInteractable);
+    }, delay);
   } else {
     fb.className = "feedback incorrect";
-    fb.textContent = "Not quite — try again.";
+    fb.textContent = "Not quite. Try again.";
   }
 });
 
@@ -627,7 +661,7 @@ socket.on("explore:scrapFound", (data) => {
   Overworld.markSolved(data.scrapId);
   openDialogueModal("A Torn Scrap", [
     `You find a scrap of paper, torn at the edges. On it, a single word: "${data.word}".`,
-    "Best bring it to the evidence table — someone's probably already started piecing the others together.",
+    "Best bring it to the evidence table. Someone's probably already started piecing the others together.",
   ]);
 });
 
@@ -772,6 +806,6 @@ socket.on("board:result", (data) => {
     fb.textContent = "\"...Yes. That's it. Good work.\"";
   } else {
     fb.className = "feedback incorrect";
-    fb.textContent = data.message || "That's not right — try again.";
+    fb.textContent = data.message || "That's not right. Try again.";
   }
 });

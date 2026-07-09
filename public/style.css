@@ -159,14 +159,40 @@ html, body {
   flex-shrink: 0;
 }
 
-.landing-cards {
+.landing-bento {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
+  align-items: stretch;
+}
+
+.landing-bento-right {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 20px;
+}
+
+.landing-bento-right .card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 @media (max-width: 600px) {
-  .landing-cards { grid-template-columns: 1fr; }
+  .landing-bento { grid-template-columns: 1fr; }
+  .landing-bento-right { grid-template-rows: auto auto; }
+}
+
+#screen-landing,
+#screen-landing input,
+#screen-landing button,
+#screen-landing .btn {
+  font-family: 'Inter', sans-serif;
+}
+
+#screen-landing .game-title {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
 }
 
 .card {
@@ -501,10 +527,77 @@ input[type="text"]:focus {
   touch-action: none;
 }
 
+.explore-viewport {
+  position: relative;
+}
+
 .interact-btn {
   width: auto;
-  margin-top: 14px;
   padding: 10px 24px;
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 5;
+}
+
+.vn-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  background: rgba(12,14,22,0.94);
+  border-top: 2px solid var(--candle);
+  border-radius: 0 0 var(--radius) var(--radius);
+  max-height: 78%;
+  overflow-y: auto;
+}
+
+#vn-portrait {
+  flex-shrink: 0;
+  width: 60px;
+  height: 80px;
+  image-rendering: pixelated;
+  background: var(--ink);
+  border: 1px solid rgba(233,227,208,0.2);
+  border-radius: 2px;
+}
+
+.vn-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.vn-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  color: var(--candle-bright);
+  margin: 0 0 8px;
+}
+
+.vn-prompt {
+  font-size: 15px;
+  line-height: 1.55;
+  margin: 0 0 4px;
+  color: var(--parchment);
+}
+
+.vn-close-btn {
+  width: auto;
+  padding: 7px 18px;
+  margin-top: 10px;
+}
+
+.vn-puzzle-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
 }
 
 .modal-box-wide {

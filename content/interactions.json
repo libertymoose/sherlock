@@ -4,7 +4,7 @@
     "title": "Steward Wren Ashby",
     "lines": [
       "\"I was polishing silver in the cellar all evening,\" he insists, hands trembling.",
-      "\"...Actually, between us, don't tell the guard captain \u2014 I wasn't in the cellar at all. Check my study desk, top drawer. There's something there I wouldn't want an auditor to see.\""
+      "\"...Actually, between us, don't tell the guard captain. I wasn't in the cellar at all. Check my study desk, top drawer. There's something there I wouldn't want an auditor to see.\""
     ]
   },
   "npc_voss": {
@@ -12,7 +12,7 @@
     "title": "Commodore Brannigan Voss",
     "lines": [
       "\"I heard the toast from the eastern watch post,\" Voss says, a little too quickly.",
-      "\"If you don't believe me, ask around the stables' tack room. There's a wager slip pinned up in there \u2014 coded, but not cleverly. Might tell you where I really was.\""
+      "\"If you don't believe me, ask around the stables' tack room. There's a wager slip pinned up in there, coded but not cleverly. Might tell you where I really was.\""
     ]
   },
   "npc_kestrel": {
@@ -36,7 +36,7 @@
     "title": "Lady Isobel Ashgate",
     "lines": [
       "She regards you coolly over the rim of her glass, entirely unbothered by the commotion.",
-      "\"A dreadful business. Alaric and I had our disagreements, of course \u2014 land, mostly, tedious inheritance law \u2014 but murder? I have people for that sort of thing. I certainly don't attend to it myself.\"",
+      "\"A dreadful business. Alaric and I had our disagreements, of course, land mostly, tedious inheritance law, but murder? I have people for that sort of thing. I certainly don't attend to it myself.\"",
       "She smiles, and gives you absolutely nothing else."
     ]
   },
@@ -46,7 +46,7 @@
     "lines": [
       "He looks you up and down, then leans in close.",
       "\"You lot look like you're about to get blamed for somethin' you didn't do. Happens to the best of us.\"",
-      "\"If it comes to it \u2014 there's an old smuggler's route under this city. Count every oak on these grounds, big and small. That number's a key you'll need later.\""
+      "\"If it comes to it, there's an old smuggler's route under this city. Count every oak on these grounds, big and small. That number's a key you'll need later.\""
     ]
   },
   "npc_flynn": {
@@ -55,7 +55,7 @@
     "lines": [
       "\"Oh, hey! Didn't expect to see Champions of Azeroth at a fancy garden party.\"",
       "\"Free drinks though, can't complain. Shame about the poisoning. Really put a damper on the evening.\"",
-      "\"Between us? I wouldn't trust anyone here who's smiling *too* hard tonight. Oh \u2014 and if you find any torn-up scraps of paper lying around? Bring 'em to a table. People don't usually tear up things that don't matter.\""
+      "\"Between us? I wouldn't trust anyone here who's smiling *too* hard tonight. Oh, and if you find any torn-up scraps of paper lying around? Bring 'em to a table. People don't usually tear up things that don't matter.\""
     ]
   },
 
@@ -115,7 +115,7 @@
     "type": "dialogue",
     "title": "A Gala Guest",
     "lines": [
-      "\"Best trade gala Boralus has seen since the Siege, and now this. Poor Alaric. Poor seating chart, honestly \u2014 who's going to redo it?\""
+      "\"Best trade gala Boralus has seen since the Siege, and now this. Poor Alaric. Poor seating chart, honestly. Who's going to redo it?\""
     ]
   },
 
@@ -123,18 +123,18 @@
     "type": "puzzle",
     "render": "wordsearch",
     "title": "The Study Desk",
-    "prompt": "Tucked in the top drawer: a page of practice handwriting, like someone rehearsing a forgery. Find every word from the list in the grid below \u2014 one word from the list won't be there at all. That missing word is your answer.",
+    "prompt": "Tucked in the top drawer: a page of practice handwriting, like someone rehearsing a forgery. Find every word from the list in the grid below. One word from the list won't be there at all. That missing word is your answer.",
     "wordList": ["LEDGER", "COIN", "DEBT", "AUDIT", "BRIBE", "THEFT", "FORGERY"],
     "grid": [["R","K","V","P","Q","M","K","T","F","O"],["R","B","K","R","L","V","Y","H","D","X"],["V","R","U","Z","W","I","T","E","E","P"],["G","I","H","I","R","J","H","F","B","J"],["Y","B","J","W","G","W","T","T","T","W"],["P","E","K","P","L","I","R","Z","X","N"],["I","J","L","E","D","G","E","R","I","D"],["S","V","R","U","M","M","L","O","Y","Z"],["E","J","A","B","J","W","C","C","L","O"],["U","I","X","P","G","G","R","I","R","W"]],
     "answer": "FORGERY",
-    "hint": "Cross off every word you DO find in the grid \u2014 whichever one from the list is left over is your answer."
+    "hint": "Cross off every word you DO find in the grid, whichever one from the list is left over is your answer."
   },
 
   "tack_room": {
     "type": "puzzle",
     "render": "cipher",
     "title": "The Tack Room",
-    "prompt": "A wager slip, pinned to the wall, reads: JDPEOHU \u2014 each letter shifted three forward from a word describing exactly the kind of trouble a naval officer might be hiding from.",
+    "prompt": "A wager slip, pinned to the wall, reads: JDPEOHU, each letter shifted three forward from a word describing exactly the kind of trouble a naval officer might be hiding from.",
     "answer": "gambler",
     "hint": "Shift each letter back three: J\u2192G, D\u2192A, and so on."
   },
@@ -143,11 +143,11 @@
     "type": "puzzle",
     "render": "highlightgrid",
     "title": "Kestrel's Ledger",
-    "prompt": "Odalys Kestrel's stall ledger is filled with trade jargon \u2014 but a path of highlighted letters cuts through the noise. Read them in order (they're numbered) to spell the word.",
+    "prompt": "Odalys Kestrel's stall ledger is filled with trade jargon, but a path of highlighted letters cuts through the noise. Read them in order (they're numbered) to spell the word.",
     "grid": [["L","C","N","D","E","A","H","O"],["D","D","S","O","A","S","A","M"],["U","N","D","E","O","S","L","A"],["D","L","E","R","C","I","P","K"],["K","D","D","L","U","T","D","N"],["D","P","A","L","P","G","M","C"],["A","I","L","O","L","R","H","D"],["L","K","G","O","H","L","E","L"]],
     "highlightPath": [{"r":2,"c":0},{"r":2,"c":1},{"r":2,"c":2},{"r":3,"c":2},{"r":3,"c":3},{"r":3,"c":4},{"r":4,"c":4},{"r":4,"c":5}],
     "answer": "UNDERCUT",
-    "hint": "Follow the numbered letters in order \u2014 don't read the grid in rows."
+    "hint": "Follow the numbered letters in order. Don't read the grid in rows."
   },
 
   "scaffold": {
@@ -163,7 +163,7 @@
     "type": "puzzle",
     "render": "text",
     "title": "Beneath the Oldest Oak",
-    "prompt": "A small carved marker at the base of the estate's oldest tree reads: 'Count us all, the tall and the small, and you'll have your number.' How many oak trees \u2014 full-sized and small \u2014 grow on these grounds?",
+    "prompt": "A small carved marker at the base of the estate's oldest tree reads: 'Count us all, the tall and the small, and you'll have your number.' How many oak trees, full-sized and small, grow on these grounds?",
     "answer": "4",
     "hint": "Walk the grounds and count every oak tree you can see, big or small."
   },
@@ -172,17 +172,17 @@
     "type": "puzzle",
     "render": "text",
     "title": "Locked Garden Chest",
-    "prompt": "A small three-digit combination lock. Scratched beside it: 'the year the seawall finished, minus the number of Duskmere ships in harbor tonight.' You recall: the seawall finished this year \u2014 the 27th year since the city's founding \u2014 and there are 3 ships moored tonight.",
+    "prompt": "A small three-digit combination lock. Scratched beside it: 'the year the seawall finished, minus the number of Duskmere ships in harbor tonight.' You recall: the seawall finished this year, the 27th year since the city's founding, and there are 3 ships moored tonight.",
     "answer": "24",
     "hint": "27 minus 3.",
-    "successText": "Inside: a forged inheritance document, bearing Lady Isobel Ashgate's seal \u2014 dated just three days before Duskmere's death."
+    "successText": "Inside: a forged inheritance document, bearing Lady Isobel Ashgate's seal, dated just three days before Duskmere's death."
   },
 
   "evidence_reyes": {
     "type": "puzzle",
     "render": "text",
     "title": "By the East Wall",
-    "prompt": "[PLACEHOLDER \u2014 a real puzzle goes here] For now, type CONTINUE to note down what you've found near the trees where Reyes wouldn't look.",
+    "prompt": "[PLACEHOLDER: a real puzzle goes here] For now, type CONTINUE to note down what you've found near the trees where Reyes wouldn't look.",
     "answer": "continue",
     "hint": "This one's a stand-in for now."
   },
@@ -190,7 +190,7 @@
     "type": "puzzle",
     "render": "text",
     "title": "Near the Dock Path",
-    "prompt": "[PLACEHOLDER \u2014 a real puzzle goes here] For now, type CONTINUE to note down what you've found where the maid kept glancing.",
+    "prompt": "[PLACEHOLDER: a real puzzle goes here] For now, type CONTINUE to note down what you've found where the maid kept glancing.",
     "answer": "continue",
     "hint": "This one's a stand-in for now."
   },

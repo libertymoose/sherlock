@@ -1,4 +1,4 @@
-// Overworld engine — a small hand-rolled top-down renderer.
+// Overworld engine. A small hand-rolled top-down renderer.
 // Exposed as window.Overworld. Talks to the rest of the app only through
 // the callbacks passed into init(), so it doesn't know about puzzles/dialogue directly.
 
@@ -24,6 +24,7 @@ window.Overworld = (function () {
   let lastTime = 0;
 
   let me = { x: 0, y: 0, dir: "down", moving: false, height: "short", color: "#d9a441" };
+  let myName = "";
   let others = {}; // socketId -> {x,y,dir,moving,height,color,name}
   let keys = {};
   let animTimer = 0;
@@ -88,7 +89,7 @@ window.Overworld = (function () {
   function handleKeyDown(e) {
     const k = e.key.toLowerCase();
     keys[k] = true;
-    if (k === "e" || k === " ") {
+    if (k === "e" || k === "f" || k === " ") {
       e.preventDefault();
       triggerInteract();
     }
@@ -213,12 +214,34 @@ window.Overworld = (function () {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     if (flip) {
-      ctx.translate(x + drawSize / 2, 0);
+      ctx.translate(x, y);
       ctx.scale(-1, 1);
-      ctx.drawImage(tmp, -drawSize / 2, y, drawSize, drawSize);
+      ctx.drawImage(tmp, -drawSize / 2, 0, drawSize, drawSize);
     } else {
       ctx.drawImage(tmp, x - drawSize / 2, y, drawSize, drawSize);
     }
+    ctx.restore();
+  }
+
+  function spriteScreenPos(height, worldX, worldY, camX, camY) {
+    const cell = height === "tall" ? 32 : 24;
+    return {
+      x: worldX * RENDER_SCALE - camX,
+      y: worldY * RENDER_SCALE - camY - cell * RENDER_SCALE + 8 * RENDER_SCALE,
+    };
+  }
+
+  function drawNameLabel(name, centerX, spriteTopY) {
+    if (!name) return;
+    ctx.save();
+    ctx.font = "10px 'Press Start 2P', monospace";
+    ctx.textAlign = "center";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#12141c";
+    ctx.fillStyle = "#ffffff";
+    const labelY = spriteTopY - 6;
+    ctx.strokeText(name, centerX, labelY);
+    ctx.fillText(name, centerX, labelY);
     ctx.restore();
   }
 
@@ -252,7 +275,7 @@ window.Overworld = (function () {
       }
     }
 
-    // Build a draw list: decor + players, sorted by their world Y (poor-man's depth)
+    // Build a draw list: decor + characters, sorted by their world Y (poor-man's depth)
     const drawList = [];
 
     mapData.decor.forEach((d) => {
@@ -260,36 +283,38 @@ window.Overworld = (function () {
     });
 
     mapData.objects.forEach((o) => {
-      drawList.push({ y: o.y * TILE + TILE, draw: () => drawObjectMarker(o, camX, camY) });
+      if (o.type === "npc" && o.height && o.color) {
+        const pos = spriteScreenPos(o.height, o.x * TILE + TILE / 2, o.y * TILE + TILE / 2, camX, camY);
+        drawList.push({
+          y: o.y * TILE + TILE,
+          draw: () => {
+            drawCharSprite(charSprites[o.height], o.height, o.color, pos.x, pos.y, "down", 0);
+            drawNameLabel(o.name, pos.x, pos.y);
+          },
+        });
+      } else {
+        drawList.push({ y: o.y * TILE + TILE, draw: () => drawObjectMarker(o, camX, camY) });
+      }
     });
 
     drawList.push({
       y: me.y,
-      draw: () =>
-        drawCharSprite(
-          charSprites[me.height],
-          me.height,
-          me.color,
-          me.x * RENDER_SCALE - camX,
-          me.y * RENDER_SCALE - camY - (me.height === "tall" ? 32 : 24) * RENDER_SCALE + 8 * RENDER_SCALE,
-          me.dir,
-          animFrame
-        ),
+      draw: () => {
+        const pos = spriteScreenPos(me.height, me.x, me.y, camX, camY);
+        drawCharSprite(charSprites[me.height], me.height, me.color, pos.x, pos.y, me.dir, animFrame);
+        if (myName) drawNameLabel(myName, pos.x, pos.y);
+      },
     });
 
     Object.values(others).forEach((p) => {
       drawList.push({
         y: p.y,
-        draw: () =>
-          drawCharSprite(
-            charSprites[p.height || "short"],
-            p.height || "short",
-            p.color || "#5b8def",
-            p.x * RENDER_SCALE - camX,
-            p.y * RENDER_SCALE - camY - (p.height === "tall" ? 32 : 24) * RENDER_SCALE + 8 * RENDER_SCALE,
-            p.dir || "down",
-            p.moving ? animFrame : 0
-          ),
+        draw: () => {
+          const height = p.height || "short";
+          const pos = spriteScreenPos(height, p.x, p.y, camX, camY);
+          drawCharSprite(charSprites[height], height, p.color || "#5b8def", pos.x, pos.y, p.dir || "down", p.moving ? animFrame : 0);
+          if (p.name) drawNameLabel(p.name, pos.x, pos.y);
+        },
       });
     });
 
@@ -358,6 +383,7 @@ window.Overworld = (function () {
       callbacks.onNearbyChange = opts.onNearbyChange || null;
       me.height = opts.myHeight || "short";
       me.color = opts.myColor || "#d9a441";
+      myName = opts.myName || "";
 
       await loadMap(opts.mapUrl);
 
