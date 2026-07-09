@@ -12,19 +12,37 @@ window.Overworld = (function () {
     grass: "/assets/tiles/Grass_Middle.png",
     path: "/assets/tiles/Path_Middle.png",
     water: "/assets/tiles/Water_Middle.png",
+    water_c: "/assets/tiles/auto/water_c.png",
+    water_n: "/assets/tiles/auto/water_n.png",
+    water_s: "/assets/tiles/auto/water_s.png",
+    water_e: "/assets/tiles/auto/water_e.png",
+    water_w: "/assets/tiles/auto/water_w.png",
+    water_ne: "/assets/tiles/auto/water_ne.png",
+    water_nw: "/assets/tiles/auto/water_nw.png",
+    water_se: "/assets/tiles/auto/water_se.png",
+    water_sw: "/assets/tiles/auto/water_sw.png",
+    path_c: "/assets/tiles/auto/path_c.png",
+    path_n: "/assets/tiles/auto/path_n.png",
+    path_s: "/assets/tiles/auto/path_s.png",
+    path_e: "/assets/tiles/auto/path_e.png",
+    path_w: "/assets/tiles/auto/path_w.png",
+    path_ne: "/assets/tiles/auto/path_ne.png",
+    path_nw: "/assets/tiles/auto/path_nw.png",
+    path_se: "/assets/tiles/auto/path_se.png",
+    path_sw: "/assets/tiles/auto/path_sw.png",
   };
 
   let canvas, ctx;
   let socket = null;
   let mapData = null;
   let images = {};
-  let charSprites = { short: null, tall: null }; // walk-strip images
-  const CELL_SIZE = { short: 24, tall: 32, npcsprite: 16 };
+  let charSprites = { human: null, orc: null, elf: null, troll: null, dwarf: null, clothes: null, clothesDwarf: null };
+  const CELL_SIZE = { human: 24, orc: 24, elf: 24, troll: 24, dwarf: 20, npcsprite: 16 };
   let running = false;
   let rafId = null;
   let lastTime = 0;
 
-  let me = { x: 0, y: 0, dir: "down", moving: false, height: "short", color: "#f9c22b" };
+  let me = { x: 0, y: 0, dir: "down", moving: false, race: "human", skinColor: "#ab947a", outfitColor: "#484a77" };
   let myName = "";
   let others = {}; // socketId -> {x,y,dir,moving,height,color,name}
   let keys = {};
@@ -59,10 +77,17 @@ window.Overworld = (function () {
     const srcs = new Set(Object.values(TILE_SRC));
     mapData.decor.forEach((d) => srcs.add(d.src));
     mapData.objects.forEach((o) => { if (o.sprite) srcs.add(o.sprite); });
+    if (mapData.objects.some((o) => o.type === "scrap")) srcs.add("/assets/props/paper_scrap.png");
+    if (mapData.objects.some((o) => o.type === "table")) srcs.add("/assets/props/evidence_table.png");
     await Promise.all([...srcs].map(loadImage));
     await Promise.all([
-      loadImage("/assets/characters/walk-short.png").then((img) => (charSprites.short = img)),
-      loadImage("/assets/characters/walk-tall.png").then((img) => (charSprites.tall = img)),
+      loadImage("/assets/characters/walk-human.png").then((img) => (charSprites.human = img)),
+      loadImage("/assets/characters/walk-orc.png").then((img) => (charSprites.orc = img)),
+      loadImage("/assets/characters/walk-elf.png").then((img) => (charSprites.elf = img)),
+      loadImage("/assets/characters/walk-troll.png").then((img) => (charSprites.troll = img)),
+      loadImage("/assets/characters/walk-dwarf.png").then((img) => (charSprites.dwarf = img)),
+      loadImage("/assets/characters/walk-clothes.png").then((img) => (charSprites.clothes = img)),
+      loadImage("/assets/characters/walk-clothes-dwarf.png").then((img) => (charSprites.clothesDwarf = img)),
     ]);
 
     me.x = mapData.spawn.x * TILE + TILE / 2;
@@ -183,9 +208,27 @@ window.Overworld = (function () {
     }
   }
 
-  function drawCharSprite(sprite, height, color, x, y, dir, frame) {
-    if (!sprite) return;
-    const cell = CELL_SIZE[height] || 24;
+  function tintLayer(sprite, sx, sy, cell, color) {
+    const tmp = document.createElement("canvas");
+    tmp.width = cell;
+    tmp.height = cell;
+    const tctx = tmp.getContext("2d");
+    tctx.imageSmoothingEnabled = false;
+    tctx.drawImage(sprite, sx, sy, cell, cell, 0, 0, cell, cell);
+    tctx.globalCompositeOperation = "multiply";
+    tctx.fillStyle = color;
+    tctx.fillRect(0, 0, cell, cell);
+    tctx.globalCompositeOperation = "destination-in";
+    tctx.drawImage(sprite, sx, sy, cell, cell, 0, 0, cell, cell);
+    return tmp;
+  }
+
+  function drawCharSprite(race, skinColor, outfitColor, x, y, dir, frame) {
+    const bodySprite = charSprites[race];
+    if (!bodySprite) return;
+    const cell = CELL_SIZE[race] || 24;
+    const clothesSprite = race === "dwarf" ? charSprites.clothesDwarf : charSprites.clothes;
+
     let row = 0; // down
     let flip = false;
     if (dir === "up") row = 2;
@@ -198,19 +241,8 @@ window.Overworld = (function () {
     const sx = frame * cell;
     const sy = row * cell;
 
-    // Draw base sprite tinted via an offscreen buffer, cached per color+height+row+frame would be
-    // overkill here; instead tint on the fly with a small temp canvas.
-    const tmp = document.createElement("canvas");
-    tmp.width = cell;
-    tmp.height = cell;
-    const tctx = tmp.getContext("2d");
-    tctx.imageSmoothingEnabled = false;
-    tctx.drawImage(sprite, sx, sy, cell, cell, 0, 0, cell, cell);
-    tctx.globalCompositeOperation = "multiply";
-    tctx.fillStyle = color;
-    tctx.fillRect(0, 0, cell, cell);
-    tctx.globalCompositeOperation = "destination-in";
-    tctx.drawImage(sprite, sx, sy, cell, cell, 0, 0, cell, cell);
+    const bodyLayer = tintLayer(bodySprite, sx, sy, cell, skinColor);
+    const clothesLayer = clothesSprite ? tintLayer(clothesSprite, sx, sy, cell, outfitColor) : null;
 
     const drawSize = cell * RENDER_SCALE;
     ctx.save();
@@ -218,9 +250,11 @@ window.Overworld = (function () {
     if (flip) {
       ctx.translate(x, y);
       ctx.scale(-1, 1);
-      ctx.drawImage(tmp, -drawSize / 2, 0, drawSize, drawSize);
+      ctx.drawImage(bodyLayer, -drawSize / 2, 0, drawSize, drawSize);
+      if (clothesLayer) ctx.drawImage(clothesLayer, -drawSize / 2, 0, drawSize, drawSize);
     } else {
-      ctx.drawImage(tmp, x - drawSize / 2, y, drawSize, drawSize);
+      ctx.drawImage(bodyLayer, x - drawSize / 2, y, drawSize, drawSize);
+      if (clothesLayer) ctx.drawImage(clothesLayer, x - drawSize / 2, y, drawSize, drawSize);
     }
     ctx.restore();
   }
@@ -305,14 +339,18 @@ window.Overworld = (function () {
             drawNameLabel(o.name, pos.x, pos.y);
           },
         });
-      } else if (o.type === "npc" && o.height && o.color) {
-        const pos = spriteScreenPos(o.height, o.x * TILE + TILE / 2, o.y * TILE + TILE / 2, camX, camY);
+      } else if (o.type === "scrap" && !o.__solved) {
+        const pos = spriteScreenPos("npcsprite", o.x * TILE + TILE / 2, o.y * TILE + TILE / 2, camX, camY);
         drawList.push({
           y: o.y * TILE + TILE,
-          draw: () => {
-            drawCharSprite(charSprites[o.height], o.height, o.color, pos.x, pos.y, "down", 0);
-            drawNameLabel(o.name, pos.x, pos.y);
-          },
+          draw: () => drawStaticSprite("/assets/props/paper_scrap.png", pos.x, pos.y - 4, 16),
+        });
+      } else if (o.type === "table") {
+        const centerX = o.x * TILE * RENDER_SCALE - camX + (TILE * RENDER_SCALE) / 2;
+        const topY = o.y * TILE * RENDER_SCALE - camY - (TILE * RENDER_SCALE) / 2;
+        drawList.push({
+          y: o.y * TILE + TILE,
+          draw: () => drawStaticSprite("/assets/props/evidence_table.png", centerX, topY, 32),
         });
       } else {
         drawList.push({ y: o.y * TILE + TILE, draw: () => drawObjectMarker(o, camX, camY) });
@@ -322,8 +360,8 @@ window.Overworld = (function () {
     drawList.push({
       y: me.y,
       draw: () => {
-        const pos = spriteScreenPos(me.height, me.x, me.y, camX, camY);
-        drawCharSprite(charSprites[me.height], me.height, me.color, pos.x, pos.y, me.dir, animFrame);
+        const pos = spriteScreenPos(me.race, me.x, me.y, camX, camY);
+        drawCharSprite(me.race, me.skinColor, me.outfitColor, pos.x, pos.y, me.dir, animFrame);
         if (myName) drawNameLabel(myName, pos.x, pos.y);
       },
     });
@@ -332,9 +370,9 @@ window.Overworld = (function () {
       drawList.push({
         y: p.y,
         draw: () => {
-          const height = p.height || "short";
-          const pos = spriteScreenPos(height, p.x, p.y, camX, camY);
-          drawCharSprite(charSprites[height], height, p.color || "#f9c22b", pos.x, pos.y, p.dir || "down", p.moving ? animFrame : 0);
+          const race = p.race || "human";
+          const pos = spriteScreenPos(race, p.x, p.y, camX, camY);
+          drawCharSprite(race, p.skinColor || "#ab947a", p.outfitColor || "#484a77", pos.x, pos.y, p.dir || "down", p.moving ? animFrame : 0);
           if (p.name) drawNameLabel(p.name, pos.x, pos.y);
         },
       });
@@ -403,8 +441,9 @@ window.Overworld = (function () {
       socket = opts.socket;
       callbacks.onInteract = opts.onInteract || null;
       callbacks.onNearbyChange = opts.onNearbyChange || null;
-      me.height = opts.myHeight || "short";
-      me.color = opts.myColor || "#f9c22b";
+      me.race = opts.myRace || "human";
+      me.skinColor = opts.mySkinColor || "#ab947a";
+      me.outfitColor = opts.myOutfitColor || "#484a77";
       myName = opts.myName || "";
 
       await loadMap(opts.mapUrl);
@@ -425,7 +464,13 @@ window.Overworld = (function () {
     setRoster(players, myId) {
       players.forEach((p) => {
         if (p.id === myId) return;
-        others[p.id] = { ...(others[p.id] || {}), color: p.color, height: p.height, name: p.name };
+        others[p.id] = {
+          ...(others[p.id] || {}),
+          race: p.race,
+          skinColor: p.skinColor,
+          outfitColor: p.outfitColor,
+          name: p.name,
+        };
       });
       Object.keys(others).forEach((id) => {
         if (!players.find((p) => p.id === id)) delete others[id];

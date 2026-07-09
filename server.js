@@ -24,13 +24,15 @@ const io = new Server(server);
 
 // In-memory room state. Fine for a friend-group game night; not meant to survive a server restart.
 const rooms = {};
+const VALID_RACES = ["human", "orc", "elf", "troll", "dwarf"];
 
 function publicPlayerList(room) {
   return Object.values(room.players).map((p) => ({
     id: p.id,
     name: p.name,
-    color: p.color,
-    height: p.height,
+    race: p.race,
+    skinColor: p.skinColor,
+    outfitColor: p.outfitColor,
     connected: p.connected,
   }));
 }
@@ -242,8 +244,9 @@ io.on("connection", (socket) => {
     room.players[socket.id] = {
       id: socket.id,
       name: cleanName,
-      color: (data && data.color) || "#d9a441",
-      height: (data && data.height) === "tall" ? "tall" : "short",
+      race: VALID_RACES.includes(data && data.race) ? data.race : "human",
+      skinColor: (data && data.skinColor) || "#ab947a",
+      outfitColor: (data && data.outfitColor) || "#484a77",
       connected: true,
     };
     room.joinOrder.push(socket.id);
@@ -254,7 +257,7 @@ io.on("connection", (socket) => {
     broadcastRoomState(code);
   });
 
-  socket.on("player:joinRoom", ({ code, name, color, height }, cb) => {
+  socket.on("player:joinRoom", ({ code, name, race, skinColor, outfitColor }, cb) => {
     code = String(code || "").toUpperCase().trim();
     const room = rooms[code];
     if (!room) {
@@ -269,8 +272,9 @@ io.on("connection", (socket) => {
     room.players[socket.id] = {
       id: socket.id,
       name: cleanName,
-      color: color || "#5b8def",
-      height: height === "tall" ? "tall" : "short",
+      race: VALID_RACES.includes(race) ? race : "human",
+      skinColor: skinColor || "#ab947a",
+      outfitColor: outfitColor || "#484a77",
       connected: true,
     };
     room.joinOrder.push(socket.id);

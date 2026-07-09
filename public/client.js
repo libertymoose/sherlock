@@ -1,18 +1,39 @@
 const socket = io();
 
-const PALETTE = [
-  { name: "Crimson",  hex: "#c51111" },
-  { name: "Cobalt",   hex: "#132ed1" },
-  { name: "Forest",   hex: "#117f2d" },
-  { name: "Blossom",  hex: "#ed54ba" },
-  { name: "Amber",    hex: "#ef7d0d" },
-  { name: "Citrine",  hex: "#e5df3a" },
-  { name: "Slate",    hex: "#3f474e" },
-  { name: "Bone",     hex: "#d6e0f0" },
-  { name: "Violet",   hex: "#6b2fbb" },
-  { name: "Umber",    hex: "#71491e" },
-  { name: "Teal",     hex: "#38b0a6" },
-  { name: "Lime",     hex: "#50ef39" },
+const skinTones = [
+  { name: "Tan",        hex: "#ab947a" },
+  { name: "Rose Tan",   hex: "#966c6c" },
+  { name: "Copper",     hex: "#cd683d" },
+  { name: "Warm Tan",   hex: "#e6904e" },
+  { name: "Deep Red",   hex: "#9e4539" },
+  { name: "Maroon",     hex: "#7a3045" },
+  { name: "Olive Green",hex: "#a2a947" },
+  { name: "Sage Green", hex: "#92a984" },
+  { name: "Moss",       hex: "#547e64" },
+  { name: "Deep Olive", hex: "#676633" },
+];
+
+const outfitColors = [
+  { name: "Crimson",  hex: "#b33831" },
+  { name: "Rust",     hex: "#ae2334" },
+  { name: "Forest",   hex: "#239063" },
+  { name: "Teal",     hex: "#0b5e65" },
+  { name: "Deep Teal",hex: "#165a4c" },
+  { name: "Navy",     hex: "#323353" },
+  { name: "Indigo",   hex: "#484a77" },
+  { name: "Plum",     hex: "#45293f" },
+  { name: "Violet",   hex: "#905ea9" },
+  { name: "Magenta",  hex: "#831c5d" },
+  { name: "Blue",     hex: "#4d65b4" },
+  { name: "Olive",    hex: "#676633" },
+];
+
+const RACES = [
+  { key: "human", label: "Human" },
+  { key: "orc", label: "Orc" },
+  { key: "elf", label: "Elf" },
+  { key: "troll", label: "Troll" },
+  { key: "dwarf", label: "Dwarf" },
 ];
 
 let state = {
@@ -20,51 +41,67 @@ let state = {
   roomCode: null,
   myId: null,
   hostId: null,
-  myHeight: "short",
-  myColor: PALETTE[0].hex,
+  myRace: "human",
+  mySkinColor: skinTones[0].hex,
+  myOutfitColor: outfitColors[6].hex,
 };
 
-const sprites = { short: new Image(), tall: new Image() };
+const sprites = { human: new Image(), orc: new Image(), elf: new Image(), troll: new Image(), dwarf: new Image(), clothes: new Image(), clothesDwarf: new Image() };
 let spritesReady = false;
 
 function loadSprites() {
   return new Promise((resolve) => {
     let loaded = 0;
-    const done = () => { loaded++; if (loaded === 2) { spritesReady = true; resolve(); } };
-    sprites.short.onload = done;
-    sprites.tall.onload = done;
-    sprites.short.src = "/images/avatar-short.png";
-    sprites.tall.src = "/images/avatar-tall.png";
+    const total = 7;
+    const done = () => { loaded++; if (loaded === total) { spritesReady = true; resolve(); } };
+    sprites.human.onload = done;
+    sprites.orc.onload = done;
+    sprites.elf.onload = done;
+    sprites.troll.onload = done;
+    sprites.dwarf.onload = done;
+    sprites.clothes.onload = done;
+    sprites.clothesDwarf.onload = done;
+    sprites.human.src = "/images/avatar-human.png";
+    sprites.orc.src = "/images/avatar-orc.png";
+    sprites.elf.src = "/images/avatar-elf.png";
+    sprites.troll.src = "/images/avatar-troll.png";
+    sprites.dwarf.src = "/images/avatar-dwarf.png";
+    sprites.clothes.src = "/images/avatar-clothes.png";
+    sprites.clothesDwarf.src = "/images/avatar-clothes-dwarf.png";
   });
+}
+
+function tintOnto(ctx, img, colorHex, canvasW, canvasH) {
+  if (!img.complete || img.naturalWidth === 0) return;
+  const scale = Math.min(canvasW / img.naturalWidth, canvasH / img.naturalHeight) * 0.85;
+  const w = img.naturalWidth * scale;
+  const h = img.naturalHeight * scale;
+  const x = (canvasW - w) / 2;
+  const y = canvasH - h - (canvasH - h) * 0.15;
+
+  ctx.drawImage(img, x, y, w, h);
+  ctx.globalCompositeOperation = "multiply";
+  ctx.fillStyle = colorHex;
+  ctx.fillRect(0, 0, canvasW, canvasH);
+  ctx.globalCompositeOperation = "destination-in";
+  ctx.drawImage(img, x, y, w, h);
+  ctx.globalCompositeOperation = "source-over";
 }
 
 // Recolours a base greyscale/skin-tone sprite by multiplying in a flat colour, then
 // masking back to the sprite's own silhouette. Similar approach to classic
-// "pick a colour" party-game avatars.
-function drawAvatar(canvas, height, colorHex) {
+// "pick a colour" party-game avatars. Draws skin tone first, then the clothes
+// overlay (its own silhouette, derived from the body) tinted with the outfit colour.
+function drawAvatar(canvas, race, skinColor, outfitColor) {
   const ctx = canvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const img = sprites[height] || sprites.short;
-  if (!img.complete || img.naturalWidth === 0) return;
+  const bodyImg = sprites[race] || sprites.human;
+  const clothesImg = race === "dwarf" ? sprites.clothesDwarf : sprites.clothes;
 
-  const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight) * 0.85;
-  const w = img.naturalWidth * scale;
-  const h = img.naturalHeight * scale;
-  const x = (canvas.width - w) / 2;
-  const y = canvas.height - h - (canvas.height - h) * 0.15;
-
-  ctx.drawImage(img, x, y, w, h);
-
-  ctx.globalCompositeOperation = "multiply";
-  ctx.fillStyle = colorHex;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.globalCompositeOperation = "destination-in";
-  ctx.drawImage(img, x, y, w, h);
-
-  ctx.globalCompositeOperation = "source-over";
+  tintOnto(ctx, bodyImg, skinColor, canvas.width, canvas.height);
+  tintOnto(ctx, clothesImg, outfitColor, canvas.width, canvas.height);
 }
 
 // --- Screen helpers ---
@@ -80,29 +117,51 @@ function showScreen(id) {
 
 // --- Character creation (shared by host + joining players) ---
 function initCharacterCreator() {
-  const swatchRow = document.getElementById("swatch-row");
-  PALETTE.forEach((c, i) => {
+  const raceRow = document.getElementById("race-row");
+  RACES.forEach((r, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "height-btn" + (i === 0 ? " active" : "");
+    btn.textContent = r.label;
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#race-row .height-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.myRace = r.key;
+      refreshPreview();
+    });
+    raceRow.appendChild(btn);
+  });
+
+  const skinRow = document.getElementById("skin-swatch-row");
+  skinTones.forEach((c, i) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "swatch" + (i === 0 ? " active" : "");
     btn.style.background = c.hex;
     btn.title = c.name;
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".swatch").forEach((s) => s.classList.remove("active"));
+      document.querySelectorAll("#skin-swatch-row .swatch").forEach((s) => s.classList.remove("active"));
       btn.classList.add("active");
-      state.myColor = c.hex;
+      state.mySkinColor = c.hex;
       refreshPreview();
     });
-    swatchRow.appendChild(btn);
+    skinRow.appendChild(btn);
   });
 
-  document.querySelectorAll(".height-btn").forEach((btn) => {
+  const outfitRow = document.getElementById("outfit-swatch-row");
+  outfitColors.forEach((c, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "swatch" + (i === 6 ? " active" : "");
+    btn.style.background = c.hex;
+    btn.title = c.name;
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".height-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll("#outfit-swatch-row .swatch").forEach((s) => s.classList.remove("active"));
       btn.classList.add("active");
-      state.myHeight = btn.dataset.height;
+      state.myOutfitColor = c.hex;
       refreshPreview();
     });
+    outfitRow.appendChild(btn);
   });
 
   refreshPreview();
@@ -111,7 +170,7 @@ function initCharacterCreator() {
 function refreshPreview() {
   if (!spritesReady) return;
   const canvas = document.getElementById("avatar-preview");
-  drawAvatar(canvas, state.myHeight, state.myColor);
+  drawAvatar(canvas, state.myRace, state.mySkinColor, state.myOutfitColor);
 }
 
 loadSprites().then(() => {
@@ -121,7 +180,7 @@ loadSprites().then(() => {
 // --- Landing screen ---
 document.getElementById("btn-host").addEventListener("click", () => {
   const name = document.getElementById("input-name").value.trim() || "Detective";
-  socket.emit("host:createRoom", { name, color: state.myColor, height: state.myHeight }, (res) => {
+  socket.emit("host:createRoom", { name, race: state.myRace, skinColor: state.mySkinColor, outfitColor: state.myOutfitColor }, (res) => {
     if (!res || !res.ok) return;
     state.isHost = true;
     state.roomCode = res.code;
@@ -143,7 +202,7 @@ document.getElementById("btn-join").addEventListener("click", () => {
     return;
   }
 
-  socket.emit("player:joinRoom", { code, name, color: state.myColor, height: state.myHeight }, (res) => {
+  socket.emit("player:joinRoom", { code, name, race: state.myRace, skinColor: state.mySkinColor, outfitColor: state.myOutfitColor }, (res) => {
     if (!res || !res.ok) {
       errorEl.textContent = (res && res.error) || "Could not join that game.";
       return;
@@ -190,9 +249,9 @@ socket.on("room:update", (data) => {
     roster.appendChild(chip);
 
     if (spritesReady) {
-      drawAvatar(mini, p.height || "short", p.color || "#f9c22b");
+      drawAvatar(mini, p.race || "human", p.skinColor || "#ab947a", p.outfitColor || "#484a77");
     } else {
-      loadSprites().then(() => drawAvatar(mini, p.height || "short", p.color || "#f9c22b"));
+      loadSprites().then(() => drawAvatar(mini, p.race || "human", p.skinColor || "#ab947a", p.outfitColor || "#484a77"));
     }
   });
 
@@ -456,8 +515,9 @@ async function enterExplore(act) {
     canvas,
     socket,
     mapUrl: act.mapUrl,
-    myHeight: state.myHeight,
-    myColor: state.myColor,
+    myRace: state.myRace,
+    mySkinColor: state.mySkinColor,
+    myOutfitColor: state.myOutfitColor,
     myName: (currentPlayers.find((p) => p.id === socket.id) || {}).name || "",
     onNearbyChange: (obj) => {
       isNearInteractable = !!obj;
@@ -517,9 +577,9 @@ function setVnPortrait(obj) {
   } else if (obj && obj.height && obj.color) {
     canvas.classList.remove("hidden");
     if (spritesReady) {
-      drawAvatar(canvas, obj.height, obj.color);
+      drawAvatar(canvas, obj.race, obj.skinColor, obj.outfitColor);
     } else {
-      loadSprites().then(() => drawAvatar(canvas, obj.height, obj.color));
+      loadSprites().then(() => drawAvatar(canvas, obj.race, obj.skinColor, obj.outfitColor));
     }
   } else {
     canvas.classList.add("hidden");
@@ -790,9 +850,9 @@ function buildPortraitCard(person) {
   if (person.sprite) {
     drawFixedPortrait(canvas, person.sprite);
   } else if (spritesReady) {
-    drawAvatar(canvas, person.height, person.color);
+    drawAvatar(canvas, person.race, person.skinColor, person.outfitColor);
   } else {
-    loadSprites().then(() => drawAvatar(canvas, person.height, person.color));
+    loadSprites().then(() => drawAvatar(canvas, person.race, person.skinColor, person.outfitColor));
   }
 
   return card;
