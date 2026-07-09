@@ -1,0 +1,60 @@
+{
+  "title": "A Study in Boralus",
+  "acts": [
+    {
+      "type": "reveal",
+      "title": "The Gala",
+      "body": "In the wake of the Siege of Boralus, House Duskmere has spent months funding repairs to Tiragarde's seawalls and docks. Tonight, they celebrate the work's completion \u2014 and christen their newly built trade vessel, Duskmere's Providence \u2014 with a gala at their estate. As Champions of Azeroth, you were invited guests. Then the toasts stopped. Lord Alaric Duskmere lies dead behind the garden hedges, poisoned.",
+      "image": ""
+    },
+    {
+      "type": "reveal",
+      "title": "The Captain Takes Charge",
+      "body": "Captain Mira Thorne of the Boralus City Watch arrives before the body's even cold, and takes one look at the gathered, panicking guests. 'Nobody leaves. Every single one of you is a suspect until I say otherwise \u2014 that includes our Champions of Azeroth.' She turns to you. 'Which is exactly why I need your help. I can't watch this whole gala at once. Move through the grounds, talk to people, find out who actually had reason to want Alaric Duskmere dead. Motive first. We'll worry about how it was done after.'",
+      "image": ""
+    },
+    {
+      "type": "explore",
+      "title": "Investigate the Estate",
+      "mapUrl": "/assets/maps/estate.json",
+      "intro": "Walk the grounds and talk to everyone \u2014 guests, suspects, staff. Most people here have nothing to hide. A few do. Every puzzle matters here \u2014 you'll need to find all of them before you can move on.",
+      "completionCount": 9
+    },
+    {
+      "type": "suspect_board",
+      "title": "The Suspect Board",
+      "intro": "Captain Thorne has laid out what you've found on a table by the gate. 'Alright. Drag forward everyone you believe actually had a real motive. Leave off anyone whose story checks out. When you're confident, submit it to me \u2014 and know that I'll send you back to think again if you've got it wrong.'"
+    },
+    {
+      "type": "reveal",
+      "title": "Means and Opportunity",
+      "body": "'Good work,' Thorne says, looking over your list. 'Now we find out which one of them actually did it, and how.' [PLACEHOLDER \u2014 Phase 2 puzzles go here: alibis, timelines, opportunity, the poison itself. This is where the frame-up interrupts you partway through.]",
+      "image": ""
+    },
+    {
+      "type": "reveal",
+      "title": "The Frame-Up",
+      "body": "Before you can finish, Commodore Brannigan Voss 'discovers' the murder weapon planted among your belongings. Someone mutters about Tol Dagor \u2014 and is immediately shut down: half that prison's still got cannonball holes in it from the last time someone broke a prisoner out. Instead, you're marched down to the docks and thrown in the brig of Duskmere's Providence, her timbers still creaking, not even properly crewed yet.",
+      "image": ""
+    },
+    {
+      "type": "reveal",
+      "title": "Duskmere's Providence",
+      "body": "What happens next isn't fully built yet \u2014 but here's how the night goes: you pick the brig's lock, slip past a skeleton crew doing their rounds, and find something in the cargo hold that changes everything: manifests showing the poison's rare ingredient moved through this very ship. Old Silas Corwin makes good on his word and shows you a way out through the smuggler's tunnels beneath the harbor. You surface back on the docks \u2014 free, and with enough evidence to make your case.",
+      "image": ""
+    },
+    {
+      "type": "puzzle_group",
+      "title": "Naming the Culprit",
+      "prompt": "You corner Lady Isobel Ashgate with everything you've gathered. Cornered, she finally gives up the word scratched into the ship's cargo manifest \u2014 the code the smugglers used for their poison shipment. What was it?",
+      "answer": "nightshade",
+      "hint": "[Placeholder \u2014 this ties back to the poison-ID puzzle we haven't designed yet.]"
+    },
+    {
+      "type": "final",
+      "title": "Case Closed... Or Is It?",
+      "body": "Lady Ashgate hands over the word, cool as ever \u2014 almost too composed for someone just caught out. 'Nightshade,' she says. 'That's what they called it.' But as she says it, her eyes flick, just for a moment, toward the estate \u2014 toward the steward, quietly straightening papers by the door, who suddenly finds something very interesting to do with his hands. Ashby was the one panicking about an audit. Ashby had access to every ledger, every shipment record, every excuse to be anywhere in that house at any hour. Maybe Lady Ashgate simply knows how to take a fall gracefully. Or maybe she's not the one who should be taking it at all. Take your answer back to Discord \u2014 the case is closed, even if the truth might not be.",
+      "finalWord": "NIGHTSHADE"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "sherlock-night-game",
+  "version": "1.0.0",
+  "description": "Real-time multiplayer murder mystery / escape room engine for Sherlock Nights",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5",
+    "nanoid": "^3.3.7"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
