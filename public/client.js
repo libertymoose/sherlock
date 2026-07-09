@@ -71,6 +71,11 @@ function drawAvatar(canvas, height, colorHex) {
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
+  document.getElementById("app").classList.toggle("app-wide", id === "screen-game");
+  if (id === "screen-game" && typeof Overworld !== "undefined" && Overworld.resize) {
+    // container size just changed; let the canvas catch up once the browser has laid it out
+    requestAnimationFrame(() => Overworld.resize());
+  }
 }
 
 // --- Character creation (shared by host + joining players) ---
