@@ -1,14 +1,38 @@
 :root {
-  --ink: #12141c;
-  --ink-surface: #1c2030;
-  --ink-surface-2: #262b3f;
-  --parchment: #e9e3d0;
-  --parchment-dim: #a8a290;
-  --candle: #d9a441;
-  --candle-bright: #f0c264;
-  --blood: #9a3b3b;
-  --focus-ring: #f0c264;
+  /* In-game palette (Resurrect) */
+  --ink: #2e222f;
+  --ink-surface: #3e3546;
+  --ink-surface-2: #625565;
+  --parchment: #ffffff;
+  --parchment-dim: #9babb2;
+  --candle: #f9c22b;
+  --candle-bright: #fbb954;
+  --blood: #ea4f36;
+  --success: #1ebc73;
+  --border-line: #484a77;
+  --focus-ring: #fbb954;
+  --btn-text: #1a1408;
+  --candle-rgb: 249,194,43;
+  --parchment-rgb: 255,255,255;
   --radius: 3px;
+}
+
+/* Out-of-game palette (Nyx) — lobby and landing screens only */
+#screen-landing, #screen-lobby {
+  --ink: #08141e;
+  --ink-surface: #0f2a3f;
+  --ink-surface-2: #20394f;
+  --parchment: #f6d6bd;
+  --parchment-dim: #c3a38a;
+  --candle: #816271;
+  --candle-bright: #997577;
+  --blood: #997577;
+  --success: #c3a38a;
+  --border-line: #4e495f;
+  --focus-ring: #997577;
+  --btn-text: #08141e;
+  --candle-rgb: 129,98,113;
+  --parchment-rgb: 246,214,189;
 }
 
 * { box-sizing: border-box; }
@@ -27,7 +51,7 @@ html, body {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse at 20% 10%, rgba(217,164,65,0.06), transparent 45%),
+    radial-gradient(ellipse at 20% 10%, rgba(var(--candle-rgb),0.06), transparent 45%),
     radial-gradient(ellipse at 80% 90%, rgba(154,59,59,0.08), transparent 50%);
   z-index: 0;
 }
@@ -59,7 +83,7 @@ html, body {
   justify-content: center;
   font-size: 28px;
   color: var(--candle);
-  box-shadow: 0 0 24px rgba(217,164,65,0.25);
+  box-shadow: 0 0 24px rgba(var(--candle-rgb),0.25);
 }
 
 .game-title {
@@ -102,7 +126,7 @@ html, body {
   flex: 1;
   padding: 8px 12px;
   background: var(--ink);
-  border: 1px solid rgba(233,227,208,0.25);
+  border: 1px solid rgba(var(--parchment-rgb),0.25);
   color: var(--parchment-dim);
   border-radius: var(--radius);
   font-family: 'Crimson Text', serif;
@@ -113,7 +137,7 @@ html, body {
 .height-btn.active {
   border-color: var(--candle);
   color: var(--candle-bright);
-  background: rgba(217,164,65,0.1);
+  background: rgba(var(--candle-rgb),0.1);
 }
 
 .swatch-row {
@@ -197,7 +221,7 @@ html, body {
 
 .card {
   background: var(--ink-surface);
-  border: 1px solid rgba(217,164,65,0.18);
+  border: 1px solid rgba(var(--candle-rgb),0.18);
   border-radius: var(--radius);
   padding: 24px;
 }
@@ -227,7 +251,7 @@ label {
 input[type="text"] {
   width: 100%;
   background: var(--ink);
-  border: 1px solid rgba(233,227,208,0.25);
+  border: 1px solid rgba(var(--parchment-rgb),0.25);
   color: var(--parchment);
   padding: 10px 12px;
   border-radius: var(--radius);
@@ -238,7 +262,7 @@ input[type="text"] {
 input[type="text"]:focus {
   outline: none;
   border-color: var(--focus-ring);
-  box-shadow: 0 0 0 3px rgba(240,194,100,0.2);
+  box-shadow: 0 0 0 3px rgba(var(--candle-rgb),0.2);
 }
 
 .btn {
@@ -263,19 +287,19 @@ input[type="text"]:focus {
 
 .btn-primary {
   background: var(--candle);
-  color: #1a1408;
+  color: var(--btn-text);
 }
 .btn-primary:hover { background: var(--candle-bright); transform: translateY(-1px); }
 
 .btn-secondary {
   background: transparent;
-  border: 1px solid rgba(233,227,208,0.35);
+  border: 1px solid rgba(var(--parchment-rgb),0.35);
   color: var(--parchment);
 }
 .btn-secondary:hover { border-color: var(--candle); color: var(--candle-bright); }
 
 .error-text {
-  color: #e08a8a;
+  color: var(--blood);
   font-size: 13px;
   min-height: 18px;
   margin-top: 6px;
@@ -310,7 +334,7 @@ input[type="text"]:focus {
   align-items: center;
   gap: 10px;
   background: var(--ink-surface);
-  border: 1px solid rgba(233,227,208,0.15);
+  border: 1px solid rgba(var(--parchment-rgb),0.15);
   padding: 6px 14px 6px 8px;
   border-radius: 20px;
   font-size: 14px;
@@ -323,7 +347,7 @@ input[type="text"]:focus {
 
 .act-frame {
   background: var(--ink-surface);
-  border: 1px solid rgba(217,164,65,0.18);
+  border: 1px solid rgba(var(--candle-rgb),0.18);
   border-radius: var(--radius);
   padding: 32px 28px;
 }
@@ -382,7 +406,7 @@ input[type="text"]:focus {
   text-align: center;
   margin-top: 28px;
   padding-top: 20px;
-  border-top: 1px dashed rgba(233,227,208,0.15);
+  border-top: 1px dashed rgba(var(--parchment-rgb),0.15);
 }
 
 .final-word {
@@ -401,13 +425,13 @@ input[type="text"]:focus {
   margin-top: 10px;
   min-height: 18px;
 }
-.feedback.correct { color: #8fd19e; }
-.feedback.incorrect { color: #e08a8a; }
+.feedback.correct { color: var(--success); }
+.feedback.incorrect { color: var(--blood); }
 
 .sync-banner {
-  background: rgba(91,141,239,0.12);
-  border: 1px solid rgba(91,141,239,0.35);
-  color: #a9c2f0;
+  background: rgba(77,155,230,0.14);
+  border: 1px solid rgba(77,155,230,0.4);
+  color: #8fd3ff;
   font-size: 12px;
   letter-spacing: 0.03em;
   text-align: center;
@@ -418,7 +442,7 @@ input[type="text"]:focus {
 
 .board-frame {
   background: var(--ink-surface);
-  border: 1px solid rgba(217,164,65,0.18);
+  border: 1px solid rgba(var(--candle-rgb),0.18);
   border-radius: var(--radius);
   padding: 24px;
 }
@@ -445,7 +469,7 @@ input[type="text"]:focus {
 
 .board-dropzone {
   min-height: 180px;
-  border: 2px dashed rgba(233,227,208,0.2);
+  border: 2px dashed rgba(var(--parchment-rgb),0.2);
   border-radius: var(--radius);
   padding: 10px;
   display: flex;
@@ -457,13 +481,13 @@ input[type="text"]:focus {
 }
 
 .board-dropzone-highlight {
-  border-color: rgba(217,164,65,0.4);
-  background: rgba(217,164,65,0.05);
+  border-color: rgba(var(--candle-rgb),0.4);
+  background: rgba(var(--candle-rgb),0.05);
 }
 
 .board-dropzone.drag-over {
   border-color: var(--candle-bright);
-  box-shadow: inset 0 0 0 2px rgba(240,194,100,0.25);
+  box-shadow: inset 0 0 0 2px rgba(var(--candle-rgb),0.25);
 }
 
 .portrait-card {
@@ -480,7 +504,7 @@ input[type="text"]:focus {
   display: block;
   margin: 0 auto 4px;
   background: var(--ink);
-  border: 1px solid rgba(233,227,208,0.15);
+  border: 1px solid rgba(var(--parchment-rgb),0.15);
   border-radius: 2px;
 }
 
@@ -492,7 +516,7 @@ input[type="text"]:focus {
 
 .explore-frame {
   background: var(--ink-surface);
-  border: 1px solid rgba(217,164,65,0.18);
+  border: 1px solid rgba(var(--candle-rgb),0.18);
   border-radius: var(--radius);
   padding: 18px;
 }
@@ -520,9 +544,9 @@ input[type="text"]:focus {
   width: 100%;
   height: 420px;
   display: block;
-  background: #0c0f16;
+  background: var(--ink);
   border-radius: var(--radius);
-  border: 1px solid rgba(217,164,65,0.15);
+  border: 1px solid rgba(var(--candle-rgb),0.15);
   image-rendering: pixelated;
   touch-action: none;
 }
@@ -562,7 +586,7 @@ input[type="text"]:focus {
   height: 80px;
   image-rendering: pixelated;
   background: var(--ink);
-  border: 1px solid rgba(233,227,208,0.2);
+  border: 1px solid rgba(var(--parchment-rgb),0.2);
   border-radius: 2px;
 }
 
@@ -616,7 +640,7 @@ input[type="text"]:focus {
   background: var(--ink);
   padding: 8px;
   border-radius: var(--radius);
-  border: 1px solid rgba(217,164,65,0.15);
+  border: 1px solid rgba(var(--candle-rgb),0.15);
 }
 
 .letter-cell {
@@ -635,7 +659,7 @@ input[type="text"]:focus {
 }
 
 .letter-cell.highlighted {
-  background: rgba(217,164,65,0.25);
+  background: rgba(var(--candle-rgb),0.25);
   color: var(--candle-bright);
   border: 1px solid var(--candle);
 }
@@ -666,7 +690,7 @@ input[type="text"]:focus {
 
 .word-chip {
   background: var(--ink-surface-2);
-  border: 1px solid rgba(233,227,208,0.15);
+  border: 1px solid rgba(var(--parchment-rgb),0.15);
   padding: 4px 10px;
   border-radius: 14px;
   font-size: 13px;
@@ -684,7 +708,7 @@ input[type="text"]:focus {
 .table-slot {
   width: 84px;
   height: 64px;
-  border: 2px dashed rgba(233,227,208,0.25);
+  border: 2px dashed rgba(var(--parchment-rgb),0.25);
   border-radius: var(--radius);
   display: flex;
   align-items: center;
@@ -707,14 +731,14 @@ input[type="text"]:focus {
 }
 
 .table-slot.solved {
-  border-color: #8fd19e;
+  border-color: var(--success);
   background: rgba(143,209,158,0.15);
-  color: #8fd19e;
+  color: var(--success);
 }
 
 .table-slot.drag-over {
   border-color: var(--candle-bright);
-  box-shadow: 0 0 0 2px rgba(240,194,100,0.3);
+  box-shadow: 0 0 0 2px rgba(var(--candle-rgb),0.3);
 }
 
 .modal-overlay {
@@ -730,7 +754,7 @@ input[type="text"]:focus {
 
 .modal-box {
   background: var(--ink-surface);
-  border: 1px solid rgba(217,164,65,0.3);
+  border: 1px solid rgba(var(--candle-rgb),0.3);
   border-radius: var(--radius);
   padding: 26px;
   max-width: 480px;

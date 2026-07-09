@@ -24,7 +24,7 @@ window.Overworld = (function () {
   let rafId = null;
   let lastTime = 0;
 
-  let me = { x: 0, y: 0, dir: "down", moving: false, height: "short", color: "#d9a441" };
+  let me = { x: 0, y: 0, dir: "down", moving: false, height: "short", color: "#f9c22b" };
   let myName = "";
   let others = {}; // socketId -> {x,y,dir,moving,height,color,name}
   let keys = {};
@@ -239,7 +239,7 @@ window.Overworld = (function () {
     ctx.font = "10px 'Press Start 2P', monospace";
     ctx.textAlign = "center";
     ctx.lineWidth = 3;
-    ctx.strokeStyle = "#12141c";
+    ctx.strokeStyle = "#2e222f";
     ctx.fillStyle = "#ffffff";
     const labelY = spriteTopY - 6;
     ctx.strokeText(name, centerX, labelY);
@@ -261,7 +261,7 @@ window.Overworld = (function () {
     const w = canvas.width;
     const h = canvas.height;
     ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = "#0c0f16";
+    ctx.fillStyle = "#2e222f";
     ctx.fillRect(0, 0, w, h);
     if (!mapData) return;
 
@@ -334,7 +334,7 @@ window.Overworld = (function () {
         draw: () => {
           const height = p.height || "short";
           const pos = spriteScreenPos(height, p.x, p.y, camX, camY);
-          drawCharSprite(charSprites[height], height, p.color || "#5b8def", pos.x, pos.y, p.dir || "down", p.moving ? animFrame : 0);
+          drawCharSprite(charSprites[height], height, p.color || "#f9c22b", pos.x, pos.y, p.dir || "down", p.moving ? animFrame : 0);
           if (p.name) drawNameLabel(p.name, pos.x, pos.y);
         },
       });
@@ -352,11 +352,11 @@ window.Overworld = (function () {
       const py = me.y * RENDER_SCALE - camY - 70;
       const label = nearbyObject.name;
       const textW = ctx.measureText(label).width;
-      ctx.fillStyle = "rgba(18,20,28,0.85)";
+      ctx.fillStyle = "rgba(46,34,47,0.9)";
       ctx.fillRect(px - textW / 2 - 10, py - 18, textW + 20, 26);
-      ctx.strokeStyle = "#d9a441";
+      ctx.strokeStyle = "#f9c22b";
       ctx.strokeRect(px - textW / 2 - 10, py - 18, textW + 20, 26);
-      ctx.fillStyle = "#f0c264";
+      ctx.fillStyle = "#fbb954";
       ctx.fillText(label, px, py);
       ctx.restore();
     }
@@ -379,9 +379,9 @@ window.Overworld = (function () {
     ctx.save();
     ctx.beginPath();
     ctx.arc(dx, dy - 6, 5, 0, Math.PI * 2);
-    ctx.fillStyle = solved ? "#5f8f5f" : o.type === "npc" ? "#d9a441" : "#9a6fd9";
+    ctx.fillStyle = solved ? "#1ebc73" : o.type === "npc" ? "#f9c22b" : "#905ea9";
     ctx.fill();
-    ctx.strokeStyle = "#12141c";
+    ctx.strokeStyle = "#2e222f";
     ctx.lineWidth = 1.5;
     ctx.stroke();
     ctx.restore();
@@ -404,7 +404,7 @@ window.Overworld = (function () {
       callbacks.onInteract = opts.onInteract || null;
       callbacks.onNearbyChange = opts.onNearbyChange || null;
       me.height = opts.myHeight || "short";
-      me.color = opts.myColor || "#d9a441";
+      me.color = opts.myColor || "#f9c22b";
       myName = opts.myName || "";
 
       await loadMap(opts.mapUrl);

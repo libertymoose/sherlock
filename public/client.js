@@ -185,9 +185,9 @@ socket.on("room:update", (data) => {
     roster.appendChild(chip);
 
     if (spritesReady) {
-      drawAvatar(mini, p.height || "short", p.color || "#d9a441");
+      drawAvatar(mini, p.height || "short", p.color || "#f9c22b");
     } else {
-      loadSprites().then(() => drawAvatar(mini, p.height || "short", p.color || "#d9a441"));
+      loadSprites().then(() => drawAvatar(mini, p.height || "short", p.color || "#f9c22b"));
     }
   });
 
