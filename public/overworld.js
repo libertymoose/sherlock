@@ -18,8 +18,8 @@ window.Overworld = (function () {
   let socket = null;
   let mapData = null;
   let images = {};
-  let charSprites = { short: null, tall: null, orc: null }; // walk-strip images
-  const CELL_SIZE = { short: 24, tall: 32, orc: 48 };
+  let charSprites = { short: null, tall: null }; // walk-strip images
+  const CELL_SIZE = { short: 24, tall: 32, npcsprite: 16 };
   let running = false;
   let rafId = null;
   let lastTime = 0;
@@ -58,11 +58,11 @@ window.Overworld = (function () {
 
     const srcs = new Set(Object.values(TILE_SRC));
     mapData.decor.forEach((d) => srcs.add(d.src));
+    mapData.objects.forEach((o) => { if (o.sprite) srcs.add(o.sprite); });
     await Promise.all([...srcs].map(loadImage));
     await Promise.all([
       loadImage("/assets/characters/walk-short.png").then((img) => (charSprites.short = img)),
       loadImage("/assets/characters/walk-tall.png").then((img) => (charSprites.tall = img)),
-      loadImage("/assets/characters/walk-orc.png").then((img) => (charSprites.orc = img)),
     ]);
 
     me.x = mapData.spawn.x * TILE + TILE / 2;
@@ -247,6 +247,16 @@ window.Overworld = (function () {
     ctx.restore();
   }
 
+  function drawStaticSprite(src, x, y, cell) {
+    const img = getImg(src);
+    if (!img) return;
+    const drawSize = cell * RENDER_SCALE;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, x - drawSize / 2, y, drawSize, drawSize);
+    ctx.restore();
+  }
+
   function render() {
     const w = canvas.width;
     const h = canvas.height;
@@ -285,7 +295,17 @@ window.Overworld = (function () {
     });
 
     mapData.objects.forEach((o) => {
-      if (o.type === "npc" && o.height && o.color) {
+      if (o.type === "npc" && o.sprite) {
+        const cell = 16;
+        const pos = spriteScreenPos("npcsprite", o.x * TILE + TILE / 2, o.y * TILE + TILE / 2, camX, camY);
+        drawList.push({
+          y: o.y * TILE + TILE,
+          draw: () => {
+            drawStaticSprite(o.sprite, pos.x, pos.y, cell);
+            drawNameLabel(o.name, pos.x, pos.y);
+          },
+        });
+      } else if (o.type === "npc" && o.height && o.color) {
         const pos = spriteScreenPos(o.height, o.x * TILE + TILE / 2, o.y * TILE + TILE / 2, camX, camY);
         drawList.push({
           y: o.y * TILE + TILE,

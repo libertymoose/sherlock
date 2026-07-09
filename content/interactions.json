@@ -211,13 +211,13 @@
 
   "suspectBoard": {
     "pool": [
-      { "key": "ashby", "name": "Steward Wren Ashby", "height": "short", "color": "#71491e" },
-      { "key": "voss", "name": "Commodore Brannigan Voss", "height": "tall", "color": "#3f474e" },
-      { "key": "kestrel", "name": "Merchant Odalys Kestrel", "height": "short", "color": "#ef7d0d" },
-      { "key": "marrow", "name": "Architect Tobias Marrow", "height": "tall", "color": "#d6e0f0" },
-      { "key": "ashgate", "name": "Lady Isobel Ashgate", "height": "tall", "color": "#6b2fbb" },
-      { "key": "reyes", "name": "Sergeant Reyes", "height": "short", "color": "#132ed1" },
-      { "key": "maid", "name": "The Lady's Maid", "height": "short", "color": "#ed54ba" }
+      { "key": "ashby", "name": "Steward Wren Ashby", "sprite": "/assets/npcs/npc_10.png" },
+      { "key": "voss", "name": "Commodore Brannigan Voss", "sprite": "/assets/npcs/npc_2.png" },
+      { "key": "kestrel", "name": "Merchant Odalys Kestrel", "sprite": "/assets/npcs/npc_5.png" },
+      { "key": "marrow", "name": "Architect Tobias Marrow", "sprite": "/assets/npcs/npc_6.png" },
+      { "key": "ashgate", "name": "Lady Isobel Ashgate", "sprite": "/assets/npcs/npc_4.png" },
+      { "key": "reyes", "name": "Sergeant Reyes", "sprite": "/assets/npcs/npc_3.png" },
+      { "key": "maid", "name": "The Lady's Maid", "sprite": "/assets/npcs/npc_1.png" }
     ],
     "correctSet": ["ashby", "voss", "kestrel", "marrow", "ashgate"]
   }

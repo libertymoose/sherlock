@@ -243,7 +243,7 @@ io.on("connection", (socket) => {
       id: socket.id,
       name: cleanName,
       color: (data && data.color) || "#d9a441",
-      height: ["tall", "orc"].includes(data && data.height) ? data.height : "short",
+      height: (data && data.height) === "tall" ? "tall" : "short",
       connected: true,
     };
     room.joinOrder.push(socket.id);
@@ -270,7 +270,7 @@ io.on("connection", (socket) => {
       id: socket.id,
       name: cleanName,
       color: color || "#5b8def",
-      height: ["tall", "orc"].includes(height) ? height : "short",
+      height: height === "tall" ? "tall" : "short",
       connected: true,
     };
     room.joinOrder.push(socket.id);

@@ -24,19 +24,17 @@ let state = {
   myColor: PALETTE[0].hex,
 };
 
-const sprites = { short: new Image(), tall: new Image(), orc: new Image() };
+const sprites = { short: new Image(), tall: new Image() };
 let spritesReady = false;
 
 function loadSprites() {
   return new Promise((resolve) => {
     let loaded = 0;
-    const done = () => { loaded++; if (loaded === 3) { spritesReady = true; resolve(); } };
+    const done = () => { loaded++; if (loaded === 2) { spritesReady = true; resolve(); } };
     sprites.short.onload = done;
     sprites.tall.onload = done;
-    sprites.orc.onload = done;
     sprites.short.src = "/images/avatar-short.png";
     sprites.tall.src = "/images/avatar-tall.png";
-    sprites.orc.src = "/images/avatar-orc.png";
   });
 }
 
@@ -508,7 +506,10 @@ async function handleObjectInteract(obj) {
 
 function setVnPortrait(obj) {
   const canvas = document.getElementById("vn-portrait");
-  if (obj && obj.height && obj.color) {
+  if (obj && obj.sprite) {
+    canvas.classList.remove("hidden");
+    drawFixedPortrait(canvas, obj.sprite);
+  } else if (obj && obj.height && obj.color) {
     canvas.classList.remove("hidden");
     if (spritesReady) {
       drawAvatar(canvas, obj.height, obj.color);
@@ -745,6 +746,22 @@ function renderBoard(zoneKeys) {
   });
 }
 
+function drawFixedPortrait(canvas, src) {
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const img = new Image();
+  img.onload = () => {
+    const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight) * 3.2;
+    const w = img.naturalWidth * scale;
+    const h = img.naturalHeight * scale;
+    const x = (canvas.width - w) / 2;
+    const y = canvas.height - h;
+    ctx.drawImage(img, x, y, w, h);
+  };
+  img.src = src;
+}
+
 function buildPortraitCard(person) {
   const card = document.createElement("div");
   card.className = "portrait-card";
@@ -765,7 +782,9 @@ function buildPortraitCard(person) {
     draggedSuspectKey = person.key;
   });
 
-  if (spritesReady) {
+  if (person.sprite) {
+    drawFixedPortrait(canvas, person.sprite);
+  } else if (spritesReady) {
     drawAvatar(canvas, person.height, person.color);
   } else {
     loadSprites().then(() => drawAvatar(canvas, person.height, person.color));

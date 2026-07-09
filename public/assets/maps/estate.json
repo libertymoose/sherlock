@@ -8701,8 +8701,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_voss"
    },
-   "height": "tall",
-   "color": "#3f474e"
+   "sprite": "/assets/npcs/npc_2.png"
   },
   {
    "id": "npc_steward",
@@ -8714,8 +8713,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_steward"
    },
-   "height": "short",
-   "color": "#71491e"
+   "sprite": "/assets/npcs/npc_10.png"
   },
   {
    "id": "npc_marrow",
@@ -8727,8 +8725,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_marrow"
    },
-   "height": "tall",
-   "color": "#d6e0f0"
+   "sprite": "/assets/npcs/npc_6.png"
   },
   {
    "id": "npc_kestrel",
@@ -8740,8 +8737,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_kestrel"
    },
-   "height": "short",
-   "color": "#ef7d0d"
+   "sprite": "/assets/npcs/npc_5.png"
   },
   {
    "id": "npc_ashgate",
@@ -8753,8 +8749,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_ashgate"
    },
-   "height": "tall",
-   "color": "#6b2fbb"
+   "sprite": "/assets/npcs/npc_4.png"
   },
   {
    "id": "npc_reyes",
@@ -8766,8 +8761,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_reyes"
    },
-   "height": "short",
-   "color": "#132ed1"
+   "sprite": "/assets/npcs/npc_3.png"
   },
   {
    "id": "npc_maid",
@@ -8779,8 +8773,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_maid"
    },
-   "height": "short",
-   "color": "#ed54ba"
+   "sprite": "/assets/npcs/npc_1.png"
   },
   {
    "id": "npc_corwin",
@@ -8792,8 +8785,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_corwin"
    },
-   "height": "tall",
-   "color": "#38b0a6"
+   "sprite": "/assets/npcs/npc_9.png"
   },
   {
    "id": "npc_flynn",
@@ -8805,8 +8797,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_flynn"
    },
-   "height": "short",
-   "color": "#50ef39"
+   "sprite": "/assets/npcs/npc_12.png"
   },
   {
    "id": "npc_guest_a1",
@@ -8818,8 +8809,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_guest_a1"
    },
-   "height": "short",
-   "color": "#c51111"
+   "sprite": "/assets/npcs/npc_7.png"
   },
   {
    "id": "npc_guest_a2",
@@ -8831,8 +8821,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_guest_a2"
    },
-   "height": "tall",
-   "color": "#117f2d"
+   "sprite": "/assets/npcs/npc_8.png"
   },
   {
    "id": "npc_guest_b1",
@@ -8844,8 +8833,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_guest_b1"
    },
-   "height": "orc",
-   "color": "#e5df3a"
+   "sprite": "/assets/npcs/npc_11.png"
   },
   {
    "id": "npc_guest_b2",
@@ -8857,8 +8845,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_guest_b2"
    },
-   "height": "tall",
-   "color": "#c51111"
+   "sprite": "/assets/npcs/npc_13.png"
   },
   {
    "id": "npc_guest_c1",
@@ -8870,8 +8857,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_guest_c1"
    },
-   "height": "short",
-   "color": "#117f2d"
+   "sprite": "/assets/npcs/npc_14.png"
   },
   {
    "id": "npc_guest_c2",
@@ -8883,8 +8869,7 @@
     "kind": "dialogue",
     "dialogueId": "npc_guest_c2"
    },
-   "height": "orc",
-   "color": "#38b0a6"
+   "sprite": "/assets/npcs/npc_15.png"
   },
   {
    "id": "study_desk",
