@@ -5,14 +5,14 @@
   --ink-surface-2: #625565;
   --parchment: #ffffff;
   --parchment-dim: #9babb2;
-  --candle: #f9c22b;
-  --candle-bright: #fbb954;
+  --candle: #e6904e;
+  --candle-bright: #cd683d;
   --blood: #ea4f36;
   --success: #1ebc73;
   --border-line: #484a77;
-  --focus-ring: #fbb954;
+  --focus-ring: #cd683d;
   --btn-text: #1a1408;
-  --candle-rgb: 249,194,43;
+  --candle-rgb: 230,144,78;
   --parchment-rgb: 255,255,255;
   --radius: 3px;
 }
@@ -42,7 +42,7 @@ html, body {
   padding: 0;
   background: var(--ink);
   color: var(--parchment);
-  font-family: 'Crimson Text', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   min-height: 100vh;
 }
 
@@ -92,7 +92,7 @@ html, body {
 }
 
 .game-title {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-weight: 600;
   font-size: clamp(32px, 6vw, 52px);
   text-align: center;
@@ -113,7 +113,7 @@ html, body {
   font-size: 12px;
   color: var(--candle);
   text-align: center;
-  font-family: 'Crimson Text', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   margin: 0 0 8px;
 }
 
@@ -136,7 +136,7 @@ html, body {
   border: 1px solid rgba(var(--parchment-rgb),0.25);
   color: var(--parchment-dim);
   border-radius: var(--radius);
-  font-family: 'Crimson Text', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-size: 14px;
   cursor: pointer;
 }
@@ -234,7 +234,7 @@ html, body {
 }
 
 .card h2 {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-size: 24px;
   margin: 0 0 8px;
   color: var(--candle-bright);
@@ -262,7 +262,7 @@ input[type="text"] {
   color: var(--parchment);
   padding: 10px 12px;
   border-radius: var(--radius);
-  font-family: 'Crimson Text', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-size: 16px;
 }
 
@@ -279,7 +279,7 @@ input[type="text"]:focus {
   padding: 12px 20px;
   border-radius: var(--radius);
   border: none;
-  font-family: 'Crimson Text', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -313,7 +313,7 @@ input[type="text"]:focus {
 }
 
 .room-code {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-size: 56px;
   letter-spacing: 0.25em;
   text-align: center;
@@ -362,7 +362,7 @@ input[type="text"]:focus {
 }
 
 .act-title {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-size: 30px;
   text-align: center;
   margin: 0 0 20px;
@@ -419,7 +419,7 @@ input[type="text"]:focus {
 }
 
 .final-word {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-size: 44px;
   letter-spacing: 0.15em;
   text-align: center;
@@ -545,7 +545,7 @@ input[type="text"]:focus {
 }
 
 .explore-title {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-size: 22px;
   margin: 2px 0 0;
   color: var(--parchment);
@@ -607,7 +607,7 @@ input[type="text"]:focus {
 }
 
 .vn-name {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-size: 20px;
   color: var(--candle-bright);
   margin: 0 0 8px;
@@ -660,7 +660,7 @@ input[type="text"]:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Crimson Text', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-weight: 600;
   font-size: 14px;
   color: var(--parchment-dim);
@@ -741,7 +741,7 @@ input[type="text"]:focus {
   border: none;
   background: #e8dcc0;
   color: #3a2f1e;
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-size: 16px;
   font-weight: 600;
   cursor: grab;
@@ -786,7 +786,7 @@ input[type="text"]:focus {
 }
 
 .modal-title {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   font-size: 24px;
   margin: 0 0 14px;
   color: var(--candle-bright);

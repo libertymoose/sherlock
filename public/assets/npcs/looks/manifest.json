@@ -82,5 +82,19 @@
       "cols": 6,
       "rows": 4
     }
+  },
+  "ashgate_fancy": {
+    "idle": {
+      "src": "/assets/npcs/looks/ashgate_fancy.png",
+      "cell": 32,
+      "cols": 8,
+      "rows": 1
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/ashgate_fancy.png",
+      "cell": 32,
+      "cols": 8,
+      "rows": 1
+    }
   }
 }

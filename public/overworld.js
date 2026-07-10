@@ -66,11 +66,30 @@ window.Overworld = (function () {
   let PRESET_MANIFEST = {};
   let NPC_MANIFEST = {};
   let WILDLIFE_MANIFEST = {};
-  const DIR_ROW = { down: 0, left: 1, right: 2, up: 3 };
-  const SPECIES_SCALE = { human: 1, orc: 1.15, gnoll: 1.05, goblin: 0.85, lizardman: 1 };
-  const WORLD_CHAR_SIZE = 22; // target on-map footprint, independent of each sheet's source cell size
+  // Direction-row order isn't consistent across vendor sub-packs: the human
+  // (swordsman) sheets and NPC sheets go down/left/right/up, but the creature
+  // packs (orc/gnoll/goblin/lizardman) go down/up/left/right. Confirmed by
+  // eye against each sheet, not assumed.
+  const SPECIES_DIR_ROW = {
+    human:     { down: 0, left: 1, right: 2, up: 3 },
+    orc:       { down: 0, up: 1, left: 2, right: 3 },
+    gnoll:     { down: 0, up: 1, left: 2, right: 3 },
+    goblin:    { down: 0, up: 1, left: 2, right: 3 },
+    lizardman: { down: 0, up: 1, left: 2, right: 3 },
+  };
+  const NPC_DIR_ROW = { down: 0, left: 1, right: 2, up: 3 };
+
+  // Each species' source art fills a different fraction of its 64px cell
+  // (the human sheet has a lot of headroom for weapon swings, the creature
+  // sheets are much more tightly cropped), so a single flat scale made
+  // players look tiny next to NPCs. These sizes are calibrated from each
+  // sheet's actual non-transparent content height so on-screen character
+  // height comes out consistent with the NPC sprites.
+  const PLAYER_DRAW_SIZE = { human: 46, orc: 38, gnoll: 32, goblin: 44, lizardman: 34 };
+  const WORLD_CHAR_SIZE = 22; // NPC on-map footprint
   const IDLE_FPS = 6;
   const WALK_FPS = 9;
+  const AMBLE_FPS = 4; // slower leg-cycle for the gentle NPC wander, not a full walk pace
 
   let running = false;
   let rafId = null;
@@ -175,7 +194,7 @@ window.Overworld = (function () {
         dir: "down",
         frame: 0,
         animTimer: 0,
-        pauseTimer: 1 + Math.random() * 2,
+        pauseTimer: 3 + Math.random() * 5,
         offsetX: 0,
         offsetY: 0,
         targetOffsetX: 0,
@@ -205,7 +224,7 @@ window.Overworld = (function () {
   function handleKeyDown(e) {
     const k = e.key.toLowerCase();
     keys[k] = true;
-    if (k === "e" || k === "f" || k === " ") {
+    if (k === " ") {
       e.preventDefault();
       triggerInteract();
     }
@@ -225,8 +244,15 @@ window.Overworld = (function () {
     let closest = null;
     let closestDist = Infinity;
     for (const obj of mapData.objects) {
-      const ox = obj.x * TILE + TILE / 2;
-      const oy = obj.y * TILE + TILE / 2;
+      let ox = obj.x * TILE + TILE / 2;
+      let oy = obj.y * TILE + TILE / 2;
+      if (obj.type === "npc") {
+        const st = npcStates[obj.id];
+        if (st) {
+          ox += st.offsetX;
+          oy += st.offsetY;
+        }
+      }
       const d = Math.hypot(ox - me.x, oy - me.y);
       if (d < INTERACT_RADIUS && d < closestDist) {
         closest = obj;
@@ -287,7 +313,7 @@ window.Overworld = (function () {
     }
   }
 
-  const NPC_WANDER_SPEED = 26; // px/sec in world space, deliberately slower than the player
+  const NPC_WANDER_SPEED = 7; // px/sec, a slow amble, not a walk
 
   function updateNpcs(dt) {
     if (!mapData) return;
@@ -297,7 +323,7 @@ window.Overworld = (function () {
       if (!st) return;
 
       st.animTimer += dt;
-      const fps = st.phase === "walking" ? WALK_FPS : IDLE_FPS;
+      const fps = st.phase === "walking" ? AMBLE_FPS : IDLE_FPS;
       if (st.animTimer > 1 / fps) {
         st.animTimer = 0;
         st.frame++;
@@ -318,7 +344,7 @@ window.Overworld = (function () {
             st.phase = "walking";
             st.frame = 0;
           } else {
-            st.pauseTimer = 1 + Math.random() * 2; // no valid spot nearby, try again shortly
+            st.pauseTimer = 4 + Math.random() * 4; // no valid spot nearby, wait a while before trying again
           }
         }
       } else if (st.phase === "walking") {
@@ -331,7 +357,7 @@ window.Overworld = (function () {
           st.offsetY = st.targetOffsetY;
           st.phase = "idle";
           st.frame = 0;
-          st.pauseTimer = 1.5 + Math.random() * 3;
+          st.pauseTimer = 5 + Math.random() * 6;
         } else {
           st.offsetX += (dx / dist) * step;
           st.offsetY += (dy / dist) * step;
@@ -342,9 +368,9 @@ window.Overworld = (function () {
 
   // Tries a few random points within the NPC's wander radius (in tiles) and
   // returns the first one that isn't inside a collision tile. Anchor point is
-  // the object's own map position, offsets are added visually at draw time,
-  // the interaction radius always keys off the real anchor so puzzles/dialogue
-  // triggers are unaffected by wander drift.
+  // the object's own map position, offsets are added visually at draw time;
+  // findNearbyObject() adds the current offset back in so interaction always
+  // tracks wherever the NPC actually is right now.
   function pickWanderTarget(o, st) {
     const anchorX = o.x * TILE + TILE / 2;
     const anchorY = o.y * TILE + TILE / 2;
@@ -403,9 +429,10 @@ window.Overworld = (function () {
     const state = moving ? "walk" : "idle";
     const frameSet = entry[state];
     const img = getImg(frameSet.src);
-    const scale = (SPECIES_SCALE[species] || 1) * WORLD_CHAR_SIZE;
-    const dirRow = DIR_ROW[dir] ?? 0;
-    return drawFrame(img, frameSet, dirRow, frame, worldX, worldY, camX, camY, scale);
+    const drawSize = PLAYER_DRAW_SIZE[species] || PLAYER_DRAW_SIZE.human;
+    const dirRowMap = SPECIES_DIR_ROW[species] || SPECIES_DIR_ROW.human;
+    const dirRow = dirRowMap[dir] ?? 0;
+    return drawFrame(img, frameSet, dirRow, frame, worldX, worldY, camX, camY, drawSize);
   }
 
   function drawNpc(o, camX, camY) {
@@ -417,7 +444,7 @@ window.Overworld = (function () {
     const img = getImg(frameSet.src);
     const worldX = o.x * TILE + TILE / 2 + (st ? st.offsetX : 0);
     const worldY = o.y * TILE + TILE / 2 + (st ? st.offsetY : 0);
-    const dirRow = DIR_ROW[(st && st.dir) || "down"] ?? 0;
+    const dirRow = NPC_DIR_ROW[(st && st.dir) || "down"] ?? 0;
     const frame = st ? st.frame : 0;
     return drawFrame(img, frameSet, dirRow, frame, worldX, worldY, camX, camY, WORLD_CHAR_SIZE);
   }
@@ -432,7 +459,7 @@ window.Overworld = (function () {
   function drawNameLabel(name, centerX, spriteTopY) {
     if (!name) return;
     ctx.save();
-    ctx.font = "10px 'Press Start 2P', monospace";
+    ctx.font = "bold 10px 'Inter', -apple-system, sans-serif";
     ctx.textAlign = "center";
     ctx.lineWidth = 3;
     ctx.strokeStyle = "#2e222f";
@@ -541,7 +568,7 @@ window.Overworld = (function () {
     // Interaction prompt
     if (nearbyObject) {
       ctx.save();
-      ctx.font = "bold 14px 'Crimson Text', serif";
+      ctx.font = "bold 14px 'Inter', 'Segoe UI', sans-serif";
       ctx.textAlign = "center";
       const px = me.x * RENDER_SCALE - camX;
       const py = me.y * RENDER_SCALE - camY - 70;
@@ -549,9 +576,9 @@ window.Overworld = (function () {
       const textW = ctx.measureText(label).width;
       ctx.fillStyle = "rgba(46,34,47,0.9)";
       ctx.fillRect(px - textW / 2 - 10, py - 18, textW + 20, 26);
-      ctx.strokeStyle = "#f9c22b";
+      ctx.strokeStyle = "#cd683d";
       ctx.strokeRect(px - textW / 2 - 10, py - 18, textW + 20, 26);
-      ctx.fillStyle = "#fbb954";
+      ctx.fillStyle = "#e6904e";
       ctx.fillText(label, px, py);
       ctx.restore();
     }
@@ -568,8 +595,11 @@ window.Overworld = (function () {
       const img = frameSet && getImg(frameSet.src);
       if (!img) return;
       const cell = frameSet.cell;
-      const col = wildlifeFrame % frameSet.cols;
-      ctx.drawImage(img, col * cell, 0, cell, cell, dx, dy, dw, dh);
+      // These sheets turn out to be a full direction-turn sequence rather than
+      // an in-place idle loop (frame 0 faces the camera, frame 1 turns, etc),
+      // so animating through them made the animal look like it was spinning.
+      // Using the single front-facing frame until there's a real idle loop to use.
+      ctx.drawImage(img, 0, 0, cell, cell, dx, dy, dw, dh);
       return;
     }
 
@@ -585,7 +615,7 @@ window.Overworld = (function () {
     ctx.save();
     ctx.beginPath();
     ctx.arc(dx, dy - 6, 5, 0, Math.PI * 2);
-    ctx.fillStyle = solved ? "#1ebc73" : o.type === "npc" ? "#f9c22b" : "#905ea9";
+    ctx.fillStyle = solved ? "#1ebc73" : o.type === "npc" ? "#cd683d" : "#905ea9";
     ctx.fill();
     ctx.strokeStyle = "#2e222f";
     ctx.lineWidth = 1.5;
