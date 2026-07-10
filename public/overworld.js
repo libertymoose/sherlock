@@ -8,52 +8,8 @@ window.Overworld = (function () {
   const MOVE_SPEED = 78; // px/sec in world space (bumped up for the larger map)
   const INTERACT_RADIUS = 22; // px
 
-  const TILE_SRC = {
-    grass: "/assets/tiles/Grass_Middle.png",
-    path: "/assets/tiles/Path_Middle.png",
-    water: "/assets/tiles/Water_Middle.png",
-    water_c: "/assets/tiles/auto/water_c.png",
-    water_n: "/assets/tiles/auto/water_n.png",
-    water_s: "/assets/tiles/auto/water_s.png",
-    water_e: "/assets/tiles/auto/water_e.png",
-    water_w: "/assets/tiles/auto/water_w.png",
-    water_ne: "/assets/tiles/auto/water_ne.png",
-    water_nw: "/assets/tiles/auto/water_nw.png",
-    water_se: "/assets/tiles/auto/water_se.png",
-    water_sw: "/assets/tiles/auto/water_sw.png",
-    water_inner_nw: "/assets/tiles/auto/water_inner_nw.png",
-    water_inner_ne: "/assets/tiles/auto/water_inner_ne.png",
-    water_inner_sw: "/assets/tiles/auto/water_inner_sw.png",
-    water_inner_se: "/assets/tiles/auto/water_inner_se.png",
-    path_c: "/assets/tiles/auto/path_c.png",
-    path_n: "/assets/tiles/auto/path_n.png",
-    path_s: "/assets/tiles/auto/path_s.png",
-    path_e: "/assets/tiles/auto/path_e.png",
-    path_w: "/assets/tiles/auto/path_w.png",
-    path_ne: "/assets/tiles/auto/path_ne.png",
-    path_nw: "/assets/tiles/auto/path_nw.png",
-    path_se: "/assets/tiles/auto/path_se.png",
-    path_sw: "/assets/tiles/auto/path_sw.png",
-    path_inner_nw: "/assets/tiles/auto/path_inner_nw.png",
-    path_inner_ne: "/assets/tiles/auto/path_inner_ne.png",
-    path_inner_sw: "/assets/tiles/auto/path_inner_sw.png",
-    path_inner_se: "/assets/tiles/auto/path_inner_se.png",
-    brick: "/assets/tiles/Brick_Middle.png",
-    brick_c: "/assets/tiles/auto/brick_c.png",
-    brick_n: "/assets/tiles/auto/brick_n.png",
-    brick_s: "/assets/tiles/auto/brick_s.png",
-    brick_e: "/assets/tiles/auto/brick_e.png",
-    brick_w: "/assets/tiles/auto/brick_w.png",
-    brick_ne: "/assets/tiles/auto/brick_ne.png",
-    brick_nw: "/assets/tiles/auto/brick_nw.png",
-    brick_se: "/assets/tiles/auto/brick_se.png",
-    brick_sw: "/assets/tiles/auto/brick_sw.png",
-    brick_inner_nw: "/assets/tiles/auto/brick_inner_nw.png",
-    brick_inner_ne: "/assets/tiles/auto/brick_inner_ne.png",
-    brick_inner_sw: "/assets/tiles/auto/brick_inner_sw.png",
-    brick_inner_se: "/assets/tiles/auto/brick_inner_se.png",
-    bridge: "/assets/tiles/Bridge_Tile.png",
-  };
+  // Ground rendering now comes from mapData.tilesets + mapData.layers (a real
+  // Tiled export), resolved once at load time in loadMap(). See resolveLayers().
 
   let canvas, ctx;
   let socket = null;
@@ -142,16 +98,20 @@ window.Overworld = (function () {
     return srcs;
   }
 
+  let resolvedLayers = []; // precomputed at load time: [{name, cells:[{x,y,img,sx,sy}]}]
+
   async function loadMap(url) {
     const res = await fetch(url);
     mapData = await res.json();
 
-    const srcs = new Set(Object.values(TILE_SRC));
-    mapData.decor.forEach((d) => srcs.add(d.src));
+    // Load every tileset image this map references, plus static props.
+    const srcs = new Set(mapData.tilesets.map((t) => t.image));
     mapData.objects.forEach((o) => { if (o.sprite) srcs.add(o.sprite); });
     if (mapData.objects.some((o) => o.type === "scrap")) srcs.add("/assets/props/paper_scrap.png");
     if (mapData.objects.some((o) => o.type === "table")) srcs.add("/assets/props/evidence_table.png");
     await Promise.all([...srcs].map(loadImage));
+
+    resolveLayers();
 
     // Preset/NPC/wildlife manifests + every sheet they reference. Small roster
     // (a handful of presets in play, a few NPC looks, a handful of critters),
@@ -181,6 +141,48 @@ window.Overworld = (function () {
     initNpcStates();
 
     return mapData;
+  }
+
+  // Ground tiles come from a real Tiled export: a list of tilesets (each
+  // covering a gid range) and a list of layers (each either a dense
+  // width*height gid array, or a sparse list of [x,y,gid] triples for mostly-
+  // empty layers). Resolving which tileset+sub-rect a gid belongs to is a
+  // linear scan, cheap enough since this only runs once here at load time,
+  // not per frame; render() just walks the precomputed result.
+  function resolveGid(gid) {
+    for (const ts of mapData.tilesets) {
+      if (gid >= ts.firstgid && gid <= ts.lastgid) {
+        const local = gid - ts.firstgid;
+        const col = local % ts.columns;
+        const row = Math.floor(local / ts.columns);
+        return { src: ts.image, sx: col * ts.tilewidth, sy: row * ts.tileheight };
+      }
+    }
+    return null;
+  }
+
+  function resolveLayers() {
+    resolvedLayers = [];
+    mapData.layers.forEach((layer) => {
+      const cells = [];
+      if (layer.dense) {
+        const w = mapData.width;
+        for (let i = 0; i < layer.data.length; i++) {
+          const gid = layer.data[i];
+          if (!gid) continue;
+          const r = resolveGid(gid);
+          if (!r) continue;
+          cells.push({ x: i % w, y: Math.floor(i / w), img: getImg(r.src), sx: r.sx, sy: r.sy });
+        }
+      } else {
+        layer.cells.forEach(([x, y, gid]) => {
+          const r = resolveGid(gid);
+          if (!r) return;
+          cells.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy });
+        });
+      }
+      resolvedLayers.push({ name: layer.name, cells });
+    });
   }
 
   function initNpcStates() {
@@ -305,12 +307,6 @@ window.Overworld = (function () {
     findNearbyObject();
     maybeSendPosition();
     updateNpcs(dt);
-
-    wildlifeTimer += dt;
-    if (wildlifeTimer > 1 / IDLE_FPS) {
-      wildlifeTimer = 0;
-      wildlifeFrame++;
-    }
   }
 
   const NPC_WANDER_SPEED = 7; // px/sec, a slow amble, not a walk
@@ -497,25 +493,18 @@ window.Overworld = (function () {
     const startRow = Math.max(0, Math.floor(camY / scaledTile));
     const endRow = Math.min(mapData.height - 1, Math.ceil((camY + h) / scaledTile));
 
-    // Ground
-    for (let ty = startRow; ty <= endRow; ty++) {
-      for (let tx = startCol; tx <= endCol; tx++) {
-        const key = mapData.ground[ty][tx];
-        const img = getImg(TILE_SRC[key]);
-        const dx = Math.round(tx * scaledTile - camX);
-        const dy = Math.round(ty * scaledTile - camY);
-        if (img) {
-          ctx.drawImage(img, 0, 0, TILE, TILE, dx, dy, scaledTile, scaledTile);
-        }
+    // Ground: draw every resolved layer bottom-to-top, each one viewport-culled.
+    for (const layer of resolvedLayers) {
+      for (const cell of layer.cells) {
+        if (cell.x < startCol || cell.x > endCol || cell.y < startRow || cell.y > endRow) continue;
+        const dx = Math.round(cell.x * scaledTile - camX);
+        const dy = Math.round(cell.y * scaledTile - camY);
+        ctx.drawImage(cell.img, cell.sx, cell.sy, TILE, TILE, dx, dy, scaledTile, scaledTile);
       }
     }
 
-    // Build a draw list: decor + characters, sorted by their world Y (poor-man's depth)
+    // Build a draw list: characters + interactive objects, sorted by world Y (poor-man's depth)
     const drawList = [];
-
-    mapData.decor.forEach((d) => {
-      drawList.push({ y: (d.y + d.h) * TILE, draw: () => drawDecor(d, camX, camY) });
-    });
 
     mapData.objects.forEach((o) => {
       if (o.type === "npc") {
@@ -584,29 +573,11 @@ window.Overworld = (function () {
     }
   }
 
-  function drawDecor(d, camX, camY) {
-    const dx = Math.round(d.x * TILE * RENDER_SCALE - camX);
-    const dy = Math.round(d.y * TILE * RENDER_SCALE - camY);
-    const dw = d.w * TILE * RENDER_SCALE;
-    const dh = d.h * TILE * RENDER_SCALE;
-
-    if (d.animated) {
-      const frameSet = WILDLIFE_MANIFEST[d.key];
-      const img = frameSet && getImg(frameSet.src);
-      if (!img) return;
-      const cell = frameSet.cell;
-      // These sheets turn out to be a full direction-turn sequence rather than
-      // an in-place idle loop (frame 0 faces the camera, frame 1 turns, etc),
-      // so animating through them made the animal look like it was spinning.
-      // Using the single front-facing frame until there's a real idle loop to use.
-      ctx.drawImage(img, 0, 0, cell, cell, dx, dy, dw, dh);
-      return;
-    }
-
-    const img = getImg(d.src);
-    if (!img) return;
-    ctx.drawImage(img, 0, 0, img.width || d.w * TILE, img.height || d.h * TILE, dx, dy, dw, dh);
-  }
+  // Standalone wildlife decor sprites are gone now that the real map paints
+  // animals directly into its tile layers (Animals/Animals2/animal buildings).
+  // They render as whatever static frame the tile itself is, not through this
+  // engine's animator, that's a reasonable follow-up if animated wildlife on
+  // the ground layer is wanted later.
 
   function drawObjectMarker(o, camX, camY) {
     const dx = Math.round(o.x * TILE * RENDER_SCALE - camX + (TILE * RENDER_SCALE) / 2);
