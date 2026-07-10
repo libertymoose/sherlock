@@ -58,7 +58,6 @@
       "\"Between us? I wouldn't trust anyone here who's smiling *too* hard tonight. Oh, and if you find any torn-up scraps of paper lying around? Bring 'em to a table. People don't usually tear up things that don't matter.\""
     ]
   },
-
   "npc_reyes": {
     "type": "dialogue",
     "title": "Sergeant Reyes",
@@ -75,7 +74,6 @@
       "\"I've been working the whole evening, sir. Haven't left the courtyard once.\" Her hands are shaking. She keeps glancing toward the dock path."
     ]
   },
-
   "npc_guest_a1": {
     "type": "dialogue",
     "title": "A Gala Guest",
@@ -118,18 +116,145 @@
       "\"Best trade gala Boralus has seen since the Siege, and now this. Poor Alaric. Poor seating chart, honestly. Who's going to redo it?\""
     ]
   },
-
   "study_desk": {
     "type": "puzzle",
     "render": "wordsearch",
     "title": "The Study Desk",
     "prompt": "Tucked in the top drawer: a page of practice handwriting, like someone rehearsing a forgery. Find every word from the list in the grid below. One word from the list won't be there at all. That missing word is your answer.",
-    "wordList": ["LEDGER", "COIN", "DEBT", "AUDIT", "BRIBE", "THEFT", "FORGERY"],
-    "grid": [["R","K","V","P","Q","M","K","T","F","O"],["R","B","K","R","L","V","Y","H","D","X"],["V","R","U","Z","W","I","T","E","E","P"],["G","I","H","I","R","J","H","F","B","J"],["Y","B","J","W","G","W","T","T","T","W"],["P","E","K","P","L","I","R","Z","X","N"],["I","J","L","E","D","G","E","R","I","D"],["S","V","R","U","M","M","L","O","Y","Z"],["E","J","A","B","J","W","C","C","L","O"],["U","I","X","P","G","G","R","I","R","W"]],
+    "wordList": [
+      "LEDGER",
+      "COIN",
+      "DEBT",
+      "AUDIT",
+      "BRIBE",
+      "THEFT",
+      "FORGERY"
+    ],
+    "grid": [
+      [
+        "R",
+        "K",
+        "V",
+        "P",
+        "Q",
+        "M",
+        "K",
+        "T",
+        "F",
+        "O"
+      ],
+      [
+        "R",
+        "B",
+        "K",
+        "R",
+        "L",
+        "V",
+        "Y",
+        "H",
+        "D",
+        "X"
+      ],
+      [
+        "V",
+        "R",
+        "U",
+        "Z",
+        "W",
+        "I",
+        "T",
+        "E",
+        "E",
+        "P"
+      ],
+      [
+        "G",
+        "I",
+        "H",
+        "I",
+        "R",
+        "J",
+        "H",
+        "F",
+        "B",
+        "J"
+      ],
+      [
+        "Y",
+        "B",
+        "J",
+        "W",
+        "G",
+        "W",
+        "T",
+        "T",
+        "T",
+        "W"
+      ],
+      [
+        "P",
+        "E",
+        "K",
+        "P",
+        "L",
+        "I",
+        "R",
+        "Z",
+        "X",
+        "N"
+      ],
+      [
+        "I",
+        "J",
+        "L",
+        "E",
+        "D",
+        "G",
+        "E",
+        "R",
+        "I",
+        "D"
+      ],
+      [
+        "S",
+        "V",
+        "R",
+        "U",
+        "M",
+        "M",
+        "L",
+        "O",
+        "Y",
+        "Z"
+      ],
+      [
+        "E",
+        "J",
+        "A",
+        "B",
+        "J",
+        "W",
+        "C",
+        "C",
+        "L",
+        "O"
+      ],
+      [
+        "U",
+        "I",
+        "X",
+        "P",
+        "G",
+        "G",
+        "R",
+        "I",
+        "R",
+        "W"
+      ]
+    ],
     "answer": "FORGERY",
     "hint": "Cross off every word you DO find in the grid, whichever one from the list is left over is your answer."
   },
-
   "tack_room": {
     "type": "puzzle",
     "render": "cipher",
@@ -138,18 +263,130 @@
     "answer": "gambler",
     "hint": "Shift each letter back three: J\u2192G, D\u2192A, and so on."
   },
-
   "market_stall": {
     "type": "puzzle",
     "render": "highlightgrid",
     "title": "Kestrel's Ledger",
     "prompt": "Odalys Kestrel's stall ledger is filled with trade jargon, but a path of highlighted letters cuts through the noise. Read them in order (they're numbered) to spell the word.",
-    "grid": [["L","C","N","D","E","A","H","O"],["D","D","S","O","A","S","A","M"],["U","N","D","E","O","S","L","A"],["D","L","E","R","C","I","P","K"],["K","D","D","L","U","T","D","N"],["D","P","A","L","P","G","M","C"],["A","I","L","O","L","R","H","D"],["L","K","G","O","H","L","E","L"]],
-    "highlightPath": [{"r":2,"c":0},{"r":2,"c":1},{"r":2,"c":2},{"r":3,"c":2},{"r":3,"c":3},{"r":3,"c":4},{"r":4,"c":4},{"r":4,"c":5}],
+    "grid": [
+      [
+        "L",
+        "C",
+        "N",
+        "D",
+        "E",
+        "A",
+        "H",
+        "O"
+      ],
+      [
+        "D",
+        "D",
+        "S",
+        "O",
+        "A",
+        "S",
+        "A",
+        "M"
+      ],
+      [
+        "U",
+        "N",
+        "D",
+        "E",
+        "O",
+        "S",
+        "L",
+        "A"
+      ],
+      [
+        "D",
+        "L",
+        "E",
+        "R",
+        "C",
+        "I",
+        "P",
+        "K"
+      ],
+      [
+        "K",
+        "D",
+        "D",
+        "L",
+        "U",
+        "T",
+        "D",
+        "N"
+      ],
+      [
+        "D",
+        "P",
+        "A",
+        "L",
+        "P",
+        "G",
+        "M",
+        "C"
+      ],
+      [
+        "A",
+        "I",
+        "L",
+        "O",
+        "L",
+        "R",
+        "H",
+        "D"
+      ],
+      [
+        "L",
+        "K",
+        "G",
+        "O",
+        "H",
+        "L",
+        "E",
+        "L"
+      ]
+    ],
+    "highlightPath": [
+      {
+        "r": 2,
+        "c": 0
+      },
+      {
+        "r": 2,
+        "c": 1
+      },
+      {
+        "r": 2,
+        "c": 2
+      },
+      {
+        "r": 3,
+        "c": 2
+      },
+      {
+        "r": 3,
+        "c": 3
+      },
+      {
+        "r": 3,
+        "c": 4
+      },
+      {
+        "r": 4,
+        "c": 4
+      },
+      {
+        "r": 4,
+        "c": 5
+      }
+    ],
     "answer": "UNDERCUT",
     "hint": "Follow the numbered letters in order. Don't read the grid in rows."
   },
-
   "scaffold": {
     "type": "puzzle",
     "render": "text",
@@ -158,7 +395,6 @@
     "answer": "20",
     "hint": "42 + 38 = 80. What's 100 minus that?"
   },
-
   "oak_count": {
     "type": "puzzle",
     "render": "text",
@@ -167,7 +403,6 @@
     "answer": "4",
     "hint": "Just the oaks in the ring around the fountain itself, not the ones elsewhere on the grounds."
   },
-
   "chest_lock": {
     "type": "puzzle",
     "render": "text",
@@ -177,7 +412,6 @@
     "hint": "27 minus 3.",
     "successText": "Inside: a forged inheritance document, bearing Lady Isobel Ashgate's seal, dated just three days before Duskmere's death."
   },
-
   "evidence_reyes": {
     "type": "puzzle",
     "render": "text",
@@ -194,31 +428,81 @@
     "answer": "continue",
     "hint": "This one's a stand-in for now."
   },
-
   "evidence_table": {
     "type": "table",
     "title": "The Evidence Table",
     "description": "Scraps of torn paper, scattered around the estate, waiting to be pieced together."
   },
   "tableScraps": {
-    "scrap_1": { "word": "THE", "order": 0 },
-    "scrap_2": { "word": "TUNNEL", "order": 1 },
-    "scrap_3": { "word": "OPENS", "order": 2 },
-    "scrap_4": { "word": "AT", "order": 3 },
-    "scrap_5": { "word": "LOW", "order": 4 },
-    "scrap_6": { "word": "TIDE", "order": 5 }
+    "scrap_1": {
+      "word": "THE",
+      "order": 0
+    },
+    "scrap_2": {
+      "word": "TUNNEL",
+      "order": 1
+    },
+    "scrap_3": {
+      "word": "OPENS",
+      "order": 2
+    },
+    "scrap_4": {
+      "word": "AT",
+      "order": 3
+    },
+    "scrap_5": {
+      "word": "LOW",
+      "order": 4
+    },
+    "scrap_6": {
+      "word": "TIDE",
+      "order": 5
+    }
   },
-
   "suspectBoard": {
     "pool": [
-      { "key": "ashby", "name": "Steward Wren Ashby", "sprite": "/assets/npcs/npc_10.png" },
-      { "key": "voss", "name": "Commodore Brannigan Voss", "sprite": "/assets/npcs/npc_2.png" },
-      { "key": "kestrel", "name": "Merchant Odalys Kestrel", "sprite": "/assets/npcs/npc_5.png" },
-      { "key": "marrow", "name": "Architect Tobias Marrow", "sprite": "/assets/npcs/npc_6.png" },
-      { "key": "ashgate", "name": "Lady Isobel Ashgate", "sprite": "/assets/npcs/npc_4.png" },
-      { "key": "reyes", "name": "Sergeant Reyes", "sprite": "/assets/npcs/npc_3.png" },
-      { "key": "maid", "name": "The Lady's Maid", "sprite": "/assets/npcs/npc_1.png" }
+      {
+        "key": "ashby",
+        "name": "Steward Wren Ashby",
+        "sprite": "/assets/npcs/portraits/citizen1.png"
+      },
+      {
+        "key": "voss",
+        "name": "Commodore Brannigan Voss",
+        "sprite": "/assets/npcs/portraits/fighter2.png"
+      },
+      {
+        "key": "kestrel",
+        "name": "Merchant Odalys Kestrel",
+        "sprite": "/assets/npcs/portraits/citizen3.png"
+      },
+      {
+        "key": "marrow",
+        "name": "Architect Tobias Marrow",
+        "sprite": "/assets/npcs/portraits/citizen2.png"
+      },
+      {
+        "key": "ashgate",
+        "name": "Lady Isobel Ashgate",
+        "sprite": "/assets/npcs/portraits/citizen4.png"
+      },
+      {
+        "key": "reyes",
+        "name": "Sergeant Reyes",
+        "sprite": "/assets/npcs/portraits/fighter2.png"
+      },
+      {
+        "key": "maid",
+        "name": "The Lady's Maid",
+        "sprite": "/assets/npcs/portraits/citizen5.png"
+      }
     ],
-    "correctSet": ["ashby", "voss", "kestrel", "marrow", "ashgate"]
+    "correctSet": [
+      "ashby",
+      "voss",
+      "kestrel",
+      "marrow",
+      "ashgate"
+    ]
   }
 }

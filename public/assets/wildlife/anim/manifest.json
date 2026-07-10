@@ -1,0 +1,37 @@
+{
+  "cow": {
+    "src": "/assets/wildlife/anim/cow.png",
+    "cell": 64,
+    "cols": 8
+  },
+  "chicken": {
+    "src": "/assets/wildlife/anim/chicken.png",
+    "cell": 64,
+    "cols": 4
+  },
+  "sheep": {
+    "src": "/assets/wildlife/anim/sheep.png",
+    "cell": 64,
+    "cols": 3
+  },
+  "cat": {
+    "src": "/assets/wildlife/anim/cat.png",
+    "cell": 64,
+    "cols": 4
+  },
+  "dog": {
+    "src": "/assets/wildlife/anim/dog.png",
+    "cell": 64,
+    "cols": 3
+  },
+  "bunny": {
+    "src": "/assets/wildlife/anim/bunny.png",
+    "cell": 64,
+    "cols": 3
+  },
+  "fox": {
+    "src": "/assets/wildlife/anim/fox.png",
+    "cell": 64,
+    "cols": 2
+  }
+}

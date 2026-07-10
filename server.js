@@ -24,15 +24,25 @@ const io = new Server(server);
 
 // In-memory room state. Fine for a friend-group game night; not meant to survive a server restart.
 const rooms = {};
-const VALID_RACES = ["human", "orc", "elf", "troll", "dwarf"];
+// Preset character system: species + a numbered look within that species.
+// No live recoloring, these are fixed pre-made sprites picked wholesale.
+const PRESET_COUNTS = { human: 9, orc: 3, gnoll: 3, goblin: 3, lizardman: 3 };
+
+function cleanSpecies(species) {
+  return Object.prototype.hasOwnProperty.call(PRESET_COUNTS, species) ? species : "human";
+}
+function cleanPreset(species, preset) {
+  const max = PRESET_COUNTS[cleanSpecies(species)];
+  const n = parseInt(preset, 10);
+  return Number.isInteger(n) && n >= 1 && n <= max ? n : 1;
+}
 
 function publicPlayerList(room) {
   return Object.values(room.players).map((p) => ({
     id: p.id,
     name: p.name,
-    race: p.race,
-    skinColor: p.skinColor,
-    outfitColor: p.outfitColor,
+    species: p.species,
+    preset: p.preset,
     connected: p.connected,
   }));
 }
@@ -244,9 +254,8 @@ io.on("connection", (socket) => {
     room.players[socket.id] = {
       id: socket.id,
       name: cleanName,
-      race: VALID_RACES.includes(data && data.race) ? data.race : "human",
-      skinColor: (data && data.skinColor) || "#ab947a",
-      outfitColor: (data && data.outfitColor) || "#484a77",
+      species: cleanSpecies(data && data.species),
+      preset: cleanPreset(data && data.species, data && data.preset),
       connected: true,
     };
     room.joinOrder.push(socket.id);
@@ -257,7 +266,7 @@ io.on("connection", (socket) => {
     broadcastRoomState(code);
   });
 
-  socket.on("player:joinRoom", ({ code, name, race, skinColor, outfitColor }, cb) => {
+  socket.on("player:joinRoom", ({ code, name, species, preset }, cb) => {
     code = String(code || "").toUpperCase().trim();
     const room = rooms[code];
     if (!room) {
@@ -272,9 +281,8 @@ io.on("connection", (socket) => {
     room.players[socket.id] = {
       id: socket.id,
       name: cleanName,
-      race: VALID_RACES.includes(race) ? race : "human",
-      skinColor: skinColor || "#ab947a",
-      outfitColor: outfitColor || "#484a77",
+      species: cleanSpecies(species),
+      preset: cleanPreset(species, preset),
       connected: true,
     };
     room.joinOrder.push(socket.id);

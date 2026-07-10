@@ -59,21 +59,36 @@ window.Overworld = (function () {
   let socket = null;
   let mapData = null;
   let images = {};
-  let charSprites = { human: null, orc: null, elf: null, troll: null, dwarf: null, clothes: null, clothesDwarf: null, tusks: null };
-  const CELL_SIZE = { human: 24, orc: 24, elf: 24, troll: 24, dwarf: 20, npcsprite: 16 };
+
+  // Preset character system: species + numbered look, no live recoloring.
+  // Manifests describe each sprite sheet's frame grid so one generic drawer
+  // can animate all of them (players, NPCs, wildlife) the same way.
+  let PRESET_MANIFEST = {};
+  let NPC_MANIFEST = {};
+  let WILDLIFE_MANIFEST = {};
+  const DIR_ROW = { down: 0, left: 1, right: 2, up: 3 };
+  const SPECIES_SCALE = { human: 1, orc: 1.15, gnoll: 1.05, goblin: 0.85, lizardman: 1 };
+  const WORLD_CHAR_SIZE = 22; // target on-map footprint, independent of each sheet's source cell size
+  const IDLE_FPS = 6;
+  const WALK_FPS = 9;
+
   let running = false;
   let rafId = null;
   let lastTime = 0;
 
-  let me = { x: 0, y: 0, dir: "down", moving: false, race: "human", skinColor: "#ab947a", outfitColor: "#484a77" };
+  let me = { x: 0, y: 0, dir: "down", moving: false, species: "human", preset: 1 };
   let myName = "";
-  let others = {}; // socketId -> {x,y,dir,moving,height,color,name}
+  let others = {}; // socketId -> {x,y,dir,moving,species,preset,name}
   let keys = {};
   let animTimer = 0;
   let animFrame = 0;
   let nearbyObject = null;
   let lastSentAt = 0;
   let lastSent = null;
+
+  let npcStates = {}; // objId -> wander/animation state, rebuilt on map load
+  let wildlifeTimer = 0;
+  let wildlifeFrame = 0;
 
   let callbacks = { onInteract: null, onNearbyChange: null };
 
@@ -93,6 +108,21 @@ window.Overworld = (function () {
     return images[src] && images[src].img;
   }
 
+  async function loadJSON(url) {
+    const res = await fetch(url);
+    return res.json();
+  }
+
+  function allFrameSrcs(manifest) {
+    const srcs = [];
+    Object.values(manifest).forEach((entry) => {
+      if (entry.idle) srcs.push(entry.idle.src);
+      if (entry.walk) srcs.push(entry.walk.src);
+      if (entry.src) srcs.push(entry.src); // wildlife (single state)
+    });
+    return srcs;
+  }
+
   async function loadMap(url) {
     const res = await fetch(url);
     mapData = await res.json();
@@ -103,20 +133,55 @@ window.Overworld = (function () {
     if (mapData.objects.some((o) => o.type === "scrap")) srcs.add("/assets/props/paper_scrap.png");
     if (mapData.objects.some((o) => o.type === "table")) srcs.add("/assets/props/evidence_table.png");
     await Promise.all([...srcs].map(loadImage));
-    await Promise.all([
-      loadImage("/assets/characters/walk-human.png").then((img) => (charSprites.human = img)),
-      loadImage("/assets/characters/walk-orc.png").then((img) => (charSprites.orc = img)),
-      loadImage("/assets/characters/walk-elf.png").then((img) => (charSprites.elf = img)),
-      loadImage("/assets/characters/walk-troll.png").then((img) => (charSprites.troll = img)),
-      loadImage("/assets/characters/walk-dwarf.png").then((img) => (charSprites.dwarf = img)),
-      loadImage("/assets/characters/walk-clothes.png").then((img) => (charSprites.clothes = img)),
-      loadImage("/assets/characters/walk-clothes-dwarf.png").then((img) => (charSprites.clothesDwarf = img)),
-      loadImage("/assets/characters/walk-tusks.png").then((img) => (charSprites.tusks = img)),
+
+    // Preset/NPC/wildlife manifests + every sheet they reference. Small roster
+    // (a handful of presets in play, a few NPC looks, a handful of critters),
+    // so we just load everything up front rather than tracking exactly what's used.
+    const [presetManifest, npcManifest, wildlifeManifest] = await Promise.all([
+      loadJSON("/assets/characters/presets/manifest.json"),
+      loadJSON("/assets/npcs/looks/manifest.json"),
+      loadJSON("/assets/wildlife/anim/manifest.json"),
     ]);
+    PRESET_MANIFEST = presetManifest;
+    NPC_MANIFEST = npcManifest;
+    WILDLIFE_MANIFEST = wildlifeManifest;
+
+    const charSrcs = [];
+    Object.values(PRESET_MANIFEST).forEach((species) => {
+      Object.values(species).forEach((preset) => {
+        charSrcs.push(preset.idle.src, preset.walk.src);
+      });
+    });
+    charSrcs.push(...allFrameSrcs(NPC_MANIFEST));
+    charSrcs.push(...allFrameSrcs(WILDLIFE_MANIFEST));
+    await Promise.all(charSrcs.map(loadImage));
 
     me.x = mapData.spawn.x * TILE + TILE / 2;
     me.y = mapData.spawn.y * TILE + TILE / 2;
+
+    initNpcStates();
+
     return mapData;
+  }
+
+  function initNpcStates() {
+    npcStates = {};
+    mapData.objects.forEach((o) => {
+      if (o.type !== "npc") return;
+      npcStates[o.id] = {
+        look: o.look || "citizen1",
+        wanderRadius: o.wanderRadius || 0,
+        phase: "idle",
+        dir: "down",
+        frame: 0,
+        animTimer: 0,
+        pauseTimer: 1 + Math.random() * 2,
+        offsetX: 0,
+        offsetY: 0,
+        targetOffsetX: 0,
+        targetOffsetY: 0,
+      };
+    });
   }
 
   function isBlockedTile(px, py) {
@@ -202,18 +267,95 @@ window.Overworld = (function () {
     }
     me.moving = moving;
 
-    if (moving) {
-      animTimer += dt;
-      if (animTimer > 0.12) {
-        animTimer = 0;
-        animFrame = (animFrame + 1) % 4;
-      }
-    } else {
-      animFrame = 0;
+    // Animate continuously in both states; drawFrame() takes frameIndex % cols
+    // per sheet, so this doesn't need to know each preset's exact frame count.
+    animTimer += dt;
+    const fps = moving ? WALK_FPS : IDLE_FPS;
+    if (animTimer > 1 / fps) {
+      animTimer = 0;
+      animFrame++;
     }
 
     findNearbyObject();
     maybeSendPosition();
+    updateNpcs(dt);
+
+    wildlifeTimer += dt;
+    if (wildlifeTimer > 1 / IDLE_FPS) {
+      wildlifeTimer = 0;
+      wildlifeFrame++;
+    }
+  }
+
+  const NPC_WANDER_SPEED = 26; // px/sec in world space, deliberately slower than the player
+
+  function updateNpcs(dt) {
+    if (!mapData) return;
+    mapData.objects.forEach((o) => {
+      if (o.type !== "npc") return;
+      const st = npcStates[o.id];
+      if (!st) return;
+
+      st.animTimer += dt;
+      const fps = st.phase === "walking" ? WALK_FPS : IDLE_FPS;
+      if (st.animTimer > 1 / fps) {
+        st.animTimer = 0;
+        st.frame++;
+      }
+
+      if (st.wanderRadius <= 0) return; // idle-in-place only
+
+      if (st.phase === "idle") {
+        st.pauseTimer -= dt;
+        if (st.pauseTimer <= 0) {
+          const target = pickWanderTarget(o, st);
+          if (target) {
+            st.targetOffsetX = target.x;
+            st.targetOffsetY = target.y;
+            st.dir = Math.abs(target.x - st.offsetX) > Math.abs(target.y - st.offsetY)
+              ? (target.x > st.offsetX ? "right" : "left")
+              : (target.y > st.offsetY ? "down" : "up");
+            st.phase = "walking";
+            st.frame = 0;
+          } else {
+            st.pauseTimer = 1 + Math.random() * 2; // no valid spot nearby, try again shortly
+          }
+        }
+      } else if (st.phase === "walking") {
+        const dx = st.targetOffsetX - st.offsetX;
+        const dy = st.targetOffsetY - st.offsetY;
+        const dist = Math.hypot(dx, dy);
+        const step = NPC_WANDER_SPEED * dt;
+        if (dist <= step) {
+          st.offsetX = st.targetOffsetX;
+          st.offsetY = st.targetOffsetY;
+          st.phase = "idle";
+          st.frame = 0;
+          st.pauseTimer = 1.5 + Math.random() * 3;
+        } else {
+          st.offsetX += (dx / dist) * step;
+          st.offsetY += (dy / dist) * step;
+        }
+      }
+    });
+  }
+
+  // Tries a few random points within the NPC's wander radius (in tiles) and
+  // returns the first one that isn't inside a collision tile. Anchor point is
+  // the object's own map position, offsets are added visually at draw time,
+  // the interaction radius always keys off the real anchor so puzzles/dialogue
+  // triggers are unaffected by wander drift.
+  function pickWanderTarget(o, st) {
+    const anchorX = o.x * TILE + TILE / 2;
+    const anchorY = o.y * TILE + TILE / 2;
+    for (let i = 0; i < 6; i++) {
+      const ox = (Math.random() * 2 - 1) * st.wanderRadius * TILE;
+      const oy = (Math.random() * 2 - 1) * st.wanderRadius * TILE;
+      if (canStandAt(anchorX + ox, anchorY + oy)) {
+        return { x: ox, y: oy };
+      }
+    }
+    return null;
   }
 
   function maybeSendPosition() {
@@ -232,68 +374,58 @@ window.Overworld = (function () {
     }
   }
 
-  function tintLayer(sprite, sx, sy, cell, color) {
-    const tmp = document.createElement("canvas");
-    tmp.width = cell;
-    tmp.height = cell;
-    const tctx = tmp.getContext("2d");
-    tctx.imageSmoothingEnabled = false;
-    tctx.drawImage(sprite, sx, sy, cell, cell, 0, 0, cell, cell);
-    // "color" keeps the sprite's own light/shadow modelling (so arms/legs still
-    // read as separate shapes) and only recolours its hue/saturation, unlike a
-    // flat multiply tint which crushes all shading toward the tint colour.
-    tctx.globalCompositeOperation = "color";
-    tctx.fillStyle = color;
-    tctx.fillRect(0, 0, cell, cell);
-    tctx.globalCompositeOperation = "destination-in";
-    tctx.drawImage(sprite, sx, sy, cell, cell, 0, 0, cell, cell);
-    return tmp;
-  }
-
-  function drawCharSprite(race, skinColor, outfitColor, x, y, dir, frame) {
-    const bodySprite = charSprites[race];
-    if (!bodySprite) return;
-    const cell = CELL_SIZE[race] || 24;
-    const clothesSprite = race === "dwarf" ? charSprites.clothesDwarf : charSprites.clothes;
-
-    let row = 0; // down
-    let flip = false;
-    if (dir === "up") row = 2;
-    else if (dir === "left") {
-      row = 1;
-      flip = true;
-    } else if (dir === "right") {
-      row = 1;
-    }
-    const sx = frame * cell;
+  // Generic sprite-sheet drawer. Every preset/NPC/wildlife sheet from this
+  // asset generation follows the same convention: a grid of square cells,
+  // one row per direction (or a single row for non-directional wildlife),
+  // frames laid out left-to-right. `frameSet` describes one sheet's grid.
+  function drawFrame(img, frameSet, dirRow, frameIndex, worldX, worldY, camX, camY, drawWorldSize) {
+    if (!img) return;
+    const cell = frameSet.cell;
+    const cols = frameSet.cols;
+    const col = frameIndex % cols;
+    const row = Math.min(dirRow, (frameSet.rows || 1) - 1);
+    const sx = col * cell;
     const sy = row * cell;
-
-    const bodyLayer = tintLayer(bodySprite, sx, sy, cell, skinColor);
-    const clothesLayer = clothesSprite ? tintLayer(clothesSprite, sx, sy, cell, outfitColor) : null;
-    const showTusks = (race === "orc" || race === "troll") && row === 0 && charSprites.tusks;
-
-    const drawSize = cell * RENDER_SCALE;
+    const drawSize = drawWorldSize * RENDER_SCALE;
+    const dx = Math.round(worldX * RENDER_SCALE - camX - drawSize / 2);
+    const dy = Math.round(worldY * RENDER_SCALE - camY - drawSize);
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    if (flip) {
-      ctx.translate(x, y);
-      ctx.scale(-1, 1);
-      ctx.drawImage(bodyLayer, -drawSize / 2, 0, drawSize, drawSize);
-      if (clothesLayer) ctx.drawImage(clothesLayer, -drawSize / 2, 0, drawSize, drawSize);
-      if (showTusks) ctx.drawImage(charSprites.tusks, sx, sy, cell, cell, -drawSize / 2, 0, drawSize, drawSize);
-    } else {
-      ctx.drawImage(bodyLayer, x - drawSize / 2, y, drawSize, drawSize);
-      if (clothesLayer) ctx.drawImage(clothesLayer, x - drawSize / 2, y, drawSize, drawSize);
-      if (showTusks) ctx.drawImage(charSprites.tusks, sx, sy, cell, cell, x - drawSize / 2, y, drawSize, drawSize);
-    }
+    ctx.drawImage(img, sx, sy, cell, cell, dx, dy, drawSize, drawSize);
     ctx.restore();
+    return { x: dx + drawSize / 2, y: dy };
   }
 
-  function spriteScreenPos(height, worldX, worldY, camX, camY) {
-    const cell = CELL_SIZE[height] || 24;
+  function drawPreset(species, preset, worldX, worldY, camX, camY, dir, moving, frame) {
+    const speciesManifest = PRESET_MANIFEST[species] || PRESET_MANIFEST.human;
+    const entry = speciesManifest[String(preset)] || speciesManifest["1"];
+    if (!entry) return { x: worldX * RENDER_SCALE - camX, y: worldY * RENDER_SCALE - camY };
+    const state = moving ? "walk" : "idle";
+    const frameSet = entry[state];
+    const img = getImg(frameSet.src);
+    const scale = (SPECIES_SCALE[species] || 1) * WORLD_CHAR_SIZE;
+    const dirRow = DIR_ROW[dir] ?? 0;
+    return drawFrame(img, frameSet, dirRow, frame, worldX, worldY, camX, camY, scale);
+  }
+
+  function drawNpc(o, camX, camY) {
+    const st = npcStates[o.id];
+    const look = NPC_MANIFEST[(st && st.look) || "citizen1"];
+    if (!look) return null;
+    const moving = st && st.phase === "walking";
+    const frameSet = moving ? look.walk : look.idle;
+    const img = getImg(frameSet.src);
+    const worldX = o.x * TILE + TILE / 2 + (st ? st.offsetX : 0);
+    const worldY = o.y * TILE + TILE / 2 + (st ? st.offsetY : 0);
+    const dirRow = DIR_ROW[(st && st.dir) || "down"] ?? 0;
+    const frame = st ? st.frame : 0;
+    return drawFrame(img, frameSet, dirRow, frame, worldX, worldY, camX, camY, WORLD_CHAR_SIZE);
+  }
+
+  function spriteScreenPos(worldSize, worldX, worldY, camX, camY) {
     return {
       x: worldX * RENDER_SCALE - camX,
-      y: worldY * RENDER_SCALE - camY - cell * RENDER_SCALE + 8 * RENDER_SCALE,
+      y: worldY * RENDER_SCALE - camY - worldSize * RENDER_SCALE,
     };
   }
 
@@ -359,18 +491,16 @@ window.Overworld = (function () {
     });
 
     mapData.objects.forEach((o) => {
-      if (o.type === "npc" && o.sprite) {
-        const cell = 16;
-        const pos = spriteScreenPos("npcsprite", o.x * TILE + TILE / 2, o.y * TILE + TILE / 2, camX, camY);
+      if (o.type === "npc") {
         drawList.push({
           y: o.y * TILE + TILE,
           draw: () => {
-            drawStaticSprite(o.sprite, pos.x, pos.y, cell);
-            drawNameLabel(o.name, pos.x, pos.y);
+            const pos = drawNpc(o, camX, camY);
+            if (pos) drawNameLabel(o.name, pos.x, pos.y);
           },
         });
       } else if (o.type === "scrap" && !o.__solved) {
-        const pos = spriteScreenPos("npcsprite", o.x * TILE + TILE / 2, o.y * TILE + TILE / 2, camX, camY);
+        const pos = spriteScreenPos(16, o.x * TILE + TILE / 2, o.y * TILE + TILE / 2, camX, camY);
         drawList.push({
           y: o.y * TILE + TILE,
           draw: () => drawStaticSprite("/assets/props/paper_scrap.png", pos.x, pos.y - 4, 16),
@@ -390,8 +520,7 @@ window.Overworld = (function () {
     drawList.push({
       y: me.y,
       draw: () => {
-        const pos = spriteScreenPos(me.race, me.x, me.y, camX, camY);
-        drawCharSprite(me.race, me.skinColor, me.outfitColor, pos.x, pos.y, me.dir, animFrame);
+        const pos = drawPreset(me.species, me.preset, me.x, me.y, camX, camY, me.dir, me.moving, animFrame);
         if (myName) drawNameLabel(myName, pos.x, pos.y);
       },
     });
@@ -400,9 +529,7 @@ window.Overworld = (function () {
       drawList.push({
         y: p.y,
         draw: () => {
-          const race = p.race || "human";
-          const pos = spriteScreenPos(race, p.x, p.y, camX, camY);
-          drawCharSprite(race, p.skinColor || "#ab947a", p.outfitColor || "#484a77", pos.x, pos.y, p.dir || "down", p.moving ? animFrame : 0);
+          const pos = drawPreset(p.species || "human", p.preset || 1, p.x, p.y, camX, camY, p.dir || "down", p.moving, animFrame);
           if (p.name) drawNameLabel(p.name, pos.x, pos.y);
         },
       });
@@ -431,12 +558,23 @@ window.Overworld = (function () {
   }
 
   function drawDecor(d, camX, camY) {
-    const img = getImg(d.src);
-    if (!img) return;
     const dx = Math.round(d.x * TILE * RENDER_SCALE - camX);
     const dy = Math.round(d.y * TILE * RENDER_SCALE - camY);
     const dw = d.w * TILE * RENDER_SCALE;
     const dh = d.h * TILE * RENDER_SCALE;
+
+    if (d.animated) {
+      const frameSet = WILDLIFE_MANIFEST[d.key];
+      const img = frameSet && getImg(frameSet.src);
+      if (!img) return;
+      const cell = frameSet.cell;
+      const col = wildlifeFrame % frameSet.cols;
+      ctx.drawImage(img, col * cell, 0, cell, cell, dx, dy, dw, dh);
+      return;
+    }
+
+    const img = getImg(d.src);
+    if (!img) return;
     ctx.drawImage(img, 0, 0, img.width || d.w * TILE, img.height || d.h * TILE, dx, dy, dw, dh);
   }
 
@@ -471,9 +609,8 @@ window.Overworld = (function () {
       socket = opts.socket;
       callbacks.onInteract = opts.onInteract || null;
       callbacks.onNearbyChange = opts.onNearbyChange || null;
-      me.race = opts.myRace || "human";
-      me.skinColor = opts.mySkinColor || "#ab947a";
-      me.outfitColor = opts.myOutfitColor || "#484a77";
+      me.species = opts.mySpecies || "human";
+      me.preset = opts.myPreset || 1;
       myName = opts.myName || "";
 
       await loadMap(opts.mapUrl);
@@ -496,9 +633,8 @@ window.Overworld = (function () {
         if (p.id === myId) return;
         others[p.id] = {
           ...(others[p.id] || {}),
-          race: p.race,
-          skinColor: p.skinColor,
-          outfitColor: p.outfitColor,
+          species: p.species,
+          preset: p.preset,
           name: p.name,
         };
       });

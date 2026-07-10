@@ -8343,7 +8343,8 @@
    "y": 9,
    "w": 1,
    "h": 2,
-   "src": "/assets/wildlife/cow.png"
+   "src": "/assets/wildlife/anim/cow.png",
+   "animated": true
   },
   {
    "key": "cow",
@@ -8351,7 +8352,8 @@
    "y": 9,
    "w": 1,
    "h": 2,
-   "src": "/assets/wildlife/cow.png"
+   "src": "/assets/wildlife/anim/cow.png",
+   "animated": true
   },
   {
    "key": "cow",
@@ -8359,7 +8361,8 @@
    "y": 8,
    "w": 1,
    "h": 2,
-   "src": "/assets/wildlife/cow.png"
+   "src": "/assets/wildlife/anim/cow.png",
+   "animated": true
   },
   {
    "key": "sheep",
@@ -8367,7 +8370,8 @@
    "y": 9,
    "w": 1,
    "h": 2,
-   "src": "/assets/wildlife/sheep.png"
+   "src": "/assets/wildlife/anim/sheep.png",
+   "animated": true
   },
   {
    "key": "sheep",
@@ -8375,7 +8379,8 @@
    "y": 5,
    "w": 1,
    "h": 2,
-   "src": "/assets/wildlife/sheep.png"
+   "src": "/assets/wildlife/anim/sheep.png",
+   "animated": true
   },
   {
    "key": "sheep",
@@ -8383,7 +8388,8 @@
    "y": 5,
    "w": 1,
    "h": 2,
-   "src": "/assets/wildlife/sheep.png"
+   "src": "/assets/wildlife/anim/sheep.png",
+   "animated": true
   },
   {
    "key": "bird",
@@ -8423,7 +8429,8 @@
    "y": 28,
    "w": 0.85,
    "h": 0.7,
-   "src": "/assets/wildlife/bunny.png"
+   "src": "/assets/wildlife/anim/bunny.png",
+   "animated": true
   },
   {
    "key": "bunny",
@@ -8431,7 +8438,8 @@
    "y": 20,
    "w": 0.85,
    "h": 0.7,
-   "src": "/assets/wildlife/bunny.png"
+   "src": "/assets/wildlife/anim/bunny.png",
+   "animated": true
   },
   {
    "key": "bunny",
@@ -8439,7 +8447,8 @@
    "y": 23,
    "w": 0.85,
    "h": 0.7,
-   "src": "/assets/wildlife/bunny.png"
+   "src": "/assets/wildlife/anim/bunny.png",
+   "animated": true
   },
   {
    "key": "fox",
@@ -8447,7 +8456,8 @@
    "y": 38,
    "w": 1.25,
    "h": 1,
-   "src": "/assets/wildlife/fox.png"
+   "src": "/assets/wildlife/anim/fox.png",
+   "animated": true
   },
   {
    "key": "fox",
@@ -8455,7 +8465,8 @@
    "y": 45,
    "w": 1.25,
    "h": 1,
-   "src": "/assets/wildlife/fox.png"
+   "src": "/assets/wildlife/anim/fox.png",
+   "animated": true
   },
   {
    "key": "cat",
@@ -8463,7 +8474,8 @@
    "y": 27,
    "w": 1,
    "h": 2,
-   "src": "/assets/wildlife/cat.png"
+   "src": "/assets/wildlife/anim/cat.png",
+   "animated": true
   },
   {
    "key": "dog",
@@ -8471,7 +8483,8 @@
    "y": 25,
    "w": 1,
    "h": 2,
-   "src": "/assets/wildlife/dog.png"
+   "src": "/assets/wildlife/anim/dog.png",
+   "animated": true
   }
  ],
  "objects": [
@@ -8485,7 +8498,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_voss"
    },
-   "sprite": "/assets/npcs/npc_2.png"
+   "look": "fighter2",
+   "wanderRadius": 3,
+   "portrait": "/assets/npcs/portraits/fighter2.png"
   },
   {
    "id": "npc_steward",
@@ -8497,7 +8512,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_steward"
    },
-   "sprite": "/assets/npcs/npc_10.png"
+   "look": "citizen1",
+   "wanderRadius": 3,
+   "portrait": "/assets/npcs/portraits/citizen1.png"
   },
   {
    "id": "npc_marrow",
@@ -8509,7 +8526,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_marrow"
    },
-   "sprite": "/assets/npcs/npc_6.png"
+   "look": "citizen2",
+   "wanderRadius": 3,
+   "portrait": "/assets/npcs/portraits/citizen2.png"
   },
   {
    "id": "npc_kestrel",
@@ -8521,7 +8540,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_kestrel"
    },
-   "sprite": "/assets/npcs/npc_5.png"
+   "look": "citizen3",
+   "wanderRadius": 3,
+   "portrait": "/assets/npcs/portraits/citizen3.png"
   },
   {
    "id": "npc_ashgate",
@@ -8533,7 +8554,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_ashgate"
    },
-   "sprite": "/assets/npcs/npc_4.png"
+   "look": "citizen4",
+   "wanderRadius": 3,
+   "portrait": "/assets/npcs/portraits/citizen4.png"
   },
   {
    "id": "npc_reyes",
@@ -8545,7 +8568,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_reyes"
    },
-   "sprite": "/assets/npcs/npc_3.png"
+   "look": "fighter2",
+   "wanderRadius": 3,
+   "portrait": "/assets/npcs/portraits/fighter2.png"
   },
   {
    "id": "npc_maid",
@@ -8557,7 +8582,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_maid"
    },
-   "sprite": "/assets/npcs/npc_1.png"
+   "look": "citizen5",
+   "wanderRadius": 3,
+   "portrait": "/assets/npcs/portraits/citizen5.png"
   },
   {
    "id": "npc_corwin",
@@ -8569,7 +8596,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_corwin"
    },
-   "sprite": "/assets/npcs/npc_9.png"
+   "look": "citizen1",
+   "wanderRadius": 3,
+   "portrait": "/assets/npcs/portraits/citizen1.png"
   },
   {
    "id": "npc_flynn",
@@ -8581,7 +8610,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_flynn"
    },
-   "sprite": "/assets/npcs/npc_12.png"
+   "look": "citizen3",
+   "wanderRadius": 5,
+   "portrait": "/assets/npcs/portraits/citizen3.png"
   },
   {
    "id": "npc_guest_a1",
@@ -8593,7 +8624,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_guest_a1"
    },
-   "sprite": "/assets/npcs/npc_7.png"
+   "look": "citizen2",
+   "wanderRadius": 5,
+   "portrait": "/assets/npcs/portraits/citizen2.png"
   },
   {
    "id": "npc_guest_a2",
@@ -8605,7 +8638,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_guest_a2"
    },
-   "sprite": "/assets/npcs/npc_8.png"
+   "look": "citizen4",
+   "wanderRadius": 5,
+   "portrait": "/assets/npcs/portraits/citizen4.png"
   },
   {
    "id": "npc_guest_b1",
@@ -8617,7 +8652,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_guest_b1"
    },
-   "sprite": "/assets/npcs/npc_11.png"
+   "look": "citizen5",
+   "wanderRadius": 5,
+   "portrait": "/assets/npcs/portraits/citizen5.png"
   },
   {
    "id": "npc_guest_b2",
@@ -8629,7 +8666,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_guest_b2"
    },
-   "sprite": "/assets/npcs/npc_13.png"
+   "look": "citizen1",
+   "wanderRadius": 5,
+   "portrait": "/assets/npcs/portraits/citizen1.png"
   },
   {
    "id": "npc_guest_c1",
@@ -8641,7 +8680,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_guest_c1"
    },
-   "sprite": "/assets/npcs/npc_14.png"
+   "look": "citizen3",
+   "wanderRadius": 5,
+   "portrait": "/assets/npcs/portraits/citizen3.png"
   },
   {
    "id": "npc_guest_c2",
@@ -8653,7 +8694,9 @@
     "kind": "dialogue",
     "dialogueId": "npc_guest_c2"
    },
-   "sprite": "/assets/npcs/npc_15.png"
+   "look": "citizen4",
+   "wanderRadius": 5,
+   "portrait": "/assets/npcs/portraits/citizen4.png"
   },
   {
    "id": "study_desk",

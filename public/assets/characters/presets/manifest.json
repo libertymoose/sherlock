@@ -1,0 +1,306 @@
+{
+  "gnoll": {
+    "1": {
+      "idle": {
+        "src": "/assets/characters/presets/gnoll/1_idle.png",
+        "cell": 64,
+        "cols": 4,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/gnoll/1_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "2": {
+      "idle": {
+        "src": "/assets/characters/presets/gnoll/2_idle.png",
+        "cell": 64,
+        "cols": 4,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/gnoll/2_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "3": {
+      "idle": {
+        "src": "/assets/characters/presets/gnoll/3_idle.png",
+        "cell": 64,
+        "cols": 4,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/gnoll/3_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    }
+  },
+  "goblin": {
+    "1": {
+      "idle": {
+        "src": "/assets/characters/presets/goblin/1_idle.png",
+        "cell": 64,
+        "cols": 4,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/goblin/1_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "2": {
+      "idle": {
+        "src": "/assets/characters/presets/goblin/2_idle.png",
+        "cell": 64,
+        "cols": 4,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/goblin/2_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "3": {
+      "idle": {
+        "src": "/assets/characters/presets/goblin/3_idle.png",
+        "cell": 64,
+        "cols": 4,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/goblin/3_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    }
+  },
+  "human": {
+    "1": {
+      "idle": {
+        "src": "/assets/characters/presets/human/1_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/human/1_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "2": {
+      "idle": {
+        "src": "/assets/characters/presets/human/2_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/human/2_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "3": {
+      "idle": {
+        "src": "/assets/characters/presets/human/3_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/human/3_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "4": {
+      "idle": {
+        "src": "/assets/characters/presets/human/4_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/human/4_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "5": {
+      "idle": {
+        "src": "/assets/characters/presets/human/5_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/human/5_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "6": {
+      "idle": {
+        "src": "/assets/characters/presets/human/6_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/human/6_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "7": {
+      "idle": {
+        "src": "/assets/characters/presets/human/7_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/human/7_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "8": {
+      "idle": {
+        "src": "/assets/characters/presets/human/8_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/human/8_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "9": {
+      "idle": {
+        "src": "/assets/characters/presets/human/9_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/human/9_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    }
+  },
+  "lizardman": {
+    "1": {
+      "idle": {
+        "src": "/assets/characters/presets/lizardman/1_idle.png",
+        "cell": 64,
+        "cols": 4,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/lizardman/1_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "2": {
+      "idle": {
+        "src": "/assets/characters/presets/lizardman/2_idle.png",
+        "cell": 64,
+        "cols": 4,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/lizardman/2_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "3": {
+      "idle": {
+        "src": "/assets/characters/presets/lizardman/3_idle.png",
+        "cell": 64,
+        "cols": 4,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/lizardman/3_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    }
+  },
+  "orc": {
+    "1": {
+      "idle": {
+        "src": "/assets/characters/presets/orc/1_idle.png",
+        "cell": 64,
+        "cols": 4,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/orc/1_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "2": {
+      "idle": {
+        "src": "/assets/characters/presets/orc/2_idle.png",
+        "cell": 64,
+        "cols": 4,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/orc/2_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "3": {
+      "idle": {
+        "src": "/assets/characters/presets/orc/3_idle.png",
+        "cell": 64,
+        "cols": 4,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/presets/orc/3_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    }
+  }
+}

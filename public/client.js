@@ -1,117 +1,58 @@
 const socket = io();
 
-const skinTones = [
-  { name: "Tan",        hex: "#ab947a" },
-  { name: "Rose Tan",   hex: "#966c6c" },
-  { name: "Copper",     hex: "#cd683d" },
-  { name: "Warm Tan",   hex: "#e6904e" },
-  { name: "Deep Red",   hex: "#9e4539" },
-  { name: "Maroon",     hex: "#7a3045" },
-  { name: "Olive Green",hex: "#a2a947" },
-  { name: "Sage Green", hex: "#92a984" },
-  { name: "Moss",       hex: "#547e64" },
-  { name: "Deep Olive", hex: "#676633" },
-];
-
-const outfitColors = [
-  { name: "Crimson",  hex: "#b33831" },
-  { name: "Rust",     hex: "#ae2334" },
-  { name: "Forest",   hex: "#239063" },
-  { name: "Teal",     hex: "#0b5e65" },
-  { name: "Deep Teal",hex: "#165a4c" },
-  { name: "Navy",     hex: "#323353" },
-  { name: "Indigo",   hex: "#484a77" },
-  { name: "Plum",     hex: "#45293f" },
-  { name: "Violet",   hex: "#905ea9" },
-  { name: "Magenta",  hex: "#831c5d" },
-  { name: "Blue",     hex: "#4d65b4" },
-  { name: "Olive",    hex: "#676633" },
-];
-
-const RACES = [
+const SPECIES = [
   { key: "human", label: "Human" },
   { key: "orc", label: "Orc" },
-  { key: "elf", label: "Elf" },
-  { key: "troll", label: "Troll" },
-  { key: "dwarf", label: "Dwarf" },
+  { key: "gnoll", label: "Gnoll" },
+  { key: "goblin", label: "Goblin" },
+  { key: "lizardman", label: "Lizardman" },
 ];
+const PRESET_COUNTS = { human: 9, orc: 3, gnoll: 3, goblin: 3, lizardman: 3 };
 
 let state = {
   isHost: false,
   roomCode: null,
   myId: null,
   hostId: null,
-  myRace: "human",
-  mySkinColor: skinTones[0].hex,
-  myOutfitColor: outfitColors[6].hex,
+  mySpecies: "human",
+  myPreset: 1,
 };
 
-const sprites = { human: new Image(), orc: new Image(), elf: new Image(), troll: new Image(), dwarf: new Image(), clothes: new Image(), clothesDwarf: new Image(), tusks: new Image() };
-let spritesReady = false;
+let PRESET_MANIFEST = null;
+let manifestReady = false;
 
-function loadSprites() {
-  return new Promise((resolve) => {
-    let loaded = 0;
-    const total = 8;
-    const done = () => { loaded++; if (loaded === total) { spritesReady = true; resolve(); } };
-    Object.values(sprites).forEach((img) => {
-      img.onload = done;
-      img.onerror = done; // don't let one failed image hang character creation forever
+function loadPresetManifest() {
+  return fetch("/assets/characters/presets/manifest.json")
+    .then((r) => r.json())
+    .then((m) => {
+      PRESET_MANIFEST = m;
+      manifestReady = true;
     });
-    sprites.human.src = "/images/avatar-human.png";
-    sprites.orc.src = "/images/avatar-orc.png";
-    sprites.elf.src = "/images/avatar-elf.png";
-    sprites.troll.src = "/images/avatar-troll.png";
-    sprites.dwarf.src = "/images/avatar-dwarf.png";
-    sprites.clothes.src = "/images/avatar-clothes.png";
-    sprites.clothesDwarf.src = "/images/avatar-clothes-dwarf.png";
-    sprites.tusks.src = "/images/avatar-tusks.png";
-  });
 }
 
-function tintOnto(ctx, img, colorHex, canvasW, canvasH) {
-  if (!img.complete || img.naturalWidth === 0) return;
-  const scale = Math.min(canvasW / img.naturalWidth, canvasH / img.naturalHeight) * 0.85;
-  const w = img.naturalWidth * scale;
-  const h = img.naturalHeight * scale;
-  const x = (canvasW - w) / 2;
-  const y = canvasH - h - (canvasH - h) * 0.15;
-
-  ctx.drawImage(img, x, y, w, h);
-  ctx.globalCompositeOperation = "color";
-  ctx.fillStyle = colorHex;
-  ctx.fillRect(0, 0, canvasW, canvasH);
-  ctx.globalCompositeOperation = "destination-in";
-  ctx.drawImage(img, x, y, w, h);
-  ctx.globalCompositeOperation = "source-over";
-}
-
-// Recolours a base greyscale/skin-tone sprite by multiplying in a flat colour, then
-// masking back to the sprite's own silhouette. Similar approach to classic
-// "pick a colour" party-game avatars. Draws skin tone first, then the clothes
-// overlay (its own silhouette, derived from the body) tinted with the outfit colour.
-function drawAvatar(canvas, race, skinColor, outfitColor) {
+// Draws a preset's down-facing idle frame (frame 0, row 0) into a preview canvas.
+// No recoloring here, presets are used exactly as authored.
+function drawAvatar(canvas, species, preset) {
   const ctx = canvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!manifestReady) return;
 
-  const bodyImg = sprites[race] || sprites.human;
-  const clothesImg = race === "dwarf" ? sprites.clothesDwarf : sprites.clothes;
-
-  tintOnto(ctx, bodyImg, skinColor, canvas.width, canvas.height);
-  tintOnto(ctx, clothesImg, outfitColor, canvas.width, canvas.height);
-
-  if (race === "orc" || race === "troll") {
-    const img = sprites.tusks;
-    if (img.complete && img.naturalWidth > 0) {
-      const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight) * 0.85;
-      const w = img.naturalWidth * scale;
-      const h = img.naturalHeight * scale;
-      const x = (canvas.width - w) / 2;
-      const y = canvas.height - h - (canvas.height - h) * 0.15;
-      ctx.drawImage(img, x, y, w, h);
-    }
-  }
+  const speciesManifest = PRESET_MANIFEST[species] || PRESET_MANIFEST.human;
+  const entry = speciesManifest[String(preset)] || speciesManifest["1"];
+  if (!entry) return;
+  const frameSet = entry.idle;
+  const img = new Image();
+  img.onload = () => {
+    const cell = frameSet.cell;
+    const scale = Math.min(canvas.width / cell, canvas.height / cell) * 0.85;
+    const w = cell * scale;
+    const h = cell * scale;
+    const x = (canvas.width - w) / 2;
+    const y = canvas.height - h - (canvas.height - h) * 0.1;
+    ctx.drawImage(img, 0, 0, cell, cell, x, y, w, h);
+  };
+  img.src = frameSet.src;
 }
 
 // --- Screen helpers ---
@@ -126,71 +67,60 @@ function showScreen(id) {
 }
 
 // --- Character creation (shared by host + joining players) ---
+function buildPresetRow() {
+  const presetRow = document.getElementById("preset-row");
+  presetRow.innerHTML = "";
+  const count = PRESET_COUNTS[state.mySpecies] || 1;
+  for (let n = 1; n <= count; n++) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "height-btn" + (n === 1 ? " active" : "");
+    btn.textContent = String(n);
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#preset-row .height-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.myPreset = n;
+      refreshPreview();
+    });
+    presetRow.appendChild(btn);
+  }
+  state.myPreset = 1;
+}
+
 function initCharacterCreator() {
-  const raceRow = document.getElementById("race-row");
-  RACES.forEach((r, i) => {
+  const speciesRow = document.getElementById("species-row");
+  SPECIES.forEach((s, i) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "height-btn" + (i === 0 ? " active" : "");
-    btn.textContent = r.label;
+    btn.textContent = s.label;
     btn.addEventListener("click", () => {
-      document.querySelectorAll("#race-row .height-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll("#species-row .height-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
-      state.myRace = r.key;
+      state.mySpecies = s.key;
+      buildPresetRow();
       refreshPreview();
     });
-    raceRow.appendChild(btn);
+    speciesRow.appendChild(btn);
   });
 
-  const skinRow = document.getElementById("skin-swatch-row");
-  skinTones.forEach((c, i) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "swatch" + (i === 0 ? " active" : "");
-    btn.style.background = c.hex;
-    btn.title = c.name;
-    btn.addEventListener("click", () => {
-      document.querySelectorAll("#skin-swatch-row .swatch").forEach((s) => s.classList.remove("active"));
-      btn.classList.add("active");
-      state.mySkinColor = c.hex;
-      refreshPreview();
-    });
-    skinRow.appendChild(btn);
-  });
-
-  const outfitRow = document.getElementById("outfit-swatch-row");
-  outfitColors.forEach((c, i) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "swatch" + (i === 6 ? " active" : "");
-    btn.style.background = c.hex;
-    btn.title = c.name;
-    btn.addEventListener("click", () => {
-      document.querySelectorAll("#outfit-swatch-row .swatch").forEach((s) => s.classList.remove("active"));
-      btn.classList.add("active");
-      state.myOutfitColor = c.hex;
-      refreshPreview();
-    });
-    outfitRow.appendChild(btn);
-  });
-
+  buildPresetRow();
   refreshPreview();
 }
 
 function refreshPreview() {
-  if (!spritesReady) return;
   const canvas = document.getElementById("avatar-preview");
-  drawAvatar(canvas, state.myRace, state.mySkinColor, state.myOutfitColor);
+  drawAvatar(canvas, state.mySpecies, state.myPreset);
 }
 
-loadSprites().then(() => {
+loadPresetManifest().then(() => {
   refreshPreview();
 });
 
 // --- Landing screen ---
 document.getElementById("btn-host").addEventListener("click", () => {
   const name = document.getElementById("input-name").value.trim() || "Detective";
-  socket.emit("host:createRoom", { name, race: state.myRace, skinColor: state.mySkinColor, outfitColor: state.myOutfitColor }, (res) => {
+  socket.emit("host:createRoom", { name, species: state.mySpecies, preset: state.myPreset }, (res) => {
     if (!res || !res.ok) return;
     state.isHost = true;
     state.roomCode = res.code;
@@ -212,7 +142,7 @@ document.getElementById("btn-join").addEventListener("click", () => {
     return;
   }
 
-  socket.emit("player:joinRoom", { code, name, race: state.myRace, skinColor: state.mySkinColor, outfitColor: state.myOutfitColor }, (res) => {
+  socket.emit("player:joinRoom", { code, name, species: state.mySpecies, preset: state.myPreset }, (res) => {
     if (!res || !res.ok) {
       errorEl.textContent = (res && res.error) || "Could not join that game.";
       return;
@@ -258,10 +188,10 @@ socket.on("room:update", (data) => {
     chip.appendChild(label);
     roster.appendChild(chip);
 
-    if (spritesReady) {
-      drawAvatar(mini, p.race || "human", p.skinColor || "#ab947a", p.outfitColor || "#484a77");
+    if (manifestReady) {
+      drawAvatar(mini, p.species || "human", p.preset || 1);
     } else {
-      loadSprites().then(() => drawAvatar(mini, p.race || "human", p.skinColor || "#ab947a", p.outfitColor || "#484a77"));
+      loadPresetManifest().then(() => drawAvatar(mini, p.species || "human", p.preset || 1));
     }
   });
 
@@ -525,9 +455,8 @@ async function enterExplore(act) {
     canvas,
     socket,
     mapUrl: act.mapUrl,
-    myRace: state.myRace,
-    mySkinColor: state.mySkinColor,
-    myOutfitColor: state.myOutfitColor,
+    mySpecies: state.mySpecies,
+    myPreset: state.myPreset,
     myName: (currentPlayers.find((p) => p.id === socket.id) || {}).name || "",
     onNearbyChange: (obj) => {
       isNearInteractable = !!obj;
@@ -581,16 +510,9 @@ async function handleObjectInteract(obj) {
 
 function setVnPortrait(obj) {
   const canvas = document.getElementById("vn-portrait");
-  if (obj && obj.sprite) {
+  if (obj && obj.portrait) {
     canvas.classList.remove("hidden");
-    drawFixedPortrait(canvas, obj.sprite);
-  } else if (obj && obj.height && obj.color) {
-    canvas.classList.remove("hidden");
-    if (spritesReady) {
-      drawAvatar(canvas, obj.race, obj.skinColor, obj.outfitColor);
-    } else {
-      loadSprites().then(() => drawAvatar(canvas, obj.race, obj.skinColor, obj.outfitColor));
-    }
+    drawFixedPortrait(canvas, obj.portrait);
   } else {
     canvas.classList.add("hidden");
   }
@@ -857,13 +779,7 @@ function buildPortraitCard(person) {
     draggedSuspectKey = person.key;
   });
 
-  if (person.sprite) {
-    drawFixedPortrait(canvas, person.sprite);
-  } else if (spritesReady) {
-    drawAvatar(canvas, person.race, person.skinColor, person.outfitColor);
-  } else {
-    loadSprites().then(() => drawAvatar(canvas, person.race, person.skinColor, person.outfitColor));
-  }
+  drawFixedPortrait(canvas, person.sprite);
 
   return card;
 }

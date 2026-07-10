@@ -1,0 +1,86 @@
+{
+  "citizen1": {
+    "idle": {
+      "src": "/assets/npcs/looks/citizen1_idle.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/citizen1_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
+  },
+  "citizen2": {
+    "idle": {
+      "src": "/assets/npcs/looks/citizen2_idle.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/citizen2_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
+  },
+  "citizen3": {
+    "idle": {
+      "src": "/assets/npcs/looks/citizen3_idle.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/citizen3_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
+  },
+  "citizen4": {
+    "idle": {
+      "src": "/assets/npcs/looks/citizen4_idle.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/citizen4_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
+  },
+  "citizen5": {
+    "idle": {
+      "src": "/assets/npcs/looks/citizen5_idle.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/citizen5_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
+  },
+  "fighter2": {
+    "idle": {
+      "src": "/assets/npcs/looks/fighter2_idle.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/fighter2_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
+  }
+}
