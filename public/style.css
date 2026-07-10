@@ -19,18 +19,18 @@
 
 /* Out-of-game palette (Nyx) — lobby and landing screens only */
 #screen-landing, #screen-lobby {
-  --ink: #08141e;
-  --ink-surface: #0f2a3f;
-  --ink-surface-2: #20394f;
-  --parchment: #f6d6bd;
-  --parchment-dim: #c3a38a;
+  --ink: #c3a38a;
+  --ink-surface: #f6d6bd;
+  --ink-surface-2: #997577;
+  --parchment: #08141e;
+  --parchment-dim: #4e495f;
   --candle: #816271;
   --candle-bright: #997577;
-  --blood: #997577;
-  --success: #c3a38a;
-  --border-line: #4e495f;
-  --focus-ring: #997577;
-  --btn-text: #08141e;
+  --blood: #4e495f;
+  --success: #816271;
+  --border-line: #997577;
+  --focus-ring: #816271;
+  --btn-text: #f6d6bd;
   --candle-rgb: 129,98,113;
   --parchment-rgb: 246,214,189;
 }

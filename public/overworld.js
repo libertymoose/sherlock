@@ -21,6 +21,10 @@ window.Overworld = (function () {
     water_nw: "/assets/tiles/auto/water_nw.png",
     water_se: "/assets/tiles/auto/water_se.png",
     water_sw: "/assets/tiles/auto/water_sw.png",
+    water_inner_nw: "/assets/tiles/auto/water_inner_nw.png",
+    water_inner_ne: "/assets/tiles/auto/water_inner_ne.png",
+    water_inner_sw: "/assets/tiles/auto/water_inner_sw.png",
+    water_inner_se: "/assets/tiles/auto/water_inner_se.png",
     path_c: "/assets/tiles/auto/path_c.png",
     path_n: "/assets/tiles/auto/path_n.png",
     path_s: "/assets/tiles/auto/path_s.png",
@@ -30,13 +34,18 @@ window.Overworld = (function () {
     path_nw: "/assets/tiles/auto/path_nw.png",
     path_se: "/assets/tiles/auto/path_se.png",
     path_sw: "/assets/tiles/auto/path_sw.png",
+    path_inner_nw: "/assets/tiles/auto/path_inner_nw.png",
+    path_inner_ne: "/assets/tiles/auto/path_inner_ne.png",
+    path_inner_sw: "/assets/tiles/auto/path_inner_sw.png",
+    path_inner_se: "/assets/tiles/auto/path_inner_se.png",
+    brick: "/assets/tiles/Brick_Middle.png",
   };
 
   let canvas, ctx;
   let socket = null;
   let mapData = null;
   let images = {};
-  let charSprites = { human: null, orc: null, elf: null, troll: null, dwarf: null, clothes: null, clothesDwarf: null };
+  let charSprites = { human: null, orc: null, elf: null, troll: null, dwarf: null, clothes: null, clothesDwarf: null, tusks: null };
   const CELL_SIZE = { human: 24, orc: 24, elf: 24, troll: 24, dwarf: 20, npcsprite: 16 };
   let running = false;
   let rafId = null;
@@ -88,6 +97,7 @@ window.Overworld = (function () {
       loadImage("/assets/characters/walk-dwarf.png").then((img) => (charSprites.dwarf = img)),
       loadImage("/assets/characters/walk-clothes.png").then((img) => (charSprites.clothes = img)),
       loadImage("/assets/characters/walk-clothes-dwarf.png").then((img) => (charSprites.clothesDwarf = img)),
+      loadImage("/assets/characters/walk-tusks.png").then((img) => (charSprites.tusks = img)),
     ]);
 
     me.x = mapData.spawn.x * TILE + TILE / 2;
@@ -243,6 +253,7 @@ window.Overworld = (function () {
 
     const bodyLayer = tintLayer(bodySprite, sx, sy, cell, skinColor);
     const clothesLayer = clothesSprite ? tintLayer(clothesSprite, sx, sy, cell, outfitColor) : null;
+    const showTusks = (race === "orc" || race === "troll") && row === 0 && charSprites.tusks;
 
     const drawSize = cell * RENDER_SCALE;
     ctx.save();
@@ -252,9 +263,11 @@ window.Overworld = (function () {
       ctx.scale(-1, 1);
       ctx.drawImage(bodyLayer, -drawSize / 2, 0, drawSize, drawSize);
       if (clothesLayer) ctx.drawImage(clothesLayer, -drawSize / 2, 0, drawSize, drawSize);
+      if (showTusks) ctx.drawImage(charSprites.tusks, sx, sy, cell, cell, -drawSize / 2, 0, drawSize, drawSize);
     } else {
       ctx.drawImage(bodyLayer, x - drawSize / 2, y, drawSize, drawSize);
       if (clothesLayer) ctx.drawImage(clothesLayer, x - drawSize / 2, y, drawSize, drawSize);
+      if (showTusks) ctx.drawImage(charSprites.tusks, sx, sy, cell, cell, x - drawSize / 2, y, drawSize, drawSize);
     }
     ctx.restore();
   }

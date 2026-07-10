@@ -46,21 +46,18 @@ let state = {
   myOutfitColor: outfitColors[6].hex,
 };
 
-const sprites = { human: new Image(), orc: new Image(), elf: new Image(), troll: new Image(), dwarf: new Image(), clothes: new Image(), clothesDwarf: new Image() };
+const sprites = { human: new Image(), orc: new Image(), elf: new Image(), troll: new Image(), dwarf: new Image(), clothes: new Image(), clothesDwarf: new Image(), tusks: new Image() };
 let spritesReady = false;
 
 function loadSprites() {
   return new Promise((resolve) => {
     let loaded = 0;
-    const total = 7;
+    const total = 8;
     const done = () => { loaded++; if (loaded === total) { spritesReady = true; resolve(); } };
-    sprites.human.onload = done;
-    sprites.orc.onload = done;
-    sprites.elf.onload = done;
-    sprites.troll.onload = done;
-    sprites.dwarf.onload = done;
-    sprites.clothes.onload = done;
-    sprites.clothesDwarf.onload = done;
+    Object.values(sprites).forEach((img) => {
+      img.onload = done;
+      img.onerror = done; // don't let one failed image hang character creation forever
+    });
     sprites.human.src = "/images/avatar-human.png";
     sprites.orc.src = "/images/avatar-orc.png";
     sprites.elf.src = "/images/avatar-elf.png";
@@ -68,6 +65,7 @@ function loadSprites() {
     sprites.dwarf.src = "/images/avatar-dwarf.png";
     sprites.clothes.src = "/images/avatar-clothes.png";
     sprites.clothesDwarf.src = "/images/avatar-clothes-dwarf.png";
+    sprites.tusks.src = "/images/avatar-tusks.png";
   });
 }
 
@@ -102,6 +100,18 @@ function drawAvatar(canvas, race, skinColor, outfitColor) {
 
   tintOnto(ctx, bodyImg, skinColor, canvas.width, canvas.height);
   tintOnto(ctx, clothesImg, outfitColor, canvas.width, canvas.height);
+
+  if (race === "orc" || race === "troll") {
+    const img = sprites.tusks;
+    if (img.complete && img.naturalWidth > 0) {
+      const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight) * 0.85;
+      const w = img.naturalWidth * scale;
+      const h = img.naturalHeight * scale;
+      const x = (canvas.width - w) / 2;
+      const y = canvas.height - h - (canvas.height - h) * 0.15;
+      ctx.drawImage(img, x, y, w, h);
+    }
+  }
 }
 
 // --- Screen helpers ---
