@@ -39,6 +39,20 @@ window.Overworld = (function () {
     path_inner_sw: "/assets/tiles/auto/path_inner_sw.png",
     path_inner_se: "/assets/tiles/auto/path_inner_se.png",
     brick: "/assets/tiles/Brick_Middle.png",
+    brick_c: "/assets/tiles/auto/brick_c.png",
+    brick_n: "/assets/tiles/auto/brick_n.png",
+    brick_s: "/assets/tiles/auto/brick_s.png",
+    brick_e: "/assets/tiles/auto/brick_e.png",
+    brick_w: "/assets/tiles/auto/brick_w.png",
+    brick_ne: "/assets/tiles/auto/brick_ne.png",
+    brick_nw: "/assets/tiles/auto/brick_nw.png",
+    brick_se: "/assets/tiles/auto/brick_se.png",
+    brick_sw: "/assets/tiles/auto/brick_sw.png",
+    brick_inner_nw: "/assets/tiles/auto/brick_inner_nw.png",
+    brick_inner_ne: "/assets/tiles/auto/brick_inner_ne.png",
+    brick_inner_sw: "/assets/tiles/auto/brick_inner_sw.png",
+    brick_inner_se: "/assets/tiles/auto/brick_inner_se.png",
+    bridge: "/assets/tiles/Bridge_Tile.png",
   };
 
   let canvas, ctx;
@@ -225,7 +239,10 @@ window.Overworld = (function () {
     const tctx = tmp.getContext("2d");
     tctx.imageSmoothingEnabled = false;
     tctx.drawImage(sprite, sx, sy, cell, cell, 0, 0, cell, cell);
-    tctx.globalCompositeOperation = "multiply";
+    // "color" keeps the sprite's own light/shadow modelling (so arms/legs still
+    // read as separate shapes) and only recolours its hue/saturation, unlike a
+    // flat multiply tint which crushes all shading toward the tint colour.
+    tctx.globalCompositeOperation = "color";
     tctx.fillStyle = color;
     tctx.fillRect(0, 0, cell, cell);
     tctx.globalCompositeOperation = "destination-in";

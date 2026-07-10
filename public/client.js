@@ -78,7 +78,7 @@ function tintOnto(ctx, img, colorHex, canvasW, canvasH) {
   const y = canvasH - h - (canvasH - h) * 0.15;
 
   ctx.drawImage(img, x, y, w, h);
-  ctx.globalCompositeOperation = "multiply";
+  ctx.globalCompositeOperation = "color";
   ctx.fillStyle = colorHex;
   ctx.fillRect(0, 0, canvasW, canvasH);
   ctx.globalCompositeOperation = "destination-in";
