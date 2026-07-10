@@ -16,32 +16,23 @@ window.Overworld = (function () {
   let mapData = null;
   let images = {};
 
-  // Preset character system: species + numbered look, no live recoloring.
-  // Manifests describe each sprite sheet's frame grid so one generic drawer
-  // can animate all of them (players, NPCs, wildlife) the same way.
-  let PRESET_MANIFEST = {};
+  // Player character system: a base body (male/female) tinted a solid colour,
+  // Among-Us style. No live canvas tinting, the 12 colour variants per gender
+  // are pre-generated static sprite sheets (see base/manifest.json), same
+  // "fixed pre-made sprite" pattern as NPCs/wildlife use.
+  let BASE_MANIFEST = {};
   let NPC_MANIFEST = {};
   let WILDLIFE_MANIFEST = {};
-  // Direction-row order isn't consistent across vendor sub-packs: the human
-  // (swordsman) sheets and NPC sheets go down/left/right/up, but the creature
-  // packs (orc/gnoll/goblin/lizardman) go down/up/left/right. Confirmed by
-  // eye against each sheet, not assumed.
-  const SPECIES_DIR_ROW = {
-    human:     { down: 0, left: 1, right: 2, up: 3 },
-    orc:       { down: 0, up: 1, left: 2, right: 3 },
-    gnoll:     { down: 0, up: 1, left: 2, right: 3 },
-    goblin:    { down: 0, up: 1, left: 2, right: 3 },
-    lizardman: { down: 0, up: 1, left: 2, right: 3 },
-  };
+  // Both base body packs (male/female) share the same source geometry and
+  // direction order as the old human sheet: down/left/right/up. Confirmed by
+  // eye against the actual sprite sheets, not assumed.
+  const PLAYER_DIR_ROW = { down: 0, left: 1, right: 2, up: 3 };
   const NPC_DIR_ROW = { down: 0, left: 1, right: 2, up: 3 };
 
-  // Each species' source art fills a different fraction of its 64px cell
-  // (the human sheet has a lot of headroom for weapon swings, the creature
-  // sheets are much more tightly cropped), so a single flat scale made
-  // players look tiny next to NPCs. These sizes are calibrated from each
-  // sheet's actual non-transparent content height so on-screen character
-  // height comes out consistent with the NPC sprites.
-  const PLAYER_DRAW_SIZE = { human: 46, orc: 38, gnoll: 32, goblin: 44, lizardman: 34 };
+  // Calibrated from actual non-transparent content height (old human sheet
+  // was 27px tall at draw size 46; the new base sheets are 22px tall), so
+  // on-screen height stays consistent with everything else.
+  const PLAYER_DRAW_SIZE = 38;
   const WORLD_CHAR_SIZE = 22; // NPC on-map footprint
   const IDLE_FPS = 6;
   const WALK_FPS = 9;
@@ -51,9 +42,9 @@ window.Overworld = (function () {
   let rafId = null;
   let lastTime = 0;
 
-  let me = { x: 0, y: 0, dir: "down", moving: false, species: "human", preset: 1 };
+  let me = { x: 0, y: 0, dir: "down", moving: false, gender: "male", color: "red" };
   let myName = "";
-  let others = {}; // socketId -> {x,y,dir,moving,species,preset,name}
+  let others = {}; // socketId -> {x,y,dir,moving,gender,color,name}
   let keys = {};
   let animTimer = 0;
   let animFrame = 0;
@@ -114,22 +105,22 @@ window.Overworld = (function () {
 
     resolveLayers();
 
-    // Preset/NPC/wildlife manifests + every sheet they reference. Small roster
-    // (a handful of presets in play, a few NPC looks, a handful of critters),
-    // so we just load everything up front rather than tracking exactly what's used.
-    const [presetManifest, npcManifest, wildlifeManifest] = await Promise.all([
-      loadJSON("/assets/characters/presets/manifest.json"),
+    // Player base manifest (gender + colour tint), plus NPC/wildlife manifests.
+    // Small roster, so we just load everything up front rather than tracking
+    // exactly what's used.
+    const [baseManifest, npcManifest, wildlifeManifest] = await Promise.all([
+      loadJSON("/assets/characters/base/manifest.json"),
       loadJSON("/assets/npcs/looks/manifest.json"),
       loadJSON("/assets/wildlife/anim/manifest.json"),
     ]);
-    PRESET_MANIFEST = presetManifest;
+    BASE_MANIFEST = baseManifest;
     NPC_MANIFEST = npcManifest;
     WILDLIFE_MANIFEST = wildlifeManifest;
 
     const charSrcs = [];
-    Object.values(PRESET_MANIFEST).forEach((species) => {
-      Object.values(species).forEach((preset) => {
-        charSrcs.push(preset.idle.src, preset.walk.src);
+    Object.values(BASE_MANIFEST).forEach((genderSet) => {
+      Object.values(genderSet).forEach((entry) => {
+        charSrcs.push(entry.idle.src, entry.walk.src);
       });
     });
     charSrcs.push(...allFrameSrcs(NPC_MANIFEST));
@@ -317,7 +308,7 @@ window.Overworld = (function () {
     me.moving = moving;
 
     // Animate continuously in both states; drawFrame() takes frameIndex % cols
-    // per sheet, so this doesn't need to know each preset's exact frame count.
+    // per sheet, so this doesn't need to know each sheet's exact frame count.
     animTimer += dt;
     const fps = moving ? WALK_FPS : IDLE_FPS;
     if (animTimer > 1 / fps) {
@@ -439,17 +430,15 @@ window.Overworld = (function () {
     return { x: dx + drawSize / 2, y: dy };
   }
 
-  function drawPreset(species, preset, worldX, worldY, camX, camY, dir, moving, frame) {
-    const speciesManifest = PRESET_MANIFEST[species] || PRESET_MANIFEST.human;
-    const entry = speciesManifest[String(preset)] || speciesManifest["1"];
+  function drawPlayer(gender, color, worldX, worldY, camX, camY, dir, moving, frame) {
+    const genderManifest = BASE_MANIFEST[gender] || BASE_MANIFEST.male;
+    const entry = genderManifest[color] || genderManifest.red;
     if (!entry) return { x: worldX * RENDER_SCALE - camX, y: worldY * RENDER_SCALE - camY };
     const state = moving ? "walk" : "idle";
     const frameSet = entry[state];
     const img = getImg(frameSet.src);
-    const drawSize = PLAYER_DRAW_SIZE[species] || PLAYER_DRAW_SIZE.human;
-    const dirRowMap = SPECIES_DIR_ROW[species] || SPECIES_DIR_ROW.human;
-    const dirRow = dirRowMap[dir] ?? 0;
-    return drawFrame(img, frameSet, dirRow, frame, worldX, worldY, camX, camY, drawSize);
+    const dirRow = PLAYER_DIR_ROW[dir] ?? 0;
+    return drawFrame(img, frameSet, dirRow, frame, worldX, worldY, camX, camY, PLAYER_DRAW_SIZE);
   }
 
   function drawNpc(o, camX, camY) {
@@ -582,7 +571,7 @@ window.Overworld = (function () {
     drawList.push({
       y: me.y,
       draw: () => {
-        const pos = drawPreset(me.species, me.preset, me.x, me.y, camX, camY, me.dir, me.moving, animFrame);
+        const pos = drawPlayer(me.gender, me.color, me.x, me.y, camX, camY, me.dir, me.moving, animFrame);
         if (myName) drawNameLabel(myName, pos.x, pos.y);
       },
     });
@@ -591,7 +580,7 @@ window.Overworld = (function () {
       drawList.push({
         y: p.y,
         draw: () => {
-          const pos = drawPreset(p.species || "human", p.preset || 1, p.x, p.y, camX, camY, p.dir || "down", p.moving, animFrame);
+          const pos = drawPlayer(p.gender || "male", p.color || "red", p.x, p.y, camX, camY, p.dir || "down", p.moving, animFrame);
           if (p.name) drawNameLabel(p.name, pos.x, pos.y);
         },
       });
@@ -656,8 +645,8 @@ window.Overworld = (function () {
       socket = opts.socket;
       callbacks.onInteract = opts.onInteract || null;
       callbacks.onNearbyChange = opts.onNearbyChange || null;
-      me.species = opts.mySpecies || "human";
-      me.preset = opts.myPreset || 1;
+      me.gender = opts.myGender || "male";
+      me.color = opts.myColor || "red";
       myName = opts.myName || "";
 
       await loadMap(opts.mapUrl);
@@ -680,8 +669,8 @@ window.Overworld = (function () {
         if (p.id === myId) return;
         others[p.id] = {
           ...(others[p.id] || {}),
-          species: p.species,
-          preset: p.preset,
+          gender: p.gender,
+          color: p.color,
           name: p.name,
         };
       });

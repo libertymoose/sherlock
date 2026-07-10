@@ -1,0 +1,342 @@
+{
+  "male": {
+    "red": {
+      "walk": {
+        "src": "/assets/characters/base/male/red_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/male/red_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "blue": {
+      "walk": {
+        "src": "/assets/characters/base/male/blue_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/male/blue_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "green": {
+      "walk": {
+        "src": "/assets/characters/base/male/green_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/male/green_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "yellow": {
+      "walk": {
+        "src": "/assets/characters/base/male/yellow_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/male/yellow_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "orange": {
+      "walk": {
+        "src": "/assets/characters/base/male/orange_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/male/orange_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "purple": {
+      "walk": {
+        "src": "/assets/characters/base/male/purple_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/male/purple_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "pink": {
+      "walk": {
+        "src": "/assets/characters/base/male/pink_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/male/pink_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "cyan": {
+      "walk": {
+        "src": "/assets/characters/base/male/cyan_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/male/cyan_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "white": {
+      "walk": {
+        "src": "/assets/characters/base/male/white_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/male/white_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "black": {
+      "walk": {
+        "src": "/assets/characters/base/male/black_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/male/black_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "brown": {
+      "walk": {
+        "src": "/assets/characters/base/male/brown_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/male/brown_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "lime": {
+      "walk": {
+        "src": "/assets/characters/base/male/lime_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/male/lime_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    }
+  },
+  "female": {
+    "red": {
+      "walk": {
+        "src": "/assets/characters/base/female/red_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/female/red_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "blue": {
+      "walk": {
+        "src": "/assets/characters/base/female/blue_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/female/blue_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "green": {
+      "walk": {
+        "src": "/assets/characters/base/female/green_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/female/green_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "yellow": {
+      "walk": {
+        "src": "/assets/characters/base/female/yellow_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/female/yellow_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "orange": {
+      "walk": {
+        "src": "/assets/characters/base/female/orange_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/female/orange_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "purple": {
+      "walk": {
+        "src": "/assets/characters/base/female/purple_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/female/purple_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "pink": {
+      "walk": {
+        "src": "/assets/characters/base/female/pink_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/female/pink_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "cyan": {
+      "walk": {
+        "src": "/assets/characters/base/female/cyan_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/female/cyan_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "white": {
+      "walk": {
+        "src": "/assets/characters/base/female/white_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/female/white_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "black": {
+      "walk": {
+        "src": "/assets/characters/base/female/black_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/female/black_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "brown": {
+      "walk": {
+        "src": "/assets/characters/base/female/brown_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/female/brown_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    },
+    "lime": {
+      "walk": {
+        "src": "/assets/characters/base/female/lime_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      },
+      "idle": {
+        "src": "/assets/characters/base/female/lime_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      }
+    }
+  }
+}

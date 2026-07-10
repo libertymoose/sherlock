@@ -1,45 +1,45 @@
 const socket = io();
 
-const SPECIES = [
-  { key: "human", label: "Human" },
-  { key: "orc", label: "Orc" },
-  { key: "gnoll", label: "Gnoll" },
-  { key: "goblin", label: "Goblin" },
-  { key: "lizardman", label: "Lizardman" },
+const GENDERS = [
+  { key: "male", label: "Male" },
+  { key: "female", label: "Female" },
 ];
-const PRESET_COUNTS = { human: 9, orc: 3, gnoll: 3, goblin: 3, lizardman: 3 };
 
 let state = {
   isHost: false,
   roomCode: null,
   myId: null,
   hostId: null,
-  mySpecies: "human",
-  myPreset: 1,
+  myGender: "male",
+  myColor: "red",
 };
 
-let PRESET_MANIFEST = null;
+let BASE_MANIFEST = null;
+let PALETTE = null;
 let manifestReady = false;
 
-function loadPresetManifest() {
-  return fetch("/assets/characters/presets/manifest.json")
-    .then((r) => r.json())
-    .then((m) => {
-      PRESET_MANIFEST = m;
-      manifestReady = true;
-    });
+function loadBaseManifest() {
+  return Promise.all([
+    fetch("/assets/characters/base/manifest.json").then((r) => r.json()),
+    fetch("/assets/characters/base/palette.json").then((r) => r.json()),
+  ]).then(([m, p]) => {
+    BASE_MANIFEST = m;
+    PALETTE = p;
+    manifestReady = true;
+  });
 }
 
-// Draws a preset's down-facing idle frame (frame 0, row 0) into a preview canvas.
-// No recoloring here, presets are used exactly as authored.
-function drawAvatar(canvas, species, preset) {
+// Draws a gender+colour's down-facing idle frame (frame 0, row 0) into a
+// preview canvas. The colour tint is already baked into the sprite sheet
+// (pre-generated offline), no live recoloring happens here.
+function drawAvatar(canvas, gender, color) {
   const ctx = canvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!manifestReady) return;
 
-  const speciesManifest = PRESET_MANIFEST[species] || PRESET_MANIFEST.human;
-  const entry = speciesManifest[String(preset)] || speciesManifest["1"];
+  const genderManifest = BASE_MANIFEST[gender] || BASE_MANIFEST.male;
+  const entry = genderManifest[color] || genderManifest.red;
   if (!entry) return;
   const frameSet = entry.idle;
   const img = new Image();
@@ -67,60 +67,59 @@ function showScreen(id) {
 }
 
 // --- Character creation (shared by host + joining players) ---
-function buildPresetRow() {
-  const presetRow = document.getElementById("preset-row");
-  presetRow.innerHTML = "";
-  const count = PRESET_COUNTS[state.mySpecies] || 1;
-  for (let n = 1; n <= count; n++) {
+function buildColorRow() {
+  const colorRow = document.getElementById("preset-row");
+  colorRow.innerHTML = "";
+  Object.entries(PALETTE || {}).forEach(([key, hex], i) => {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "height-btn" + (n === 1 ? " active" : "");
-    btn.textContent = String(n);
+    btn.className = "swatch" + (key === state.myColor ? " active" : "");
+    btn.style.background = hex;
+    btn.title = key.charAt(0).toUpperCase() + key.slice(1);
     btn.addEventListener("click", () => {
-      document.querySelectorAll("#preset-row .height-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll("#preset-row .swatch").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
-      state.myPreset = n;
+      state.myColor = key;
       refreshPreview();
     });
-    presetRow.appendChild(btn);
-  }
-  state.myPreset = 1;
+    colorRow.appendChild(btn);
+  });
 }
 
 function initCharacterCreator() {
-  const speciesRow = document.getElementById("species-row");
-  SPECIES.forEach((s, i) => {
+  const genderRow = document.getElementById("gender-row");
+  GENDERS.forEach((g, i) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "height-btn" + (i === 0 ? " active" : "");
-    btn.textContent = s.label;
+    btn.textContent = g.label;
     btn.addEventListener("click", () => {
-      document.querySelectorAll("#species-row .height-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll("#gender-row .height-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
-      state.mySpecies = s.key;
-      buildPresetRow();
+      state.myGender = g.key;
       refreshPreview();
     });
-    speciesRow.appendChild(btn);
+    genderRow.appendChild(btn);
   });
 
-  buildPresetRow();
+  buildColorRow();
   refreshPreview();
 }
 
 function refreshPreview() {
   const canvas = document.getElementById("avatar-preview");
-  drawAvatar(canvas, state.mySpecies, state.myPreset);
+  drawAvatar(canvas, state.myGender, state.myColor);
 }
 
-loadPresetManifest().then(() => {
+loadBaseManifest().then(() => {
+  buildColorRow();
   refreshPreview();
 });
 
 // --- Landing screen ---
 document.getElementById("btn-host").addEventListener("click", () => {
   const name = document.getElementById("input-name").value.trim() || "Detective";
-  socket.emit("host:createRoom", { name, species: state.mySpecies, preset: state.myPreset }, (res) => {
+  socket.emit("host:createRoom", { name, gender: state.myGender, color: state.myColor }, (res) => {
     if (!res || !res.ok) return;
     state.isHost = true;
     state.roomCode = res.code;
@@ -142,7 +141,7 @@ document.getElementById("btn-join").addEventListener("click", () => {
     return;
   }
 
-  socket.emit("player:joinRoom", { code, name, species: state.mySpecies, preset: state.myPreset }, (res) => {
+  socket.emit("player:joinRoom", { code, name, gender: state.myGender, color: state.myColor }, (res) => {
     if (!res || !res.ok) {
       errorEl.textContent = (res && res.error) || "Could not join that game.";
       return;
@@ -189,9 +188,9 @@ socket.on("room:update", (data) => {
     roster.appendChild(chip);
 
     if (manifestReady) {
-      drawAvatar(mini, p.species || "human", p.preset || 1);
+      drawAvatar(mini, p.gender || "male", p.color || "red");
     } else {
-      loadPresetManifest().then(() => drawAvatar(mini, p.species || "human", p.preset || 1));
+      loadBaseManifest().then(() => drawAvatar(mini, p.gender || "male", p.color || "red"));
     }
   });
 
@@ -455,8 +454,8 @@ async function enterExplore(act) {
     canvas,
     socket,
     mapUrl: act.mapUrl,
-    mySpecies: state.mySpecies,
-    myPreset: state.myPreset,
+    myGender: state.myGender,
+    myColor: state.myColor,
     myName: (currentPlayers.find((p) => p.id === socket.id) || {}).name || "",
     onNearbyChange: (obj) => {
       isNearInteractable = !!obj;

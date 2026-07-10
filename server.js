@@ -24,25 +24,25 @@ const io = new Server(server);
 
 // In-memory room state. Fine for a friend-group game night; not meant to survive a server restart.
 const rooms = {};
-// Preset character system: species + a numbered look within that species.
-// No live recoloring, these are fixed pre-made sprites picked wholesale.
-const PRESET_COUNTS = { human: 9, orc: 3, gnoll: 3, goblin: 3, lizardman: 3 };
+// Player character system: pick a model (male/female base body) and a solid
+// colour tint, Among-Us style. No species/look-number selection any more,
+// that's reserved for NPCs/creature presets elsewhere in the game.
+const GENDERS = ["male", "female"];
+const COLORS = ["red", "blue", "green", "yellow", "orange", "purple", "pink", "cyan", "white", "black", "brown", "lime"];
 
-function cleanSpecies(species) {
-  return Object.prototype.hasOwnProperty.call(PRESET_COUNTS, species) ? species : "human";
+function cleanGender(gender) {
+  return GENDERS.includes(gender) ? gender : "male";
 }
-function cleanPreset(species, preset) {
-  const max = PRESET_COUNTS[cleanSpecies(species)];
-  const n = parseInt(preset, 10);
-  return Number.isInteger(n) && n >= 1 && n <= max ? n : 1;
+function cleanColor(color) {
+  return COLORS.includes(color) ? color : "red";
 }
 
 function publicPlayerList(room) {
   return Object.values(room.players).map((p) => ({
     id: p.id,
     name: p.name,
-    species: p.species,
-    preset: p.preset,
+    gender: p.gender,
+    color: p.color,
     connected: p.connected,
   }));
 }
@@ -254,8 +254,8 @@ io.on("connection", (socket) => {
     room.players[socket.id] = {
       id: socket.id,
       name: cleanName,
-      species: cleanSpecies(data && data.species),
-      preset: cleanPreset(data && data.species, data && data.preset),
+      gender: cleanGender(data && data.gender),
+      color: cleanColor(data && data.color),
       connected: true,
     };
     room.joinOrder.push(socket.id);
@@ -266,7 +266,7 @@ io.on("connection", (socket) => {
     broadcastRoomState(code);
   });
 
-  socket.on("player:joinRoom", ({ code, name, species, preset }, cb) => {
+  socket.on("player:joinRoom", ({ code, name, gender, color }, cb) => {
     code = String(code || "").toUpperCase().trim();
     const room = rooms[code];
     if (!room) {
@@ -281,8 +281,8 @@ io.on("connection", (socket) => {
     room.players[socket.id] = {
       id: socket.id,
       name: cleanName,
-      species: cleanSpecies(species),
-      preset: cleanPreset(species, preset),
+      gender: cleanGender(gender),
+      color: cleanColor(color),
       connected: true,
     };
     room.joinOrder.push(socket.id);
