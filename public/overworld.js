@@ -98,7 +98,8 @@ window.Overworld = (function () {
     return srcs;
   }
 
-  let resolvedLayers = []; // precomputed at load time: [{name, cells:[{x,y,img,sx,sy}]}]
+  let resolvedLayers = []; // "sorted" layers only now: [{name, cells:[{x,y,img,sx,sy}]}]
+  let floorCanvas = null; // "floor" layers pre-rendered once at native (unscaled) resolution
 
   async function loadMap(url) {
     const res = await fetch(url);
@@ -163,6 +164,8 @@ window.Overworld = (function () {
 
   function resolveLayers() {
     resolvedLayers = [];
+    const floorCells = []; // gathered across all floor layers, drawn once to floorCanvas
+
     mapData.layers.forEach((layer) => {
       const cells = [];
       if (layer.dense) {
@@ -181,7 +184,25 @@ window.Overworld = (function () {
           cells.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy });
         });
       }
-      resolvedLayers.push({ name: layer.name, cells });
+      if (layer.kind === "floor") {
+        floorCells.push(...cells);
+      } else {
+        resolvedLayers.push({ name: layer.name, cells });
+      }
+    });
+
+    // Floor (grass/path/water/etc) never moves and never changes, so it's drawn
+    // once here into an offscreen canvas at native (1x) resolution instead of
+    // redrawing every tile of every floor layer on every single frame. Redrawing
+    // thousands of individual tiles per frame was slow enough to stall
+    // animation and cause visible flicker/dropped frames.
+    floorCanvas = document.createElement("canvas");
+    floorCanvas.width = mapData.width * TILE;
+    floorCanvas.height = mapData.height * TILE;
+    const fctx = floorCanvas.getContext("2d");
+    fctx.imageSmoothingEnabled = false;
+    floorCells.forEach((c) => {
+      fctx.drawImage(c.img, c.sx, c.sy, TILE, TILE, c.x * TILE, c.y * TILE, TILE, TILE);
     });
   }
 
@@ -485,26 +506,51 @@ window.Overworld = (function () {
     if (!mapData) return;
 
     const scaledTile = TILE * RENDER_SCALE;
-    const camX = me.x * RENDER_SCALE - w / 2;
-    const camY = me.y * RENDER_SCALE - h / 2;
+    const worldW = mapData.width * scaledTile;
+    const worldH = mapData.height * scaledTile;
+    // Clamp the camera to the map bounds so the void beyond the edge is never
+    // visible, that void reading as "walking off the map" even when collision
+    // was correctly stopping the player right at the boundary.
+    let camX = me.x * RENDER_SCALE - w / 2;
+    let camY = me.y * RENDER_SCALE - h / 2;
+    camX = Math.max(0, Math.min(worldW - w, camX));
+    camY = Math.max(0, Math.min(worldH - h, camY));
+    if (worldW < w) camX = (worldW - w) / 2;
+    if (worldH < h) camY = (worldH - h) / 2;
 
     const startCol = Math.max(0, Math.floor(camX / scaledTile));
     const endCol = Math.min(mapData.width - 1, Math.ceil((camX + w) / scaledTile));
     const startRow = Math.max(0, Math.floor(camY / scaledTile));
     const endRow = Math.min(mapData.height - 1, Math.ceil((camY + h) / scaledTile));
 
-    // Ground: draw every resolved layer bottom-to-top, each one viewport-culled.
-    for (const layer of resolvedLayers) {
-      for (const cell of layer.cells) {
-        if (cell.x < startCol || cell.x > endCol || cell.y < startRow || cell.y > endRow) continue;
-        const dx = Math.round(cell.x * scaledTile - camX);
-        const dy = Math.round(cell.y * scaledTile - camY);
-        ctx.drawImage(cell.img, cell.sx, cell.sy, TILE, TILE, dx, dy, scaledTile, scaledTile);
-      }
+    // Floor: one single blit from the pre-rendered offscreen canvas (see
+    // resolveLayers), instead of redrawing thousands of individual tiles
+    // every frame.
+    if (floorCanvas) {
+      const sx = camX / RENDER_SCALE;
+      const sy = camY / RENDER_SCALE;
+      const sw = w / RENDER_SCALE;
+      const sh = h / RENDER_SCALE;
+      ctx.drawImage(floorCanvas, sx, sy, sw, sh, 0, 0, w, h);
     }
 
-    // Build a draw list: characters + interactive objects, sorted by world Y (poor-man's depth)
+    // Build a draw list: characters + interactive objects + "tall" scenery
+    // layers (buildings/statues/fences/decor), all sorted by world Y together
+    // so a character standing behind a tall object is correctly hidden by it,
+    // and one standing in front of it correctly draws on top.
     const drawList = [];
+
+    for (const layer of resolvedLayers) {
+      for (const cell of layer.cells) {
+        if (cell.x < startCol - 2 || cell.x > endCol + 2 || cell.y < startRow - 2 || cell.y > endRow + 2) continue;
+        const dx = Math.round(cell.x * scaledTile - camX);
+        const dy = Math.round(cell.y * scaledTile - camY);
+        drawList.push({
+          y: cell.y * TILE + TILE,
+          draw: () => ctx.drawImage(cell.img, cell.sx, cell.sy, TILE, TILE, dx, dy, scaledTile, scaledTile),
+        });
+      }
+    }
 
     mapData.objects.forEach((o) => {
       if (o.type === "npc") {
