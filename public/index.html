@@ -88,9 +88,13 @@
         <div>
           <p class="eyebrow" style="text-align:left;margin:0">Now Exploring</p>
           <h2 class="explore-title" id="explore-title"></h2>
+          <p class="zone-label" id="explore-zone-label"></p>
         </div>
         <div class="explore-hud-right">
           <div id="explore-progress" class="progress-text" style="margin:0"></div>
+          <button id="btn-open-inventory" class="btn btn-secondary inventory-btn">
+            Inventory <span id="inventory-count" class="inventory-count">0</span>
+          </button>
           <button id="btn-explore-force-advance" class="btn btn-secondary hidden">Host: Advance &rarr;</button>
         </div>
       </div>
@@ -98,7 +102,7 @@
         <canvas id="explore-canvas"></canvas>
         <button id="btn-interact" class="btn btn-primary interact-btn hidden">Examine</button>
 
-        <div id="vn-panel" class="vn-panel hidden">
+        <div id="vn-panel" class="vn-panel pixel-panel-dialogue hidden">
           <canvas id="vn-portrait" width="60" height="80"></canvas>
           <div class="vn-body">
             <div id="vn-dialogue-set">
@@ -149,15 +153,43 @@
     </div>
   </section>
 
-  <!-- Evidence table modal (collaborative scrap arrangement) -->
+  <!-- Player inventory (private, held items not yet added to the Evidence Table) -->
+  <div id="modal-inventory" class="modal-overlay hidden">
+    <div class="pixel-panel pixel-panel-popup modal-box">
+      <button id="btn-close-inventory" class="pixel-close-btn" aria-label="Close">&times;</button>
+      <h3 class="pixel-panel-title">Your Findings</h3>
+      <p class="hint-text" style="margin-top:0">Carry these to the Evidence Table to add them as exhibits.</p>
+      <div class="item-grid" id="inventory-grid"></div>
+      <p class="hint-text" id="inventory-empty-note">Nothing held right now. Explore the estate to find things worth keeping.</p>
+    </div>
+  </div>
+
+  <!-- Evidence table (shared, synced across the whole party) -->
   <div id="modal-table" class="modal-overlay hidden">
-    <div class="modal-box modal-box-wide">
-      <h3 class="modal-title">The Evidence Table</h3>
+    <div class="pixel-panel pixel-panel-popup modal-box modal-box-wide">
+      <button id="btn-close-table" class="pixel-close-btn" aria-label="Close">&times;</button>
+      <h3 class="pixel-panel-title">The Evidence Table</h3>
       <div class="sync-banner">Shared with your whole party &mdash; everyone sees this update live</div>
-      <p class="modal-prompt" id="table-status"></p>
-      <div class="table-slots" id="table-slots"></div>
-      <p class="hint-text" style="margin-top:14px">Drag a scrap onto another to swap their positions. The table solves itself once the order is right.</p>
-      <button id="btn-close-table" class="btn btn-secondary" style="margin-top:10px">Close</button>
+
+      <div class="item-grid" id="table-grid"></div>
+      <p class="hint-text" id="table-empty-note">No exhibits added yet.</p>
+
+      <div id="table-add-section">
+        <p class="section-label">Add from your inventory</p>
+        <div class="item-grid item-grid-small" id="table-add-grid"></div>
+      </div>
+
+      <button id="btn-close-table-2" class="btn btn-secondary" style="margin-top:10px">Close</button>
+    </div>
+  </div>
+
+  <!-- Investigate an exhibit: illustrated art plus description -->
+  <div id="modal-investigate" class="modal-overlay hidden">
+    <div class="pixel-panel pixel-panel-popup modal-box">
+      <button id="btn-close-investigate" class="pixel-close-btn" aria-label="Close">&times;</button>
+      <h3 class="pixel-panel-title" id="investigate-title"></h3>
+      <img id="investigate-art" class="investigate-art" src="" alt="" />
+      <p class="hint-text" id="investigate-text"></p>
     </div>
   </div>
 

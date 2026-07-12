@@ -445,6 +445,7 @@ async function getInteractions() {
 }
 
 async function enterExplore(act) {
+  ZONE_MAPS.estate = act.mapUrl;
   document.getElementById("explore-title").textContent = act.title;
   document.getElementById("explore-progress").textContent = `0 / ${act.requiredCount} clues found`;
   document.getElementById("btn-explore-force-advance").classList.toggle("hidden", state.hostId !== state.myId);
@@ -488,6 +489,27 @@ document.getElementById("btn-explore-force-advance").addEventListener("click", (
   socket.emit("host:advanceAct");
 });
 
+// Interior zones a player can walk into independently of the rest of the
+// party. "estate" isn't listed here, it's whatever act.mapUrl the current
+// explore act is using, set in enterExplore().
+const ZONE_MAPS = {
+  estate: null,
+  barn_interior: "/assets/maps/barn_interior.json",
+  dock_interior: "/assets/maps/dock_interior.json",
+  manor_interior: "/assets/maps/manor_interior.json",
+};
+
+function updateZoneLabel(zoneId) {
+  const label = {
+    estate: "",
+    barn_interior: "The Barn",
+    dock_interior: "The Dockhouse",
+    manor_interior: "The Manor",
+  }[zoneId] || "";
+  const el = document.getElementById("explore-zone-label");
+  if (el) el.textContent = label;
+}
+
 async function handleObjectInteract(obj) {
   const kind = obj.interaction && obj.interaction.kind;
   const data = await getInteractions();
@@ -500,10 +522,22 @@ async function handleObjectInteract(obj) {
   } else if (kind === "puzzle") {
     const entry = data[obj.interaction.puzzleId];
     if (entry) openPuzzleModal(obj, entry);
-  } else if (kind === "scrap_pickup") {
-    socket.emit("explore:pickupScrap", { scrapId: obj.interaction.scrapId });
+  } else if (kind === "inventory_pickup") {
+    socket.emit("inventory:pickup", { objectId: obj.id });
   } else if (kind === "table") {
     openTableModal();
+  } else if (kind === "zone_exit") {
+    const targetZone = obj.interaction.targetZone;
+    const mapUrl = ZONE_MAPS[targetZone];
+    if (!mapUrl) return;
+    document.getElementById("btn-interact").classList.add("hidden");
+    await Overworld.changeZone(targetZone, mapUrl, obj.interaction.targetX, obj.interaction.targetY);
+    socket.emit("player:changeZone", {
+      zone: targetZone,
+      x: obj.interaction.targetX,
+      y: obj.interaction.targetY,
+    });
+    updateZoneLabel(targetZone);
   }
 }
 
@@ -656,64 +690,130 @@ socket.on("explore:clueSolved", (data) => {
   Overworld.markSolved(data.puzzleId);
 });
 
-socket.on("explore:scrapFound", (data) => {
-  Overworld.markSolved(data.scrapId);
-  openDialogueModal("A Torn Scrap", [
-    `You find a scrap of paper, torn at the edges. On it, a single word: "${data.word}".`,
-    "Best bring it to the evidence table. Someone's probably already started piecing the others together.",
-  ]);
+socket.on("map:objectRemoved", (data) => {
+  Overworld.removeObject(data.objectId);
 });
 
-// --- The Evidence Table (collaborative drag-and-drop) ---
-let dragFromIndex = null;
+// --- Player inventory (private, held items not yet on the Evidence Table) ---
+let myInventory = [];
+
+function openInventoryModal() {
+  socket.emit("inventory:requestState");
+  document.getElementById("modal-inventory").classList.remove("hidden");
+}
+
+document.getElementById("btn-open-inventory").addEventListener("click", openInventoryModal);
+document.getElementById("btn-close-inventory").addEventListener("click", () => {
+  document.getElementById("modal-inventory").classList.add("hidden");
+});
+
+socket.on("inventory:state", (items) => {
+  myInventory = items || [];
+  document.getElementById("inventory-count").textContent = myInventory.length;
+  renderInventoryGrid();
+});
+
+function renderInventoryGrid() {
+  const grid = document.getElementById("inventory-grid");
+  const empty = document.getElementById("inventory-empty-note");
+  grid.innerHTML = "";
+  empty.classList.toggle("hidden", myInventory.length > 0);
+  myInventory.forEach((item) => {
+    grid.appendChild(buildItemCard(item, { label: item.name }));
+  });
+}
+
+function buildItemCard(item, opts) {
+  const card = document.createElement("div");
+  card.className = "item-card";
+  const icon = document.createElement("div");
+  icon.className = "item-card-icon";
+  icon.textContent = (opts.label || item.name || "?").slice(0, 1).toUpperCase();
+  const label = document.createElement("div");
+  label.className = "item-card-label";
+  label.textContent = opts.label || item.name;
+  card.appendChild(icon);
+  card.appendChild(label);
+  if (opts.exhibitLetter) {
+    const ex = document.createElement("div");
+    ex.className = "item-card-exhibit";
+    ex.textContent = `Exhibit ${opts.exhibitLetter}`;
+    card.appendChild(ex);
+  }
+  if (opts.onClick) card.addEventListener("click", opts.onClick);
+  return card;
+}
+
+// --- The Evidence Table (shared, synced across the whole party) ---
+let tableExhibits = [];
 
 function openTableModal() {
-  socket.emit("table:requestState");
+  socket.emit("evidence:requestState");
+  socket.emit("inventory:requestState");
   document.getElementById("modal-table").classList.remove("hidden");
 }
 
-document.getElementById("btn-close-table").addEventListener("click", () => {
+function closeTableModal() {
   document.getElementById("modal-table").classList.add("hidden");
+}
+
+document.getElementById("btn-close-table").addEventListener("click", closeTableModal);
+document.getElementById("btn-close-table-2").addEventListener("click", closeTableModal);
+
+socket.on("evidence:state", (exhibits) => {
+  tableExhibits = exhibits || [];
+  renderTableGrid();
 });
 
-socket.on("table:state", (state) => {
-  const container = document.getElementById("table-slots");
-  container.innerHTML = "";
-
-  document.getElementById("table-status").textContent = state.solved
-    ? "Solved! The order is right."
-    : `${state.foundCount} / ${state.totalScraps} scraps found so far. Drag the pieces into order.`;
-
-  state.slots.forEach((slot, index) => {
-    const el = document.createElement("div");
-    el.className = "table-slot" + (slot ? " filled" : "") + (state.solved ? " solved" : "");
-    el.textContent = slot ? slot.word : "empty";
-    el.dataset.index = index;
-
-    if (slot) {
-      el.draggable = true;
-      el.addEventListener("dragstart", () => {
-        dragFromIndex = index;
-      });
-    }
-
-    el.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      el.classList.add("drag-over");
-    });
-    el.addEventListener("dragleave", () => {
-      el.classList.remove("drag-over");
-    });
-    el.addEventListener("drop", (e) => {
-      e.preventDefault();
-      el.classList.remove("drag-over");
-      if (dragFromIndex === null || dragFromIndex === index) return;
-      socket.emit("table:swap", { fromIndex: dragFromIndex, toIndex: index });
-      dragFromIndex = null;
-    });
-
-    container.appendChild(el);
+function renderTableGrid() {
+  const grid = document.getElementById("table-grid");
+  const empty = document.getElementById("table-empty-note");
+  grid.innerHTML = "";
+  empty.classList.toggle("hidden", tableExhibits.length > 0);
+  tableExhibits.forEach((ex) => {
+    grid.appendChild(
+      buildItemCard(ex, {
+        label: `Exhibit ${ex.letter}`,
+        exhibitLetter: ex.letter,
+        onClick: () => openInvestigateModal(ex),
+      })
+    );
   });
+  renderTableAddGrid();
+}
+
+function renderTableAddGrid() {
+  const grid = document.getElementById("table-add-grid");
+  const section = document.getElementById("table-add-section");
+  grid.innerHTML = "";
+  section.classList.toggle("hidden", myInventory.length === 0);
+  myInventory.forEach((item) => {
+    grid.appendChild(
+      buildItemCard(item, {
+        label: `+ ${item.name}`,
+        onClick: () => socket.emit("evidence:add", { itemId: item.itemId }),
+      })
+    );
+  });
+}
+
+// --- Investigate an exhibit (illustrated art plus description) ---
+function openInvestigateModal(exhibit) {
+  document.getElementById("investigate-title").textContent = `Exhibit ${exhibit.letter}: ${exhibit.name}`;
+  const art = document.getElementById("investigate-art");
+  if (exhibit.art) {
+    art.src = exhibit.art;
+    art.classList.remove("hidden");
+  } else {
+    art.classList.add("hidden");
+  }
+  document.getElementById("investigate-text").textContent =
+    exhibit.description || "No further details recorded yet.";
+  document.getElementById("modal-investigate").classList.remove("hidden");
+}
+
+document.getElementById("btn-close-investigate").addEventListener("click", () => {
+  document.getElementById("modal-investigate").classList.add("hidden");
 });
 
 // --- The Suspect Board (live-synced portrait matching) ---

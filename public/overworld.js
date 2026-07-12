@@ -44,6 +44,7 @@ window.Overworld = (function () {
 
   let me = { x: 0, y: 0, dir: "down", moving: false, gender: "male", color: "red" };
   let myName = "";
+  let currentZone = "estate";
   let others = {}; // socketId -> {x,y,dir,moving,gender,color,name}
   let keys = {};
   let animTimer = 0;
@@ -659,6 +660,24 @@ window.Overworld = (function () {
         socket.on("players:moved", (p) => {
           others[p.id] = { ...(others[p.id] || {}), ...p };
         });
+
+        // Zones (interiors): players can walk into buildings independently,
+        // so "others" only ever reflects who else is in the same zone.
+        socket.off("zone:roster");
+        socket.on("zone:roster", (data) => {
+          others = {};
+          (data.players || []).forEach((p) => {
+            others[p.id] = { ...p };
+          });
+        });
+        socket.off("zone:playerEntered");
+        socket.on("zone:playerEntered", (p) => {
+          others[p.id] = { ...(others[p.id] || {}), ...p };
+        });
+        socket.off("zone:playerLeft");
+        socket.on("zone:playerLeft", (data) => {
+          delete others[data.id];
+        });
       }
 
       return mapData;
@@ -683,6 +702,30 @@ window.Overworld = (function () {
       if (!mapData) return;
       const obj = mapData.objects.find((o) => o.id === objId || o.interaction?.puzzleId === objId);
       if (obj) obj.__solved = true;
+    },
+
+    removeObject(objId) {
+      if (!mapData) return;
+      const idx = mapData.objects.findIndex((o) => o.id === objId);
+      if (idx !== -1) mapData.objects.splice(idx, 1);
+      if (nearbyObject && nearbyObject.id === objId) {
+        nearbyObject = null;
+        if (callbacks.onNearbyChange) callbacks.onNearbyChange(null);
+      }
+    },
+
+    async changeZone(zoneId, mapUrl, tileX, tileY) {
+      others = {}; // repopulated by the zone:roster reply from the server
+      nearbyObject = null;
+      await loadMap(mapUrl);
+      me.x = tileX * TILE + TILE / 2;
+      me.y = tileY * TILE + TILE / 2;
+      currentZone = zoneId;
+      return mapData;
+    },
+
+    getZone() {
+      return currentZone;
     },
 
     start() {

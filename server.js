@@ -14,6 +14,9 @@ const STORY = JSON.parse(
 const INTERACTIONS = JSON.parse(
   fs.readFileSync(path.join(__dirname, "content", "interactions.json"), "utf8")
 );
+const ITEMS = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "content", "items.json"), "utf8")
+);
 
 const app = express();
 app.use(express.static(path.join(__dirname, "public")));
@@ -138,8 +141,6 @@ function sendActToRoom(code) {
     solvedBy: {},
     ackBy: {},
     solvedClues: {},
-    tableSlots: [null, null, null, null, null, null],
-    foundScraps: {},
     boardZone: [],
   };
 
@@ -197,44 +198,39 @@ function normalize(str) {
   return String(str || "").trim().toLowerCase();
 }
 
-function buildTableState(room) {
-  const scrapDefs = INTERACTIONS.tableScraps || {};
-  const totalScraps = Object.keys(scrapDefs).length;
-  return {
-    slots: room.actState.tableSlots.map((scrapId) =>
-      scrapId ? { scrapId, word: scrapDefs[scrapId]?.word || "?" } : null
-    ),
-    foundCount: Object.keys(room.actState.foundScraps).length,
-    totalScraps,
-    solved: !!room.actState.solvedClues["evidence_table"],
-  };
+function getInventory(room, socketId) {
+  if (!room.inventories[socketId]) room.inventories[socketId] = [];
+  return room.inventories[socketId];
 }
 
-function checkTableSolved(room, code) {
-  if (room.actState.solvedClues["evidence_table"]) return;
-  const scrapDefs = INTERACTIONS.tableScraps || {};
-  const slots = room.actState.tableSlots;
-  if (slots.some((s) => s === null)) return;
+function buildInventoryState(room, socketId) {
+  return getInventory(room, socketId).map((it) => ({
+    itemId: it.itemId,
+    name: it.name,
+  }));
+}
 
-  const correct = slots.every((scrapId, index) => {
-    const def = scrapDefs[scrapId];
-    return def && def.order === index;
-  });
+function buildEvidenceState(room) {
+  return room.evidence.map((ex) => ({
+    itemId: ex.itemId,
+    letter: ex.letter,
+    name: ex.name,
+    description: ex.description,
+    art: ex.art,
+  }));
+}
 
-  if (correct) {
-    room.actState.solvedClues["evidence_table"] = true;
-    io.to(code).emit("explore:clueSolved", {
-      puzzleId: "evidence_table",
-      title: "The Evidence Table",
-    });
-    emitProgress(code);
-
-    const act = STORY.acts[room.actIndex];
-    const solvedCount = Object.keys(room.actState.solvedClues).length;
-    if (act.completionCount && solvedCount >= act.completionCount) {
-      setTimeout(() => advanceAct(code), 2500);
-    }
+function letterForIndex(i) {
+  // A, B, C ... Z, then AA, AB... good enough for a case file that will
+  // never realistically hit 26 exhibits in one sitting.
+  let s = "";
+  i += 1;
+  while (i > 0) {
+    const rem = (i - 1) % 26;
+    s = String.fromCharCode(65 + rem) + s;
+    i = Math.floor((i - 1) / 26);
   }
+  return s;
 }
 
 io.on("connection", (socket) => {
@@ -249,6 +245,11 @@ io.on("connection", (socket) => {
       started: false,
       actIndex: -1,
       actState: { solvedBy: {}, ackBy: {} },
+      // Persistent across acts, unlike actState, exhibits found in the estate
+      // still need to be on the table by the time the party reaches the Guild Hall.
+      inventories: {},
+      evidence: [],
+      collectedPickups: {},
     };
     const room = rooms[code];
     room.players[socket.id] = {
@@ -257,9 +258,11 @@ io.on("connection", (socket) => {
       gender: cleanGender(data && data.gender),
       color: cleanColor(data && data.color),
       connected: true,
+      zone: "estate",
     };
     room.joinOrder.push(socket.id);
     socket.join(code);
+    socket.join(`${code}:estate`);
     socket.data.roomCode = code;
     socket.data.isHost = true;
     cb && cb({ ok: true, code });
@@ -284,9 +287,11 @@ io.on("connection", (socket) => {
       gender: cleanGender(gender),
       color: cleanColor(color),
       connected: true,
+      zone: "estate",
     };
     room.joinOrder.push(socket.id);
     socket.join(code);
+    socket.join(`${code}:estate`);
     socket.data.roomCode = code;
     cb && cb({ ok: true, code });
     broadcastRoomState(code);
@@ -381,14 +386,50 @@ io.on("connection", (socket) => {
     const code = socket.data.roomCode;
     const room = rooms[code];
     if (!room || !room.players[socket.id]) return;
+    const zone = room.players[socket.id].zone || "estate";
     room.players[socket.id].pos = { x: data.x, y: data.y, dir: data.dir, moving: !!data.moving };
-    socket.to(code).volatile.emit("players:moved", {
+    socket.to(`${code}:${zone}`).volatile.emit("players:moved", {
       id: socket.id,
       x: data.x,
       y: data.y,
       dir: data.dir,
       moving: !!data.moving,
     });
+  });
+
+  // Players can walk into buildings independently, they don't need to be
+  // pulled in together. Each zone is its own Socket.io sub-room so movement
+  // and roster updates only reach players actually standing in that zone.
+  socket.on("player:changeZone", ({ zone, x, y }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !room.players[socket.id]) return;
+    const player = room.players[socket.id];
+    const oldZone = player.zone || "estate";
+    if (oldZone === zone) return;
+
+    socket.leave(`${code}:${oldZone}`);
+    socket.to(`${code}:${oldZone}`).emit("zone:playerLeft", { id: socket.id });
+
+    player.zone = zone;
+    player.pos = { x, y, dir: "down", moving: false };
+    socket.join(`${code}:${zone}`);
+
+    socket.to(`${code}:${zone}`).emit("zone:playerEntered", {
+      id: socket.id,
+      name: player.name,
+      gender: player.gender,
+      color: player.color,
+      x, y,
+    });
+
+    const othersHere = Object.entries(room.players)
+      .filter(([id, p]) => id !== socket.id && p.connected && (p.zone || "estate") === zone)
+      .map(([id, p]) => ({
+        id, name: p.name, gender: p.gender, color: p.color,
+        x: p.pos ? p.pos.x : x, y: p.pos ? p.pos.y : y,
+      }));
+    socket.emit("zone:roster", { zone, players: othersHere });
   });
 
   socket.on("explore:requestDialogue", ({ dialogueId }) => {
@@ -429,55 +470,62 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("explore:pickupScrap", ({ scrapId }) => {
+  socket.on("inventory:pickup", ({ objectId }) => {
     const code = socket.data.roomCode;
     const room = rooms[code];
     if (!room) return;
     const act = STORY.acts[room.actIndex];
     if (!act || act.type !== "explore") return;
 
-    const def = INTERACTIONS.tableScraps && INTERACTIONS.tableScraps[scrapId];
+    const def = ITEMS[objectId];
     if (!def) return;
-    if (room.actState.foundScraps[scrapId]) {
-      socket.emit("table:state", buildTableState(room));
-      return;
-    }
+    if (room.collectedPickups[objectId]) return; // someone else already got it
 
-    room.actState.foundScraps[scrapId] = true;
-    const emptyIndex = room.actState.tableSlots.findIndex((s) => s === null);
-    if (emptyIndex !== -1) {
-      room.actState.tableSlots[emptyIndex] = scrapId;
-    }
+    room.collectedPickups[objectId] = true;
+    getInventory(room, socket.id).push({
+      itemId: objectId,
+      name: def.name,
+      description: def.description,
+      art: def.art,
+    });
 
-    io.to(code).emit("explore:scrapFound", { scrapId, word: def.word });
-    io.to(code).emit("table:state", buildTableState(room));
+    io.to(code).emit("map:objectRemoved", { objectId });
+    socket.emit("inventory:state", buildInventoryState(room, socket.id));
   });
 
-  socket.on("table:requestState", () => {
+  socket.on("inventory:requestState", () => {
     const code = socket.data.roomCode;
     const room = rooms[code];
     if (!room) return;
-    socket.emit("table:state", buildTableState(room));
+    socket.emit("inventory:state", buildInventoryState(room, socket.id));
   });
 
-  socket.on("table:swap", ({ fromIndex, toIndex }) => {
+  socket.on("evidence:requestState", () => {
     const code = socket.data.roomCode;
     const room = rooms[code];
     if (!room) return;
-    const act = STORY.acts[room.actIndex];
-    if (!act || act.type !== "explore") return;
-    const slots = room.actState.tableSlots;
-    if (
-      fromIndex < 0 || fromIndex >= slots.length ||
-      toIndex < 0 || toIndex >= slots.length
-    ) return;
+    socket.emit("evidence:state", buildEvidenceState(room));
+  });
 
-    const tmp = slots[fromIndex];
-    slots[fromIndex] = slots[toIndex];
-    slots[toIndex] = tmp;
+  socket.on("evidence:add", ({ itemId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room) return;
+    const inv = getInventory(room, socket.id);
+    const idx = inv.findIndex((it) => it.itemId === itemId);
+    if (idx === -1) return;
 
-    checkTableSolved(room, code);
-    io.to(code).emit("table:state", buildTableState(room));
+    const [item] = inv.splice(idx, 1);
+    room.evidence.push({
+      itemId: item.itemId,
+      letter: letterForIndex(room.evidence.length),
+      name: item.name,
+      description: item.description,
+      art: item.art,
+    });
+
+    socket.emit("inventory:state", buildInventoryState(room, socket.id));
+    io.to(code).emit("evidence:state", buildEvidenceState(room));
   });
 
   socket.on("board:move", ({ key, toZone }) => {
@@ -545,6 +593,8 @@ io.on("connection", (socket) => {
 
     if (room.players[socket.id]) {
       room.players[socket.id].connected = false;
+      const zone = room.players[socket.id].zone || "estate";
+      socket.to(`${code}:${zone}`).emit("zone:playerLeft", { id: socket.id });
       broadcastRoomState(code);
     }
 
