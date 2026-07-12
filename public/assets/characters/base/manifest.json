@@ -167,6 +167,62 @@
         "cols": 12,
         "rows": 4
       }
+    },
+    "navy": {
+      "idle": {
+        "src": "/assets/characters/base/male/navy_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/base/male/navy_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "teal": {
+      "idle": {
+        "src": "/assets/characters/base/male/teal_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/base/male/teal_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "maroon": {
+      "idle": {
+        "src": "/assets/characters/base/male/maroon_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/base/male/maroon_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "violet": {
+      "idle": {
+        "src": "/assets/characters/base/male/violet_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/base/male/violet_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
     }
   },
   "female": {
@@ -335,6 +391,62 @@
         "src": "/assets/characters/base/female/lime_idle.png",
         "cell": 64,
         "cols": 12,
+        "rows": 4
+      }
+    },
+    "navy": {
+      "idle": {
+        "src": "/assets/characters/base/female/navy_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/base/female/navy_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "teal": {
+      "idle": {
+        "src": "/assets/characters/base/female/teal_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/base/female/teal_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "maroon": {
+      "idle": {
+        "src": "/assets/characters/base/female/maroon_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/base/female/maroon_walk.png",
+        "cell": 64,
+        "cols": 6,
+        "rows": 4
+      }
+    },
+    "violet": {
+      "idle": {
+        "src": "/assets/characters/base/female/violet_idle.png",
+        "cell": 64,
+        "cols": 12,
+        "rows": 4
+      },
+      "walk": {
+        "src": "/assets/characters/base/female/violet_walk.png",
+        "cell": 64,
+        "cols": 6,
         "rows": 4
       }
     }

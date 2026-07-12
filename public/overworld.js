@@ -32,7 +32,7 @@ window.Overworld = (function () {
   // Calibrated from actual non-transparent content height (old human sheet
   // was 27px tall at draw size 46; the new base sheets are 22px tall), so
   // on-screen height stays consistent with everything else.
-  const PLAYER_DRAW_SIZE = 38;
+  const PLAYER_DRAW_SIZE = 50;
   const WORLD_CHAR_SIZE = 22; // NPC on-map footprint
   const IDLE_FPS = 6;
   const WALK_FPS = 9;

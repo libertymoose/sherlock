@@ -175,23 +175,16 @@ socket.on("room:update", (data) => {
     const chip = document.createElement("div");
     chip.className = "player-chip" + (p.connected ? "" : " disconnected");
 
-    const mini = document.createElement("canvas");
-    mini.className = "mini-avatar";
-    mini.width = 48;
-    mini.height = 64;
+    const dot = document.createElement("span");
+    dot.className = "player-color-dot";
+    dot.style.background = (PALETTE && PALETTE[p.color || "red"]) || "#e83b3b";
 
     const label = document.createElement("span");
     label.textContent = p.name + (p.id === data.hostId ? " (Host)" : "");
 
-    chip.appendChild(mini);
+    chip.appendChild(dot);
     chip.appendChild(label);
     roster.appendChild(chip);
-
-    if (manifestReady) {
-      drawAvatar(mini, p.gender || "male", p.color || "red");
-    } else {
-      loadBaseManifest().then(() => drawAvatar(mini, p.gender || "male", p.color || "red"));
-    }
   });
 
   if (!data.started) {

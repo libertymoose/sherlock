@@ -179,8 +179,8 @@ html, body {
 
 #avatar-preview {
   image-rendering: pixelated;
-  width: 96px;
-  height: 128px;
+  width: 160px;
+  height: 213px;
 }
 
 .mini-avatar {
@@ -188,6 +188,15 @@ html, body {
   width: 24px;
   height: 32px;
   flex-shrink: 0;
+}
+
+.player-color-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(var(--parchment-rgb), 0.4);
+  flex-shrink: 0;
+  display: inline-block;
 }
 
 .landing-bento {
@@ -207,6 +216,7 @@ html, body {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding: 14px 16px;
 }
 
 @media (max-width: 600px) {
