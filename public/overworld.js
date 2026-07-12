@@ -93,9 +93,15 @@ window.Overworld = (function () {
   let resolvedLayers = []; // "sorted" layers only now: [{name, cells:[{x,y,img,sx,sy}]}]
   let floorCanvas = null; // "floor" layers pre-rendered once at native (unscaled) resolution
 
+  let animClock = 0; // ms, accumulated each frame, drives animated tile frames
+  let activatedZones = new Set(); // animation trigger zones that have been walked into
+  let insideInteriorZone = null; // which INTERIORS rect (if any) the player is currently standing in, for edge-triggering
+
   async function loadMap(url) {
     const res = await fetch(url);
     mapData = await res.json();
+    activatedZones = new Set();
+    insideInteriorZone = null;
 
     // Load every tileset image this map references, plus static props.
     const srcs = new Set(mapData.tilesets.map((t) => t.image));
@@ -136,6 +142,26 @@ window.Overworld = (function () {
     return mapData;
   }
 
+  // Given a tile's base gid, returns whichever gid should actually be drawn
+  // right now: itself if it has no animation data, or if it belongs to a
+  // building-animation trigger zone that hasn't been walked into yet (stays
+  // on its resting frame until then), otherwise the frame its animation
+  // cycle is currently on.
+  function currentGidFor(baseGid, layer, index) {
+    const frames = mapData.animations && mapData.animations[baseGid];
+    if (!frames || !frames.length) return baseGid;
+    const zone = layer.gatedCells && layer.gatedCells[index];
+    if (zone && !activatedZones.has(zone)) return baseGid;
+    const total = frames.reduce((s, f) => s + f.duration, 0);
+    if (total <= 0) return baseGid;
+    let t = animClock % total;
+    for (const f of frames) {
+      if (t < f.duration) return f.gid;
+      t -= f.duration;
+    }
+    return frames[frames.length - 1].gid;
+  }
+
   // Ground tiles come from a real Tiled export: a list of tilesets (each
   // covering a gid range) and a list of layers (each either a dense
   // width*height gid array, or a sparse list of [x,y,gid] triples for mostly-
@@ -154,26 +180,39 @@ window.Overworld = (function () {
     return null;
   }
 
+  let animatedFloorCells = []; // floor-kind cells with animation data, redrawn every frame instead of baked
+
   function resolveLayers() {
     resolvedLayers = [];
-    const floorCells = []; // gathered across all floor layers, drawn once to floorCanvas
+    animatedFloorCells = [];
+    const floorCells = []; // gathered across all floor (non-animated) layers, drawn once to floorCanvas
 
     mapData.layers.forEach((layer) => {
       const cells = [];
+      const isAnimatedLayer = (gid) => mapData.animations && mapData.animations[gid];
       if (layer.dense) {
         const w = mapData.width;
         for (let i = 0; i < layer.data.length; i++) {
           const gid = layer.data[i];
           if (!gid) continue;
+          const x = i % w, y = Math.floor(i / w);
+          if (layer.kind === "floor" && isAnimatedLayer(gid)) {
+            animatedFloorCells.push({ x, y, gid, layer, index: i });
+            continue;
+          }
           const r = resolveGid(gid);
           if (!r) continue;
-          cells.push({ x: i % w, y: Math.floor(i / w), img: getImg(r.src), sx: r.sx, sy: r.sy });
+          cells.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, layer, index: i, animated: !!isAnimatedLayer(gid) });
         }
       } else {
-        layer.cells.forEach(([x, y, gid]) => {
+        layer.cells.forEach(([x, y, gid], idx) => {
+          if (layer.kind === "floor" && isAnimatedLayer(gid)) {
+            animatedFloorCells.push({ x, y, gid, layer, index: idx });
+            return;
+          }
           const r = resolveGid(gid);
           if (!r) return;
-          cells.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy });
+          cells.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, layer, index: idx, animated: !!isAnimatedLayer(gid) });
         });
       }
       if (layer.kind === "floor") {
@@ -183,11 +222,13 @@ window.Overworld = (function () {
       }
     });
 
-    // Floor (grass/path/water/etc) never moves and never changes, so it's drawn
-    // once here into an offscreen canvas at native (1x) resolution instead of
-    // redrawing every tile of every floor layer on every single frame. Redrawing
-    // thousands of individual tiles per frame was slow enough to stall
-    // animation and cause visible flicker/dropped frames.
+    // Floor (grass/path/water/etc) never moves and rarely changes, so the
+    // non-animated majority is drawn once here into an offscreen canvas at
+    // native (1x) resolution instead of redrawing every tile of every floor
+    // layer on every single frame. Redrawing thousands of individual tiles
+    // per frame was slow enough to stall animation and cause visible
+    // flicker/dropped frames. Animated floor tiles (water shimmer etc) are
+    // kept out of this bake and drawn fresh each frame instead, see render().
     floorCanvas = document.createElement("canvas");
     floorCanvas.width = mapData.width * TILE;
     floorCanvas.height = mapData.height * TILE;
@@ -317,9 +358,55 @@ window.Overworld = (function () {
       animFrame++;
     }
 
+    animClock += dt * 1000; // Tiled animation durations are in ms
+    checkAnimationZones();
+    checkInteriorZones();
+
     findNearbyObject();
     maybeSendPosition();
     updateNpcs(dt);
+  }
+
+  // Building animations (doors opening etc) stay on their resting frame by
+  // default and only start playing once a player has actually walked into
+  // the matching ANIMATION TRIGGERS zone, rather than looping forever from
+  // the moment the map loads.
+  function checkAnimationZones() {
+    if (!mapData || !mapData.animationZones) return;
+    const tx = me.x / TILE, ty = me.y / TILE;
+    for (const z of mapData.animationZones) {
+      if (tx >= z.x0 && tx < z.x1 && ty >= z.y0 && ty < z.y1) {
+        activatedZones.add(z.id);
+      }
+    }
+  }
+
+  // Walking anywhere into an INTERIORS rectangle moves the party into that
+  // building, no interact button needed. Edge-triggered (only fires on the
+  // step from outside to inside) so it doesn't refire every frame while
+  // standing in the zone.
+  function checkInteriorZones() {
+    if (!mapData || !mapData.interiorZones) return;
+    const tx = me.x / TILE, ty = me.y / TILE;
+    const zone = mapData.interiorZones.find(
+      (z) => tx >= z.x0 && tx < z.x1 && ty >= z.y0 && ty < z.y1
+    );
+    const zoneId = zone ? zone.id : null;
+    if (zoneId !== insideInteriorZone) {
+      insideInteriorZone = zoneId;
+      if (zone && callbacks.onInteract) {
+        callbacks.onInteract({
+          id: `zone_${zone.id}`,
+          type: "zone_exit",
+          interaction: {
+            kind: "zone_exit",
+            targetZone: zone.targetZone,
+            targetX: zone.targetX,
+            targetY: zone.targetY,
+          },
+        });
+      }
+    }
   }
 
   const NPC_WANDER_SPEED = 7; // px/sec, a slow amble, not a walk
@@ -524,6 +611,18 @@ window.Overworld = (function () {
       ctx.drawImage(floorCanvas, sx, sy, sw, sh, 0, 0, w, h);
     }
 
+    // Animated floor tiles (water shimmer etc) aren't in the static bake,
+    // drawn fresh each frame instead, same viewport culling as everything else.
+    for (const cell of animatedFloorCells) {
+      if (cell.x < startCol - 2 || cell.x > endCol + 2 || cell.y < startRow - 2 || cell.y > endRow + 2) continue;
+      const curGid = currentGidFor(cell.gid, cell.layer, cell.index);
+      const r = resolveGid(curGid);
+      if (!r) continue;
+      const dx = Math.round(cell.x * scaledTile - camX);
+      const dy = Math.round(cell.y * scaledTile - camY);
+      ctx.drawImage(getImg(r.src), r.sx, r.sy, TILE, TILE, dx, dy, scaledTile, scaledTile);
+    }
+
     // Build a draw list: characters + interactive objects + "tall" scenery
     // layers (buildings/statues/fences/decor), all sorted by world Y together
     // so a character standing behind a tall object is correctly hidden by it,
@@ -535,10 +634,22 @@ window.Overworld = (function () {
         if (cell.x < startCol - 2 || cell.x > endCol + 2 || cell.y < startRow - 2 || cell.y > endRow + 2) continue;
         const dx = Math.round(cell.x * scaledTile - camX);
         const dy = Math.round(cell.y * scaledTile - camY);
-        drawList.push({
-          y: cell.y * TILE + TILE,
-          draw: () => ctx.drawImage(cell.img, cell.sx, cell.sy, TILE, TILE, dx, dy, scaledTile, scaledTile),
-        });
+        if (cell.animated) {
+          drawList.push({
+            y: cell.y * TILE + TILE,
+            draw: () => {
+              const curGid = currentGidFor(cell.gid, cell.layer, cell.index);
+              const r = resolveGid(curGid);
+              if (!r) return;
+              ctx.drawImage(getImg(r.src), r.sx, r.sy, TILE, TILE, dx, dy, scaledTile, scaledTile);
+            },
+          });
+        } else {
+          drawList.push({
+            y: cell.y * TILE + TILE,
+            draw: () => ctx.drawImage(cell.img, cell.sx, cell.sy, TILE, TILE, dx, dy, scaledTile, scaledTile),
+          });
+        }
       }
     }
 
