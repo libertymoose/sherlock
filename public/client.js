@@ -496,7 +496,8 @@ const ZONE_MAPS = {
   estate: null,
   barn_interior: "/assets/maps/barn_interior.json",
   dock_interior: "/assets/maps/dock_interior.json",
-  manor_interior: "/assets/maps/manor_interior.json",
+  manor_ground: "/assets/maps/manor_ground.json",
+  manor_upper: "/assets/maps/manor_upper.json",
 };
 
 function updateZoneLabel(zoneId) {
@@ -504,7 +505,8 @@ function updateZoneLabel(zoneId) {
     estate: "",
     barn_interior: "The Barn",
     dock_interior: "The Dockhouse",
-    manor_interior: "The Manor",
+    manor_ground: "The Manor",
+    manor_upper: "The Manor, Upstairs",
   }[zoneId] || "";
   const el = document.getElementById("explore-zone-label");
   if (el) el.textContent = label;
