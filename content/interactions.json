@@ -43,7 +43,7 @@
     "type": "dialogue",
     "title": "Silas \"Hook\" Corwin",
     "lines": [
-      "He looks you up and down, then leans in close."
+      "He looks you up and down, then leans in close.",
       "\"You lot look like you're about to get blamed for somethin' you didn't do. \"",
       "\"If you want to know more about Marrow, he's left a survey marker out near the river. Always thought that was odd.\""
     ]
@@ -70,8 +70,8 @@
     "title": "A Lady's Maid",
     "lines": [
       "She's refilling glasses that don't need refilling, doing her best to look busy.",
-      "\"I've been working the whole evening, sir. Haven't left the courtyard once.\" Her hands are shaking, and she keeps glancing toward the farm animals."
-      "\Then again, maybe she just doesn't like cows?"
+      "\"I've been working the whole evening, sir. Haven't left the courtyard once.\" Her hands are shaking, and she keeps glancing toward the farm animals.",
+      "Then again, maybe she just doesn't like cows?"
     ]
   },
   "npc_guest_a1": {
