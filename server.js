@@ -440,38 +440,6 @@ io.on("connection", (socket) => {
     socket.emit("explore:dialogue", { id: dialogueId, title: entry.title, lines: entry.lines });
   });
 
-  socket.on("explore:submitAnswer", ({ puzzleId, answer }) => {
-    const code = socket.data.roomCode;
-    const room = rooms[code];
-    if (!room) return;
-    const act = STORY.acts[room.actIndex];
-    if (!act || act.type !== "explore") return;
-
-    const entry = INTERACTIONS[puzzleId];
-    if (!entry || entry.type !== "puzzle") return;
-
-    const isCorrect = normalize(answer) === normalize(entry.answer);
-    socket.emit("explore:result", { puzzleId, correct: isCorrect });
-
-    if (isCorrect) {
-      const alreadySolved = !!room.actState.solvedClues[puzzleId];
-      room.actState.solvedClues[puzzleId] = true;
-      if (!alreadySolved) {
-        io.to(code).emit("explore:clueSolved", {
-          puzzleId,
-          by: room.players[socket.id]?.name,
-          title: entry.title,
-        });
-      }
-      emitProgress(code);
-
-      const solvedCount = Object.keys(room.actState.solvedClues).length;
-      if (act.completionCount && solvedCount >= act.completionCount) {
-        setTimeout(() => advanceAct(code), 2500);
-      }
-    }
-  });
-
   socket.on("inventory:pickup", ({ objectId, itemId }) => {
     const code = socket.data.roomCode;
     const room = rooms[code];
