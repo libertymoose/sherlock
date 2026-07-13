@@ -412,10 +412,12 @@ window.Overworld = (function () {
     return pts.every(([px, py]) => !isBlockedTile(px, py));
   }
 
+  let zoneChangeInProgress = false;
+
   function handleKeyDown(e) {
     const k = e.key.toLowerCase();
     keys[k] = true;
-    if (k === " ") {
+    if (k === " " && !e.repeat) {
       e.preventDefault();
       triggerInteract();
     }
@@ -425,6 +427,7 @@ window.Overworld = (function () {
   }
 
   function triggerInteract() {
+    if (zoneChangeInProgress) return;
     if (nearbyObject && callbacks.onInteract) {
       callbacks.onInteract(nearbyObject);
     }
@@ -988,12 +991,18 @@ window.Overworld = (function () {
     },
 
     async changeZone(zoneId, mapUrl, tileX, tileY) {
+      zoneChangeInProgress = true;
       others = {}; // repopulated by the zone:roster reply from the server
       nearbyObject = null;
       await loadMap(mapUrl);
       me.x = tileX * TILE + TILE / 2;
       me.y = tileY * TILE + TILE / 2;
       currentZone = zoneId;
+      // Give the next animation frame a chance to recompute nearbyObject
+      // for the new position before interact can fire again, otherwise a
+      // key repeat landing right on arrival can immediately trigger
+      // whatever exit happens to be closest to the spawn point.
+      setTimeout(() => { zoneChangeInProgress = false; }, 400);
       return mapData;
     },
 
