@@ -4,15 +4,15 @@
     "title": "Steward Wren Ashby",
     "lines": [
       "\"I was polishing silver in the cellar all evening,\" he insists, hands trembling.",
-      "\"...Actually, between us, don't tell the guard captain. There's a locked cupboard in the tack room I'd rather nobody opened. The stable keys are right there on the nail, if you're determined.\""
+      "\"I wasn't doing nothing in the Barn, so if you saw me over there it wasn't me!\""
     ]
   },
   "npc_voss": {
     "type": "dialogue",
     "title": "Commodore Brannigan Voss",
     "lines": [
-      "\"I heard the toast from the eastern watch post,\" Voss says, a little too quickly.",
-      "\"Ask anyone. I've nothing to hide.\" He does not sound like a man with nothing to hide."
+      "\"I heard the toast from the watch post,\" Voss says, a little too quickly.",
+      "\"Ask anyone. I've nothing to hide.\" He stares at you intently as he says this."
     ]
   },
   "npc_kestrel": {
@@ -20,15 +20,15 @@
     "title": "Merchant Odalys Kestrel",
     "lines": [
       "\"I never even spoke to Lord Duskmere tonight,\" Kestrel claims, arms folded.",
-      "\"Go on, then. Check my dock office if you don't believe me. Key's under the loose plank by the door. See if you can make sense of the manifests yourself.\""
+      "\"I was working all evening until they called us over here. Go on and check the dock office if you don't believe me.\""
     ]
   },
   "npc_marrow": {
     "type": "dialogue",
     "title": "Architect Tobias Marrow",
     "lines": [
-      "\"I was proud to rebuild these walls,\" Marrow says, gesturing at the estate.",
-      "\"Every stone, on schedule and to the letter of the contract.\" He doesn't quite meet your eyes when he says it."
+      "\"I was proud to have played my part in rebuilding these walls,\" Marrow says, gesturing at the estate house.",
+      "\"Every stone on schedule, a-and to the letter of the contract.\" He doesn't quite meet your eyes when he says it."
     ]
   },
   "npc_ashgate": {
@@ -36,34 +36,33 @@
     "title": "Lady Isobel Ashgate",
     "lines": [
       "She regards you coolly over the rim of her glass, entirely unbothered by the commotion.",
-      "\"A dreadful business. Alaric and I had our disagreements, of course, land mostly, tedious inheritance law, but murder? I have people for that sort of thing. I certainly don't attend to it myself.\"",
-      "She smiles, and gives you absolutely nothing else."
+      "\"A dreadful business. Alaric and I had our disagreements, of course, land mostly, tedious inheritance laws, but murder? I have people for that sort of thing. I certainly don't attend to it myself.\" She smiles, and gives you absolutely nothing else."
     ]
   },
   "npc_corwin": {
     "type": "dialogue",
-    "title": "Old Silas \"Hook\" Corwin",
+    "title": "Silas \"Hook\" Corwin",
     "lines": [
-      "He looks you up and down, then leans in close.",
-      "\"You lot look like you're about to get blamed for somethin' you didn't do. Happens to the best of us.\"",
-      "\"If you want the truth about what Marrow was really paid for, there's a survey marker out past the manor grounds. Dig where it points. Might tell you more than the man himself will.\""
+      "He looks you up and down, then leans in close."
+      "\"You lot look like you're about to get blamed for somethin' you didn't do. \"",
+      "\"If you want to know more about Marrow, he's left a survey marker out near the river. Always thought that was odd.\""
     ]
   },
   "npc_nell": {
     "type": "dialogue",
     "title": "Nell Cobb",
     "lines": [
-      "\"Oh, hey! Didn't expect to see Champions of Azeroth at a fancy garden party.\"",
+      "\"Didn't expect to see Champions of Azeroth at a fancy garden party!\"",
       "\"Free drinks though, can't complain. Shame about the poisoning. Really put a damper on the evening.\"",
-      "\"Between us? I saw the Commodore burning papers down by the river a few nights back. Didn't think much of it at the time. Might be worth a look.\""
+      "\"Between us? I saw the Commodore down by the river a few nights back. Didn't think much of it at the time, but now murder? Suspect if you ask me.\""
     ]
   },
   "npc_reyes": {
     "type": "dialogue",
     "title": "Sergeant Reyes",
     "lines": [
-      "The watch sergeant won't quite meet your eyes. \"I was on my rounds. The whole time. Ask anyone.\"",
-      "Nobody seems to have actually seen him. There's a broken lantern near the bridge he keeps glancing at, like he'd rather you didn't."
+      "The watch sergeant won't quite meet your eyes. \"I was on my rounds. The whole time. \"",
+      "He keeps glancing over the bridge and looking back towards the manor."
     ]
   },
   "npc_maid": {
@@ -71,14 +70,15 @@
     "title": "A Lady's Maid",
     "lines": [
       "She's refilling glasses that don't need refilling, doing her best to look busy.",
-      "\"I've been working the whole evening, sir. Haven't left the courtyard once.\" Her hands are shaking, and she keeps glancing toward the kitchen garden, like there's something buried there she'd rather you didn't find."
+      "\"I've been working the whole evening, sir. Haven't left the courtyard once.\" Her hands are shaking, and she keeps glancing toward the farm animals."
+      "\Then again, maybe she just doesn't like cows?"
     ]
   },
   "npc_guest_a1": {
     "type": "dialogue",
     "title": "A Gala Guest",
     "lines": [
-      "\"Terrible thing, isn't it? Though between us, House Duskmere's wine cellar is still the best in Tiragarde Sound. Shame to let it go to waste tonight.\""
+      "\"Terrible thing, isn't it? Though between us, Duskmere's wine cellar is still the best. Shame to let it go to waste tonight.\""
     ]
   },
   "npc_guest_a2": {
@@ -106,7 +106,7 @@
     "type": "dialogue",
     "title": "A Gala Guest",
     "lines": [
-      "\"Lady Ashgate looked awfully calm when they found the body, don't you think? ...No, I'm sure that means nothing. Though I did hear the engagement was announced awfully suddenly, barely a season ago.\""
+      "\"Surprised to see Lady Ashgate still here - I heard the engagement was called off awfully suddenly...\""
     ]
   },
   "npc_guest_c1": {
@@ -120,7 +120,7 @@
     "type": "dialogue",
     "title": "A Gala Guest",
     "lines": [
-      "\"Best trade gala Boralus has seen since the Siege, and now this. Poor Alaric. Poor seating chart, honestly. Who's going to redo it?\""
+      "\"Best gala Boralus has seen since the Siege, and now this. Poor Alaric. Poor seating chart, honestly. Who's going to redo it?\""
     ]
   },
   "doc_ashby": {
@@ -347,7 +347,7 @@
   "evidence_table": {
     "type": "table",
     "title": "The Evidence Table",
-    "description": "Whatever you find out on the grounds needs to end up here. Bring every piece of evidence you're carrying and add it to the table."
+    "description": "Bring every piece of evidence you're carrying and add it to the table."
   },
   "suspectBoard": {
     "pool": [
@@ -374,7 +374,7 @@
       {
         "key": "ashgate",
         "name": "Lady Isobel Ashgate",
-        "sprite": "/assets/npcs/portraits/ashgate_fancy.png"
+        "sprite": "/assets/npcs/portraits/ashgate_portrait.png"
       },
       {
         "key": "reyes",
@@ -384,7 +384,7 @@
       {
         "key": "maid",
         "name": "The Lady's Maid",
-        "sprite": "/assets/npcs/portraits/citizen6.png"
+        "sprite": "/assets/npcs/portraits/citizen6_portrait.png"
       }
     ],
     "correctSet": [
