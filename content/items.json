@@ -1,7 +1,37 @@
 {
-  "scrap_1": { "name": "A Torn Scrap", "description": "A scrap of paper, torn at the edges. Worth a closer look once it's on the table.", "art": null },
-  "scrap_2": { "name": "A Torn Scrap", "description": "A scrap of paper, torn at the edges. Worth a closer look once it's on the table.", "art": null },
-  "scrap_3": { "name": "A Torn Scrap", "description": "A scrap of paper, torn at the edges. Worth a closer look once it's on the table.", "art": null },
-  "scrap_4": { "name": "A Torn Scrap", "description": "A scrap of paper, torn at the edges. Worth a closer look once it's on the table.", "art": null },
-  "scrap_5": { "name": "A Torn Scrap", "description": "A scrap of paper, torn at the edges. Worth a closer look once it's on the table.", "art": null }
+  "ledger_ashby": {
+    "name": "Repair Ledger",
+    "description": "Seven withdrawals against the repair fund, and a tin of numbered receipt stubs that don't quite line up.",
+    "art": null
+  },
+  "satchel_voss": {
+    "name": "Burnt Satchel",
+    "description": "Torn, part-burned betting slips, the debts inside them climbing right up to the night of the gala.",
+    "art": null
+  },
+  "manifests_kestrel": {
+    "name": "Shipping Manifests",
+    "description": "A stack of dock paperwork. Two entries describe a ship arriving before it could possibly have left.",
+    "art": null
+  },
+  "blueprint_marrow": {
+    "name": "Blueprint Tube",
+    "description": "The original contracted repairs, and a second sheet showing everything that actually got built.",
+    "art": null
+  },
+  "letter_ashgate": {
+    "name": "Torn Correspondence",
+    "description": "A letter torn into six pieces, mixed in with a few things that don't matter at all.",
+    "art": null
+  },
+  "rota_reyes": {
+    "name": "Patrol Rota",
+    "description": "A watch schedule, and a half-torn note about a shift swap nobody was told about.",
+    "art": null
+  },
+  "diary_maid": {
+    "name": "Hidden Diary",
+    "description": "Half plain hand, half a lover's code. Someone was being careful not to name names.",
+    "art": null
+  }
 }

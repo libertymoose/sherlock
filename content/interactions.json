@@ -4,7 +4,7 @@
     "title": "Steward Wren Ashby",
     "lines": [
       "\"I was polishing silver in the cellar all evening,\" he insists, hands trembling.",
-      "\"...Actually, between us, don't tell the guard captain. I wasn't in the cellar at all. Check my study desk, top drawer. There's something there I wouldn't want an auditor to see.\""
+      "\"...Actually, between us, don't tell the guard captain. There's a locked cupboard in the tack room I'd rather nobody opened. The stable keys are right there on the nail, if you're determined.\""
     ]
   },
   "npc_voss": {
@@ -12,7 +12,7 @@
     "title": "Commodore Brannigan Voss",
     "lines": [
       "\"I heard the toast from the eastern watch post,\" Voss says, a little too quickly.",
-      "\"If you don't believe me, ask around the stables' tack room. There's a wager slip pinned up in there, coded but not cleverly. Might tell you where I really was.\""
+      "\"Ask anyone. I've nothing to hide.\" He does not sound like a man with nothing to hide."
     ]
   },
   "npc_kestrel": {
@@ -20,7 +20,7 @@
     "title": "Merchant Odalys Kestrel",
     "lines": [
       "\"I never even spoke to Lord Duskmere tonight,\" Kestrel claims, arms folded.",
-      "\"My stall ledger's still pinned open by the market stall, if you don't believe me. Though... some of the letters in it are circled for no reason I can explain.\""
+      "\"Go on, then. Check my dock office if you don't believe me. Key's under the loose plank by the door. See if you can make sense of the manifests yourself.\""
     ]
   },
   "npc_marrow": {
@@ -28,7 +28,7 @@
     "title": "Architect Tobias Marrow",
     "lines": [
       "\"I was proud to rebuild these walls,\" Marrow says, gesturing at the estate.",
-      "\"The scaffold's still got my measurements chalked on the beam, if you want the truth of what I was actually paid for.\""
+      "\"Every stone, on schedule and to the letter of the contract.\" He doesn't quite meet your eyes when he says it."
     ]
   },
   "npc_ashgate": {
@@ -46,16 +46,16 @@
     "lines": [
       "He looks you up and down, then leans in close.",
       "\"You lot look like you're about to get blamed for somethin' you didn't do. Happens to the best of us.\"",
-      "\"If it comes to it, there's an old smuggler's route under this city. There's a marker among the oaks around the old fountain. Count only those, mind, not every tree on the grounds. That number's a key you'll need later.\""
+      "\"If you want the truth about what Marrow was really paid for, there's a survey marker out past the manor grounds. Dig where it points. Might tell you more than the man himself will.\""
     ]
   },
-  "npc_flynn": {
+  "npc_nell": {
     "type": "dialogue",
-    "title": "Flynn Fairwind",
+    "title": "Nell Cobb",
     "lines": [
       "\"Oh, hey! Didn't expect to see Champions of Azeroth at a fancy garden party.\"",
       "\"Free drinks though, can't complain. Shame about the poisoning. Really put a damper on the evening.\"",
-      "\"Between us? I wouldn't trust anyone here who's smiling *too* hard tonight. Oh, and if you find any torn-up scraps of paper lying around? Bring 'em to a table. People don't usually tear up things that don't matter.\""
+      "\"Between us? I saw the Commodore burning papers down by the river a few nights back. Didn't think much of it at the time. Might be worth a look.\""
     ]
   },
   "npc_reyes": {
@@ -63,7 +63,7 @@
     "title": "Sergeant Reyes",
     "lines": [
       "The watch sergeant won't quite meet your eyes. \"I was on my rounds. The whole time. Ask anyone.\"",
-      "Nobody seems to have actually seen him. There's something by the trees near the east wall he clearly doesn't want you looking at."
+      "Nobody seems to have actually seen him. There's a broken lantern near the bridge he keeps glancing at, like he'd rather you didn't."
     ]
   },
   "npc_maid": {
@@ -71,7 +71,7 @@
     "title": "A Lady's Maid",
     "lines": [
       "She's refilling glasses that don't need refilling, doing her best to look busy.",
-      "\"I've been working the whole evening, sir. Haven't left the courtyard once.\" Her hands are shaking. She keeps glancing toward the dock path."
+      "\"I've been working the whole evening, sir. Haven't left the courtyard once.\" Her hands are shaking, and she keeps glancing toward the kitchen garden, like there's something buried there she'd rather you didn't find."
     ]
   },
   "npc_guest_a1": {
@@ -102,6 +102,13 @@
       "\"I do hope they let us go home soon. My feet are absolutely killing me in these shoes.\""
     ]
   },
+  "npc_guest_a3": {
+    "type": "dialogue",
+    "title": "A Gala Guest",
+    "lines": [
+      "\"Lady Ashgate looked awfully calm when they found the body, don't you think? ...No, I'm sure that means nothing. Though I did hear the engagement was announced awfully suddenly, barely a season ago.\""
+    ]
+  },
   "npc_guest_c1": {
     "type": "dialogue",
     "title": "A Gala Guest",
@@ -116,393 +123,134 @@
       "\"Best trade gala Boralus has seen since the Siege, and now this. Poor Alaric. Poor seating chart, honestly. Who's going to redo it?\""
     ]
   },
-  "study_desk": {
-    "type": "puzzle",
-    "render": "wordsearch",
-    "title": "The Study Desk",
-    "prompt": "Tucked in the top drawer: a page of practice handwriting, like someone rehearsing a forgery. Find every word from the list in the grid below. One word from the list won't be there at all. That missing word is your answer.",
-    "wordList": [
-      "LEDGER",
-      "COIN",
-      "DEBT",
-      "AUDIT",
-      "BRIBE",
-      "THEFT",
-      "FORGERY"
-    ],
-    "grid": [
-      [
-        "R",
-        "K",
-        "V",
-        "P",
-        "Q",
-        "M",
-        "K",
-        "T",
-        "F",
-        "O"
-      ],
-      [
-        "R",
-        "B",
-        "K",
-        "R",
-        "L",
-        "V",
-        "Y",
-        "H",
-        "D",
-        "X"
-      ],
-      [
-        "V",
-        "R",
-        "U",
-        "Z",
-        "W",
-        "I",
-        "T",
-        "E",
-        "E",
-        "P"
-      ],
-      [
-        "G",
-        "I",
-        "H",
-        "I",
-        "R",
-        "J",
-        "H",
-        "F",
-        "B",
-        "J"
-      ],
-      [
-        "Y",
-        "B",
-        "J",
-        "W",
-        "G",
-        "W",
-        "T",
-        "T",
-        "T",
-        "W"
-      ],
-      [
-        "P",
-        "E",
-        "K",
-        "P",
-        "L",
-        "I",
-        "R",
-        "Z",
-        "X",
-        "N"
-      ],
-      [
-        "I",
-        "J",
-        "L",
-        "E",
-        "D",
-        "G",
-        "E",
-        "R",
-        "I",
-        "D"
-      ],
-      [
-        "S",
-        "V",
-        "R",
-        "U",
-        "M",
-        "M",
-        "L",
-        "O",
-        "Y",
-        "Z"
-      ],
-      [
-        "E",
-        "J",
-        "A",
-        "B",
-        "J",
-        "W",
-        "C",
-        "C",
-        "L",
-        "O"
-      ],
-      [
-        "U",
-        "I",
-        "X",
-        "P",
-        "G",
-        "G",
-        "R",
-        "I",
-        "R",
-        "W"
+  "doc_ashby": {
+    "type": "document",
+    "title": "The Repair Ledger",
+    "intro": "A ledger of seven repair-fund withdrawals sits beside a small tin of numbered receipt stubs.",
+    "table": {
+      "headers": ["#", "Date", "Vendor", "Purpose", "Amount"],
+      "rows": [
+        ["1", "3rd Wanning", "Coastwood Timber", "Scaffold planking", "40g"],
+        ["2", "6th Wanning", "Coastwood Timber", "Scaffold planking", "25g"],
+        ["3", "9th Wanning", "Ironbell Smithy", "Gate hinges", "15g"],
+        ["4", "14th Wanning", "Duskmere Estate", "Contingency reserve", "60g"],
+        ["5", "18th Wanning", "Coastwood Timber", "Roof beams", "55g"],
+        ["6", "21st Wanning", "Ironbell Smithy", "Fence repair", "20g"],
+        ["7", "25th Wanning", "Harrow & Vale", "Stone masonry", "90g"]
       ]
+    },
+    "list": [
+      "Stub 401 — Coastwood Timber, 40g",
+      "Stub 402 — Coastwood Timber, 25g",
+      "Stub 403 — Ironbell Smithy, 15g",
+      "Stub 404 — Harrow & Vale, 90g",
+      "Stub 405 — Coastwood Timber, 55g",
+      "Stub 406 — Ironbell Smithy, 20g"
     ],
-    "answer": "FORGERY",
-    "hint": "Cross off every word you DO find in the grid, whichever one from the list is left over is your answer."
+    "closing": "Six stubs for seven withdrawals. If they were issued in ledger order, simply skipping whichever entry lacked a receipt, stub 404 ought to belong to the fifth withdrawal, the Coastwood Timber roof beams. Instead it's stamped for Harrow & Vale, the seventh. Something's been renumbered to cover a gap. The fourteenth-of-Wanning withdrawal, paid straight to 'Duskmere Estate' itself for a contingency reserve, has no stub at all.",
+    "itemId": "ledger_ashby"
   },
-  "tack_room": {
-    "type": "puzzle",
-    "render": "cipher",
-    "title": "The Tack Room",
-    "prompt": "A wager slip, pinned to the wall, reads: JDPEOHU, each letter shifted three forward from a word describing exactly the kind of trouble a naval officer might be hiding from.",
-    "answer": "gambler",
-    "hint": "Shift each letter back three: J\u2192G, D\u2192A, and so on."
+  "doc_voss": {
+    "type": "document",
+    "title": "The Burnt Satchel",
+    "intro": "Half-buried among the reeds, a satchel holds five torn, part-burned betting slips. None show a full date, only fragments of context.",
+    "list": [
+      "\"...paid in full after the regatta, no hard feelings, B.V.\" (5g)",
+      "\"...third marker this month, Voss, I'm done extending you credit\" (20g)",
+      "\"...since the Siege repairs started, you've been good for it, but this one's steep\" (35g)",
+      "\"...if this isn't settled by the gala I'm bringing it to Thorne myself\" (80g)",
+      "\"...he swears the ship's coming in any day now. It never does.\" (a side note, different hand, no amount)"
+    ],
+    "closing": "The regatta came before the Siege repairs began. Read in that order, the debt only grows, and the largest, most recent slip threatens to go straight to Thorne by the night of the gala.",
+    "itemId": "satchel_voss"
   },
-  "market_stall": {
-    "type": "puzzle",
-    "render": "highlightgrid",
-    "title": "Kestrel's Ledger",
-    "prompt": "Odalys Kestrel's stall ledger is filled with trade jargon, but a path of highlighted letters cuts through the noise. Read them in order (they're numbered) to spell the word.",
-    "grid": [
-      [
-        "L",
-        "C",
-        "N",
-        "D",
-        "E",
-        "A",
-        "H",
-        "O"
-      ],
-      [
-        "D",
-        "D",
-        "S",
-        "O",
-        "A",
-        "S",
-        "A",
-        "M"
-      ],
-      [
-        "U",
-        "N",
-        "D",
-        "E",
-        "O",
-        "S",
-        "L",
-        "A"
-      ],
-      [
-        "D",
-        "L",
-        "E",
-        "R",
-        "C",
-        "I",
-        "P",
-        "K"
-      ],
-      [
-        "K",
-        "D",
-        "D",
-        "L",
-        "U",
-        "T",
-        "D",
-        "N"
-      ],
-      [
-        "D",
-        "P",
-        "A",
-        "L",
-        "P",
-        "G",
-        "M",
-        "C"
-      ],
-      [
-        "A",
-        "I",
-        "L",
-        "O",
-        "L",
-        "R",
-        "H",
-        "D"
-      ],
-      [
-        "L",
-        "K",
-        "G",
-        "O",
-        "H",
-        "L",
-        "E",
-        "L"
+  "doc_kestrel": {
+    "type": "document",
+    "title": "The Shipping Manifests",
+    "intro": "A locked dock office, and inside, a stack of shipping manifests.",
+    "table": {
+      "headers": ["Ship", "Cargo", "Departed", "Arrived", "Notes"],
+      "rows": [
+        ["Windward Gale", "Kestrel timber", "12th Wanning, dawn", "14th Wanning", "Standard Boralus route"],
+        ["Windward Gale", "Kestrel cloth", "19th Wanning, dawn", "21st Wanning", "Standard Boralus route"],
+        ["Providence's Grace", "Duskmere grain", "13th Wanning, dusk", "13th Wanning, dusk", "Boralus to Boralus"],
+        ["Fair Tide", "Kestrel spice", "22nd Wanning, dawn", "24th Wanning", "Standard Boralus route"],
+        ["Providence's Grace", "Duskmere grain", "20th Wanning, dawn", "20th Wanning, dawn", "Boralus to Duskwater"]
       ]
+    },
+    "closing": "Two of these describe the same ship, Providence's Grace, departing and arriving in the same instant, twice. No ship sails that fast. Something was filed on paper that never needed to happen on water.",
+    "itemId": "manifests_kestrel"
+  },
+  "doc_marrow": {
+    "type": "document",
+    "title": "The Blueprint Tube",
+    "intro": "Buried near the survey marker, a tube holding two documents: the original contracted repairs, and a second sheet recording what actually got built.",
+    "table": {
+      "headers": ["Contracted Repairs", "As Actually Built"],
+      "rows": [
+        ["Seawall patch", "Built as contracted"],
+        ["East wing roof", "Built as contracted"],
+        ["Courtyard fountain repair", "Built as contracted"],
+        ["Dock decking", "Built as contracted"],
+        ["Stable roof", "Built as contracted"],
+        ["(not on the contract)", "Rebuilt garden folly"],
+        ["(not on the contract)", "A second, larger dock extension"]
+      ]
+    },
+    "closing": "Two structures exist on the grounds that never appeared on the original contract. Marrow built them anyway, and was never paid for the overage.",
+    "itemId": "blueprint_marrow"
+  },
+  "doc_ashgate": {
+    "type": "document",
+    "title": "Torn Correspondence",
+    "intro": "A locked travelling chest holds a letter torn into six pieces, mixed in with a shawl-mending receipt and a dinner invitation that don't matter at all.",
+    "list": [
+      "\"...the solicitor confirms House Ashgate's holdings will not...\"",
+      "\"...cover the debts by autumn. If the engagement proceeds as...\"",
+      "\"...planned, everything changes. I am told the...\"",
+      "\"...paperwork can be finalized within the month, well before...\"",
+      "\"...the anniversary of the Siege. I cannot say this...\"",
+      "\"...to anyone, least of all him, until it is settled...\""
     ],
-    "highlightPath": [
-      {
-        "r": 2,
-        "c": 0
-      },
-      {
-        "r": 2,
-        "c": 1
-      },
-      {
-        "r": 2,
-        "c": 2
-      },
-      {
-        "r": 3,
-        "c": 2
-      },
-      {
-        "r": 3,
-        "c": 3
-      },
-      {
-        "r": 3,
-        "c": 4
-      },
-      {
-        "r": 4,
-        "c": 4
-      },
-      {
-        "r": 4,
-        "c": 5
-      }
+    "closing": "Pieced together in order, the letter reads: 'The solicitor confirms House Ashgate's holdings will not cover the debts by autumn. If the engagement proceeds as planned, everything changes. I am told the paperwork can be finalized within the month, well before the anniversary of the Siege. I cannot say this to anyone, least of all him, until it is settled.' Weeks before the gala, and already a matter of real urgency.",
+    "itemId": "letter_ashgate"
+  },
+  "doc_reyes": {
+    "type": "document",
+    "title": "The Patrol Rota",
+    "intro": "Folded inside a broken lantern near the bridge: a watch schedule, in Boralus City Watch bells rather than plain hours.",
+    "list": [
+      "First Bell, dusk",
+      "Second Bell, one candle-mark after dusk",
+      "Third Bell, two candle-marks after dusk — Reyes",
+      "Fourth Bell, midnight",
+      "Fifth Bell, two candle-marks after midnight"
     ],
-    "answer": "UNDERCUT",
-    "hint": "Follow the numbered letters in order. Don't read the grid in rows."
+    "closing": "A second note, half-torn: 'R. asked to swap Third for Fourth, said he'd cover the gap himself, told no one.' A crossed-out watch log shows someone else covering Fourth Bell instead. Reyes' actual post, Third Bell, two candle-marks after dusk, was empty.",
+    "itemId": "rota_reyes"
   },
-  "scaffold": {
-    "type": "puzzle",
-    "render": "text",
-    "title": "The Scaffold Beam",
-    "prompt": "Chalked measurements, half rain-washed: the north wall took 42 feet of stone, the south wall 38 feet. Duskmere's contract promised payment for 100 feet total, split evenly between them. How many feet of paid-for stone never got billed?",
-    "answer": "20",
-    "hint": "42 + 38 = 80. What's 100 minus that?"
-  },
-  "oak_count": {
-    "type": "puzzle",
-    "render": "text",
-    "title": "Beneath the Fountain Oaks",
-    "prompt": "A small carved marker at the base of one of the oaks ringing the old fountain reads: 'Count us all, the tall and the small, and you'll have your number.' There are more oaks scattered across the grounds, but this marker only cares about the ones planted right around the fountain. How many is that?",
-    "answer": "4",
-    "hint": "Just the oaks in the ring around the fountain itself, not the ones elsewhere on the grounds."
-  },
-  "chest_lock": {
-    "type": "puzzle",
-    "render": "text",
-    "title": "Locked Garden Chest",
-    "prompt": "A small three-digit combination lock. Scratched beside it: 'the year the seawall finished, minus the number of Duskmere ships in harbor tonight.' You recall: the seawall finished this year, the 27th year since the city's founding, and there are 3 ships moored tonight.",
-    "answer": "24",
-    "hint": "27 minus 3.",
-    "successText": "Inside: a forged inheritance document, bearing Lady Isobel Ashgate's seal, dated just three days before Duskmere's death."
-  },
-  "evidence_reyes": {
-    "type": "puzzle",
-    "render": "text",
-    "title": "By the East Wall",
-    "prompt": "[PLACEHOLDER: a real puzzle goes here] For now, type CONTINUE to note down what you've found near the trees where Reyes wouldn't look.",
-    "answer": "continue",
-    "hint": "This one's a stand-in for now."
-  },
-  "evidence_maid": {
-    "type": "puzzle",
-    "render": "text",
-    "title": "Near the Dock Path",
-    "prompt": "[PLACEHOLDER: a real puzzle goes here] For now, type CONTINUE to note down what you've found where the maid kept glancing.",
-    "answer": "continue",
-    "hint": "This one's a stand-in for now."
+  "doc_maid": {
+    "type": "document",
+    "title": "The Hidden Diary",
+    "intro": "Buried beneath a loose stone in the kitchen garden: a diary, half in plain hand, half in a simple lover's code.",
+    "closing": "Decoded, one entry reads: 'He waits for me where the old boathouse used to stand, past the willow, where no one from the house ever walks after dark.' Whoever she's meeting, she's gone to real trouble to avoid naming him.",
+    "itemId": "diary_maid"
   },
   "evidence_table": {
     "type": "table",
     "title": "The Evidence Table",
-    "description": "Scraps of torn paper, scattered around the estate, waiting to be pieced together."
-  },
-  "tableScraps": {
-    "scrap_1": {
-      "word": "THE",
-      "order": 0
-    },
-    "scrap_2": {
-      "word": "TUNNEL",
-      "order": 1
-    },
-    "scrap_3": {
-      "word": "OPENS",
-      "order": 2
-    },
-    "scrap_4": {
-      "word": "AT",
-      "order": 3
-    },
-    "scrap_5": {
-      "word": "LOW",
-      "order": 4
-    },
-    "scrap_6": {
-      "word": "TIDE",
-      "order": 5
-    }
+    "description": "Whatever you find out on the grounds needs to end up here. Bring every piece of evidence you're carrying and add it to the table."
   },
   "suspectBoard": {
     "pool": [
-      {
-        "key": "ashby",
-        "name": "Steward Wren Ashby",
-        "sprite": "/assets/npcs/portraits/citizen1.png"
-      },
-      {
-        "key": "voss",
-        "name": "Commodore Brannigan Voss",
-        "sprite": "/assets/npcs/portraits/fighter2.png"
-      },
-      {
-        "key": "kestrel",
-        "name": "Merchant Odalys Kestrel",
-        "sprite": "/assets/npcs/portraits/citizen3.png"
-      },
-      {
-        "key": "marrow",
-        "name": "Architect Tobias Marrow",
-        "sprite": "/assets/npcs/portraits/citizen2.png"
-      },
-      {
-        "key": "ashgate",
-        "name": "Lady Isobel Ashgate",
-        "sprite": "/assets/npcs/portraits/ashgate_fancy.png"
-      },
-      {
-        "key": "reyes",
-        "name": "Sergeant Reyes",
-        "sprite": "/assets/npcs/portraits/fighter2.png"
-      },
-      {
-        "key": "maid",
-        "name": "The Lady's Maid",
-        "sprite": "/assets/npcs/portraits/citizen1.png"
-      }
+      { "key": "ashby", "name": "Steward Wren Ashby", "sprite": "/assets/npcs/portraits/citizen1.png" },
+      { "key": "voss", "name": "Commodore Brannigan Voss", "sprite": "/assets/npcs/portraits/fighter2.png" },
+      { "key": "kestrel", "name": "Merchant Odalys Kestrel", "sprite": "/assets/npcs/portraits/citizen3.png" },
+      { "key": "marrow", "name": "Architect Tobias Marrow", "sprite": "/assets/npcs/portraits/citizen2.png" },
+      { "key": "ashgate", "name": "Lady Isobel Ashgate", "sprite": "/assets/npcs/portraits/ashgate_fancy.png" },
+      { "key": "reyes", "name": "Sergeant Reyes", "sprite": "/assets/npcs/portraits/fighter2.png" },
+      { "key": "maid", "name": "The Lady's Maid", "sprite": "/assets/npcs/portraits/citizen1.png" }
     ],
-    "correctSet": [
-      "ashby",
-      "voss",
-      "kestrel",
-      "marrow",
-      "ashgate"
-    ]
+    "correctSet": ["ashby", "voss", "kestrel", "marrow", "ashgate"]
   }
 }

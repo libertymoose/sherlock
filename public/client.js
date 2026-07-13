@@ -517,6 +517,9 @@ async function handleObjectInteract(obj) {
   } else if (kind === "puzzle") {
     const entry = data[obj.interaction.puzzleId];
     if (entry) openPuzzleModal(obj, entry);
+  } else if (kind === "evidence_document") {
+    const entry = data[obj.interaction.documentId];
+    if (entry) openDocumentModal(obj, entry);
   } else if (kind === "inventory_pickup") {
     socket.emit("inventory:pickup", { objectId: obj.id });
   } else if (kind === "table") {
@@ -648,6 +651,80 @@ function buildLetterGrid(grid, highlightPath) {
 }
 
 document.getElementById("btn-close-puzzle").addEventListener("click", () => {
+  document.getElementById("vn-panel").classList.add("hidden");
+  document.getElementById("btn-interact").classList.toggle("hidden", !isNearInteractable);
+});
+
+let activeDocumentObj = null;
+
+function openDocumentModal(obj, entry) {
+  activeDocumentObj = obj;
+
+  document.getElementById("vn-dialogue-set").classList.add("hidden");
+  document.getElementById("vn-puzzle-set").classList.add("hidden");
+  document.getElementById("vn-document-set").classList.remove("hidden");
+  setVnPortrait(obj);
+
+  document.getElementById("document-title").textContent = entry.title;
+  document.getElementById("document-intro").textContent = entry.intro || "";
+  document.getElementById("document-closing").textContent = entry.closing || "";
+
+  const extra = document.getElementById("document-extra");
+  extra.innerHTML = "";
+  if (entry.table) extra.appendChild(buildDocumentTable(entry.table));
+  if (entry.list) extra.appendChild(buildDocumentList(entry.list));
+
+  document.getElementById("vn-panel").classList.remove("hidden");
+  document.getElementById("btn-interact").classList.add("hidden");
+}
+
+function buildDocumentTable(table) {
+  const el = document.createElement("table");
+  el.className = "document-table";
+  const thead = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  table.headers.forEach((h) => {
+    const th = document.createElement("th");
+    th.textContent = h;
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+  el.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  table.rows.forEach((row) => {
+    const tr = document.createElement("tr");
+    row.forEach((cell) => {
+      const td = document.createElement("td");
+      td.textContent = cell;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  el.appendChild(tbody);
+  return el;
+}
+
+function buildDocumentList(list) {
+  const el = document.createElement("ul");
+  el.className = "document-list";
+  list.forEach((line) => {
+    const li = document.createElement("li");
+    li.textContent = line;
+    el.appendChild(li);
+  });
+  return el;
+}
+
+document.getElementById("btn-document-take").addEventListener("click", () => {
+  if (!activeDocumentObj) return;
+  socket.emit("inventory:pickup", { objectId: activeDocumentObj.id });
+  document.getElementById("vn-panel").classList.add("hidden");
+  document.getElementById("btn-interact").classList.toggle("hidden", !isNearInteractable);
+  activeDocumentObj = null;
+});
+
+document.getElementById("btn-close-document").addEventListener("click", () => {
   document.getElementById("vn-panel").classList.add("hidden");
   document.getElementById("btn-interact").classList.toggle("hidden", !isNearInteractable);
 });

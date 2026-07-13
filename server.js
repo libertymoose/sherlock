@@ -174,7 +174,9 @@ function emitProgress(code) {
       total: totalPlayers,
     });
   } else if (act.type === "explore") {
-    const solvedCount = Object.keys(room.actState.solvedClues || {}).length;
+    const solvedCount = act.completionMode === "evidence"
+      ? (rooms[code].evidence || []).length
+      : Object.keys(room.actState.solvedClues || {}).length;
     io.to(code).emit("act:progress", {
       kind: "explore",
       solved: solvedCount,
@@ -526,6 +528,18 @@ io.on("connection", (socket) => {
 
     socket.emit("inventory:state", buildInventoryState(room, socket.id));
     io.to(code).emit("evidence:state", buildEvidenceState(room));
+    emitProgress(code);
+
+    // Evidence-gated acts (the Estate stage) advance once every required
+    // exhibit is on the table, not on a typed answer. completionMode stays
+    // opt-in on the act so other explore-type stages can keep using the
+    // solvedClues/typed-answer path if that ever fits them better.
+    const act = STORY.acts[room.actIndex];
+    if (act && act.type === "explore" && act.completionMode === "evidence" && act.completionCount) {
+      if (room.evidence.length >= act.completionCount) {
+        setTimeout(() => advanceAct(code), 2500);
+      }
+    }
   });
 
   socket.on("board:move", ({ key, toZone }) => {

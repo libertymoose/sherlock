@@ -17,8 +17,9 @@
       "type": "explore",
       "title": "Investigate the Estate",
       "mapUrl": "/assets/maps/estate.json",
-      "intro": "Walk the grounds and talk to everyone: guests, suspects, staff. Most people here have nothing to hide. A few do. Every puzzle matters here. You'll need to find all of them before you can move on.",
-      "completionCount": 9
+      "intro": "Walk the grounds and talk to everyone: guests, suspects, staff. Most people here have nothing to hide. A few do. Pick up whatever you find and bring it back to the Evidence Table, every piece matters, and Captain Thorne won't move things forward until it's all there.",
+      "completionMode": "evidence",
+      "completionCount": 7
     },
     {
       "type": "suspect_board",

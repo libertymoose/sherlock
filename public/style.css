@@ -1004,3 +1004,32 @@ input[type="text"]:focus {
   font-weight: 600;
   letter-spacing: 0.03em;
 }
+
+/* Evidence documents: ledgers, manifests, letters, and the like, shown */
+/* when examining an estate evidence object, no typed answer required. */
+.document-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.document-table th,
+.document-table td {
+  border: 1px solid var(--border-line);
+  padding: 4px 6px;
+  text-align: left;
+  color: var(--ink);
+}
+.document-table th {
+  background: rgba(var(--candle-rgb), 0.15);
+  font-weight: 600;
+}
+.document-list {
+  margin: 8px 0;
+  padding-left: 18px;
+}
+.document-list li {
+  margin-bottom: 6px;
+  font-style: italic;
+  color: var(--ink);
+}
