@@ -417,8 +417,8 @@ socket.on("act:progress", (data) => {
   } else if (data.kind === "reveal" && el) {
     el.textContent = `${data.acknowledged} / ${data.total} ready`;
   } else if (data.kind === "explore") {
-    const exploreEl = document.getElementById("explore-progress");
-    if (exploreEl) exploreEl.textContent = `${data.solved} / ${data.total} clues found`;
+    const countEl = document.getElementById("explore-progress-count");
+    if (countEl) countEl.textContent = data.solved;
   }
 });
 
@@ -438,7 +438,7 @@ async function getInteractions() {
 async function enterExplore(act) {
   ZONE_MAPS.estate = act.mapUrl;
   document.getElementById("explore-title").textContent = act.title;
-  document.getElementById("explore-progress").textContent = `0 / ${act.requiredCount} clues found`;
+  document.getElementById("explore-progress-count").textContent = "0";
   document.getElementById("btn-explore-force-advance").classList.toggle("hidden", state.hostId !== state.myId);
 
   const canvas = document.getElementById("explore-canvas");
@@ -545,22 +545,76 @@ function setVnPortrait(obj) {
   }
 }
 
+// --- Pagination: no scrollbars and no font-shrinking allowed, so when
+// dialogue or document text doesn't fit the (deliberately short) box, it's
+// split into pages instead, advanced by clicking the continue indicator.
+let vnPages = [];
+let vnPageIndex = 0;
+let vnPageContainerId = null;
+
+function paginateIntoContainer(containerId, lines, className) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+
+  const elements = lines.map((line) => {
+    const p = document.createElement("p");
+    p.className = className;
+    p.textContent = line;
+    return p;
+  });
+
+  const pages = [];
+  let currentPage = [];
+  elements.forEach((el) => {
+    container.appendChild(el);
+    currentPage.push(el);
+    if (container.scrollHeight > container.clientHeight + 1 && currentPage.length > 1) {
+      container.removeChild(el);
+      pages.push(currentPage.slice(0, -1));
+      currentPage = [el];
+      container.appendChild(el);
+    }
+  });
+  pages.push(currentPage);
+
+  container.innerHTML = "";
+  return pages;
+}
+
+function showVnPage(index) {
+  const container = document.getElementById(vnPageContainerId);
+  container.innerHTML = "";
+  vnPages[index].forEach((el) => container.appendChild(el));
+  document.getElementById("vn-continue-indicator").classList.toggle("hidden", index >= vnPages.length - 1);
+}
+
+function setupPagination(containerId, lines, className) {
+  vnPageContainerId = containerId;
+  vnPages = paginateIntoContainer(containerId, lines, className);
+  vnPageIndex = 0;
+  showVnPage(0);
+}
+
+document.getElementById("vn-continue-indicator").addEventListener("click", () => {
+  if (vnPageIndex < vnPages.length - 1) {
+    vnPageIndex += 1;
+    showVnPage(vnPageIndex);
+  }
+});
+
 function openDialogueModal(title, lines, obj) {
   document.getElementById("vn-dialogue-set").classList.remove("hidden");
   document.getElementById("vn-document-set").classList.add("hidden");
+  document.getElementById("vn-continue-indicator").classList.add("hidden");
   setVnPortrait(obj);
 
   document.getElementById("dialogue-title").textContent = title;
-  const container = document.getElementById("dialogue-lines");
-  container.innerHTML = "";
-  lines.forEach((line) => {
-    const p = document.createElement("p");
-    p.className = "dialogue-line";
-    p.textContent = line;
-    container.appendChild(p);
-  });
   document.getElementById("vn-panel").classList.remove("hidden");
   document.getElementById("btn-interact").classList.add("hidden");
+
+  // Panel has to actually be visible (and laid out) before we can measure
+  // how much text fits, so pagination happens after the unhide above.
+  setupPagination("dialogue-lines", lines, "dialogue-line");
 }
 
 function closeVnPanel() {
@@ -583,6 +637,7 @@ function openDocumentModal(obj, entry) {
 
   document.getElementById("vn-dialogue-set").classList.add("hidden");
   document.getElementById("vn-document-set").classList.remove("hidden");
+  document.getElementById("vn-continue-indicator").classList.add("hidden");
   setVnPortrait(obj);
 
   // Deliberately shows only the flavor/quest text here (entry.intro), never
@@ -591,10 +646,10 @@ function openDocumentModal(obj, entry) {
   // see openInvestigateModal, so examining evidence in the field can't
   // accidentally spoil the solve.
   document.getElementById("document-title").textContent = entry.title;
-  document.getElementById("document-intro").textContent = entry.intro || "";
-
   document.getElementById("vn-panel").classList.remove("hidden");
   document.getElementById("btn-interact").classList.add("hidden");
+
+  setupPagination("document-intro", [entry.intro || ""], "vn-prompt");
 }
 
 function buildDocumentTable(table) {

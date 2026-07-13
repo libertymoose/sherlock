@@ -94,9 +94,13 @@
       </div>
       <div class="explore-viewport" id="explore-viewport">
         <canvas id="explore-canvas"></canvas>
-        <div id="explore-progress" class="progress-text explore-progress-hud"></div>
-        <button id="btn-open-inventory" class="btn btn-secondary inventory-btn inventory-btn-hud">
-          Inventory <span id="inventory-count" class="inventory-count">0</span>
+        <div id="explore-progress" class="explore-progress-hud">
+          <img src="/assets/ui/icons/info.png" class="hud-icon" alt="Clues found" />
+          <span id="explore-progress-count">0</span>
+        </div>
+        <button id="btn-open-inventory" class="inventory-btn inventory-btn-hud" aria-label="Inventory">
+          <img src="/assets/ui/icons/chest.png" class="hud-icon" alt="Inventory" />
+          <span id="inventory-count" class="inventory-count">0</span>
         </button>
         <button id="btn-interact" class="btn btn-primary interact-btn hidden">Examine</button>
 
@@ -109,15 +113,16 @@
             <div class="vn-body">
               <div id="vn-dialogue-set">
                 <h3 id="dialogue-title" class="vn-name"></h3>
-                <div id="dialogue-lines"></div>
+                <div id="dialogue-lines" class="vn-page-content"></div>
               </div>
               <div id="vn-document-set" class="hidden">
                 <h3 id="document-title" class="vn-name"></h3>
-                <p id="document-intro" class="vn-prompt"></p>
+                <div id="document-intro" class="vn-page-content"></div>
                 <div class="vn-puzzle-footer">
                   <button id="btn-document-take" class="btn btn-primary">Pick up</button>
                 </div>
               </div>
+              <div id="vn-continue-indicator" class="vn-continue-indicator hidden">Click to continue &#9660;</div>
             </div>
           </div>
         </div>

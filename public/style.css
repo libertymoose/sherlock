@@ -15,24 +15,31 @@
   --candle-rgb: 230,144,78;
   --parchment-rgb: 255,255,255;
   --radius: 3px;
+
+  /* Fixed button accent, deliberately NOT overridden by either theme below.
+     Buttons are always this green, in-game and out-of-game alike. */
+  --accent-btn: #50a978;
+  --accent-btn-bright: #5fff94;
+  --accent-btn-text: #1a1408;
+  --accent-btn-rgb: 80,169,120;
 }
 
 /* Out-of-game palette (Nyx) — lobby and landing screens only */
 #screen-landing, #screen-lobby {
-  --ink: #c3a38a;
-  --ink-surface: #f6d6bd;
-  --ink-surface-2: #997577;
-  --parchment: #08141e;
-  --parchment-dim: #4e495f;
-  --candle: #816271;
-  --candle-bright: #997577;
-  --blood: #4e495f;
-  --success: #816271;
-  --border-line: #997577;
-  --focus-ring: #816271;
-  --btn-text: #f6d6bd;
-  --candle-rgb: 129,98,113;
-  --parchment-rgb: 246,214,189;
+  --ink: #34202f;
+  --ink-surface: #e5d6a1;
+  --ink-surface-2: #603654;
+  --parchment: #c3f7d0;
+  --parchment-dim: #522747;
+  --candle: #50a978;
+  --candle-bright: #5fff94;
+  --blood: #5f3828;
+  --success: #50a978;
+  --border-line: #603654;
+  --focus-ring: #50a978;
+  --btn-text: #34202f;
+  --candle-rgb: 80,169,120;
+  --parchment-rgb: 195,247,208;
 }
 
 * { box-sizing: border-box; }
@@ -303,17 +310,17 @@ input[type="text"]:focus {
 }
 
 .btn-primary {
-  background: var(--candle);
-  color: var(--btn-text);
+  background: var(--accent-btn);
+  color: var(--accent-btn-text);
 }
-.btn-primary:hover { background: var(--candle-bright); transform: translateY(-1px); }
+.btn-primary:hover { background: var(--accent-btn-bright); transform: translateY(-1px); }
 
 .btn-secondary {
   background: transparent;
   border: 1px solid rgba(var(--parchment-rgb),0.35);
   color: var(--parchment);
 }
-.btn-secondary:hover { border-color: var(--candle); color: var(--candle-bright); }
+.btn-secondary:hover { border-color: var(--accent-btn); color: var(--accent-btn-bright); }
 
 .error-text {
   color: var(--blood);
@@ -591,10 +598,23 @@ input[type="text"]:focus {
   right: 14px;
   z-index: 5;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   background: rgba(12,14,22,0.75);
-  padding: 6px 14px;
-  border-radius: var(--radius);
-  border: 1px solid rgba(var(--candle-rgb),0.2);
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(var(--accent-btn-rgb),0.35);
+  color: var(--parchment);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.hud-icon {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
 }
 
 .inventory-btn-hud {
@@ -606,13 +626,15 @@ input[type="text"]:focus {
 
 .vn-panel {
   position: absolute;
-  left: 14px;
-  right: 14px;
+  left: 0;
+  right: 0;
   bottom: 14px;
   z-index: 10;
   display: flex;
+  justify-content: center;
   align-items: flex-end;
   gap: 12px;
+  padding: 0 14px;
 }
 
 .vn-portrait-frame {
@@ -630,16 +652,51 @@ input[type="text"]:focus {
 
 .vn-text-frame {
   position: relative;
-  flex: 1;
+  flex: 1 1 700px;
   min-width: 0;
   max-width: 700px;
+  max-height: 30vh;
   padding: 16px 28px;
   background: transparent;
+  display: flex;
+  flex-direction: column;
 }
 
 .vn-body {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.vn-page-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#vn-dialogue-set,
+#vn-document-set {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.vn-continue-indicator {
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-btn);
+  cursor: pointer;
+  padding-top: 4px;
+  animation: vn-continue-bounce 1.2s ease-in-out infinite;
+}
+@keyframes vn-continue-bounce {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
 .vn-name {
@@ -814,10 +871,19 @@ input[type="text"]:focus {
 .inventory-btn {
   width: auto;
   margin-top: 0;
-  padding: 8px 14px;
+  padding: 6px 12px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  background: rgba(12,14,22,0.75);
+  border: 1px solid rgba(var(--accent-btn-rgb),0.35);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.inventory-btn:hover {
+  border-color: var(--accent-btn);
+  transform: translateY(-1px);
 }
 
 .inventory-count {
@@ -825,8 +891,8 @@ input[type="text"]:focus {
   min-width: 18px;
   padding: 1px 5px;
   border-radius: 9px;
-  background: var(--candle);
-  color: var(--btn-text);
+  background: var(--accent-btn);
+  color: var(--accent-btn-text);
   font-size: 12px;
   font-weight: 700;
   text-align: center;
