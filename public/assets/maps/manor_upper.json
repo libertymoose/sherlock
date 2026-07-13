@@ -5662,10 +5662,10 @@
     [
       1,
       1,
-      1,
-      1,
-      1,
-      1,
+      0,
+      0,
+      0,
+      0,
       1,
       1,
       1,
@@ -11016,6 +11016,18 @@
       "interaction": {
         "kind": "evidence_document",
         "documentId": "doc_ashgate"
+      }
+    },
+    {
+      "id": "stairs_down",
+      "name": "Stairs Down",
+      "x": 13,
+      "y": 2,
+      "interaction": {
+        "kind": "zone_exit",
+        "targetZone": "manor_ground",
+        "targetX": 18,
+        "targetY": 2
       }
     }
   ],
