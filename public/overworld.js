@@ -877,9 +877,9 @@ window.Overworld = (function () {
       const textW = ctx.measureText(label).width;
       ctx.fillStyle = "rgba(46,34,47,0.9)";
       ctx.fillRect(px - textW / 2 - 10, py - 18, textW + 20, 26);
-      ctx.strokeStyle = "#cd683d";
+      ctx.strokeStyle = "#50a978";
       ctx.strokeRect(px - textW / 2 - 10, py - 18, textW + 20, 26);
-      ctx.fillStyle = "#e6904e";
+      ctx.fillStyle = "#5fff94";
       ctx.fillText(label, px, py);
       ctx.restore();
     }

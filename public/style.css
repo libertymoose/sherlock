@@ -5,14 +5,14 @@
   --ink-surface-2: #625565;
   --parchment: #ffffff;
   --parchment-dim: #9babb2;
-  --candle: #e6904e;
-  --candle-bright: #cd683d;
+  --candle: #50a978;
+  --candle-bright: #5fff94;
   --blood: #ea4f36;
   --success: #1ebc73;
   --border-line: #484a77;
-  --focus-ring: #cd683d;
+  --focus-ring: #5fff94;
   --btn-text: #1a1408;
-  --candle-rgb: 230,144,78;
+  --candle-rgb: 80,169,120;
   --parchment-rgb: 255,255,255;
   --radius: 3px;
 
@@ -141,7 +141,7 @@ html, body {
   padding: 8px 8px;
   background: var(--ink);
   border: 1px solid rgba(var(--parchment-rgb),0.25);
-  color: var(--parchment-dim);
+  color: var(--parchment);
   border-radius: var(--radius);
   font-family: 'Inter', -apple-system, sans-serif;
   font-size: 14px;
@@ -180,7 +180,8 @@ html, body {
   justify-content: center;
   margin-top: 16px;
   padding: 16px;
-  background: var(--ink);
+  background: rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.1);
   border-radius: var(--radius);
 }
 
@@ -587,7 +588,8 @@ input[type="text"]:focus {
   width: auto;
   padding: 10px 24px;
   position: absolute;
-  right: 14px;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 14px;
   z-index: 5;
 }
@@ -611,7 +613,7 @@ input[type="text"]:focus {
 }
 
 .hud-icon {
-  width: 16px;
+  width: auto;
   height: 16px;
   image-rendering: pixelated;
   flex-shrink: 0;
@@ -620,7 +622,7 @@ input[type="text"]:focus {
 .inventory-btn-hud {
   position: absolute;
   right: 14px;
-  bottom: 60px;
+  bottom: 14px;
   z-index: 5;
 }
 
@@ -645,9 +647,11 @@ input[type="text"]:focus {
 
 #vn-portrait {
   display: block;
-  width: 120px;
-  height: 140px;
+  width: 180px;
+  height: 180px;
   image-rendering: pixelated;
+  background: #e5d6a1;
+  border-radius: 2px;
 }
 
 .vn-text-frame {
@@ -656,7 +660,7 @@ input[type="text"]:focus {
   min-width: 0;
   max-width: 700px;
   max-height: 30vh;
-  padding: 16px 28px;
+  padding: 12px 20px;
   background: transparent;
   display: flex;
   flex-direction: column;
@@ -687,12 +691,14 @@ input[type="text"]:focus {
 .vn-continue-indicator {
   flex-shrink: 0;
   text-align: right;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--accent-btn);
   cursor: pointer;
   padding-top: 4px;
   animation: vn-continue-bounce 1.2s ease-in-out infinite;
+}
+.vn-continue-icon {
+  width: auto;
+  height: 20px;
+  image-rendering: pixelated;
 }
 @keyframes vn-continue-bounce {
   0%, 100% { opacity: 0.6; }
@@ -722,10 +728,16 @@ input[type="text"]:focus {
 .vn-puzzle-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 6px;
+}
+.vn-puzzle-footer .btn {
+  width: auto;
+  margin-top: 0;
+  padding: 8px 22px;
+  font-size: 14px;
 }
 
 .modal-box-wide {

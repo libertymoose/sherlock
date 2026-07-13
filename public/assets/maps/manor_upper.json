@@ -1770,7 +1770,7 @@
     },
     {
       "name": "Objects1",
-      "kind": "sorted",
+      "kind": "floor",
       "dense": true,
       "data": [
         0,
@@ -5079,10 +5079,10 @@
         0,
         0,
         0,
-        1638,
-        1637,
-        1636,
         1635,
+        1636,
+        1637,
+        1638,
         0,
         0,
         1645,
@@ -5101,10 +5101,10 @@
         0,
         0,
         0,
-        1648,
-        1647,
-        1646,
         1645,
+        1646,
+        1647,
+        1648,
         0,
         0,
         0,
@@ -11021,13 +11021,13 @@
     {
       "id": "stairs_down",
       "name": "Stairs Down",
-      "x": 13,
-      "y": 2,
+      "x": 2,
+      "y": 13,
       "interaction": {
         "kind": "zone_exit",
         "targetZone": "manor_ground",
-        "targetX": 18,
-        "targetY": 2
+        "targetX": 4,
+        "targetY": 12
       }
     }
   ],

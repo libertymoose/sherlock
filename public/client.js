@@ -452,7 +452,13 @@ async function enterExplore(act) {
     onNearbyChange: (obj) => {
       isNearInteractable = !!obj;
       const panelOpen = !document.getElementById("vn-panel").classList.contains("hidden");
-      document.getElementById("btn-interact").classList.toggle("hidden", !obj || panelOpen);
+      const btn = document.getElementById("btn-interact");
+      btn.classList.toggle("hidden", !obj || panelOpen);
+      if (obj && obj.interaction && obj.interaction.kind === "zone_exit") {
+        btn.textContent = obj.interaction.targetZone === "estate" ? "Exit" : "Enter";
+      } else {
+        btn.textContent = "Examine";
+      }
     },
     onInteract: (obj) => handleObjectInteract(obj),
   });
@@ -886,17 +892,70 @@ function drawFixedPortrait(canvas, src) {
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const img = new Image();
+  img.crossOrigin = "anonymous";
   img.onload = () => {
-    // Contain-fit: works whether the source is a small pixel-art icon or a
-    // larger illustrated portrait, without a size-specific magic number.
-    const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight);
-    const w = img.naturalWidth * scale;
-    const h = img.naturalHeight * scale;
+    // Chroma-key the flat white background out via flood fill from the
+    // four corners, rather than a blanket colour threshold across the
+    // whole image, so a genuinely white detail inside the portrait (an
+    // eye, a shirt collar) that isn't connected to the outer edge is left
+    // alone. Only run this on portraits big enough to be real
+    // illustrations, the small 32x32 auto-cropped sprite icons don't
+    // reliably have a flat background and shouldn't be touched.
+    let source = img;
+    if (img.naturalWidth > 64 && img.naturalHeight > 64) {
+      source = chromaKeyWhiteBackground(img);
+    }
+
+    const scale = Math.min(canvas.width / source.width, canvas.height / source.height);
+    const w = source.width * scale;
+    const h = source.height * scale;
     const x = (canvas.width - w) / 2;
     const y = canvas.height - h;
-    ctx.drawImage(img, x, y, w, h);
+    ctx.drawImage(source, x, y, w, h);
   };
   img.src = src;
+}
+
+function chromaKeyWhiteBackground(img) {
+  const off = document.createElement("canvas");
+  off.width = img.naturalWidth;
+  off.height = img.naturalHeight;
+  const octx = off.getContext("2d");
+  octx.drawImage(img, 0, 0);
+
+  let imgData;
+  try {
+    imgData = octx.getImageData(0, 0, off.width, off.height);
+  } catch (e) {
+    return img; // canvas got tainted (cross-origin without CORS headers), just use the image as-is
+  }
+  const data = imgData.data;
+  const w = off.width, h = off.height;
+  const isNearWhite = (i) => data[i] > 235 && data[i + 1] > 235 && data[i + 2] > 235;
+
+  const visited = new Uint8Array(w * h);
+  const stack = [];
+  for (let x = 0; x < w; x++) {
+    stack.push([x, 0], [x, h - 1]);
+  }
+  for (let y = 0; y < h; y++) {
+    stack.push([0, y], [w - 1, y]);
+  }
+
+  while (stack.length) {
+    const [x, y] = stack.pop();
+    if (x < 0 || y < 0 || x >= w || y >= h) continue;
+    const idx = y * w + x;
+    if (visited[idx]) continue;
+    const i = idx * 4;
+    if (!isNearWhite(i)) continue;
+    visited[idx] = 1;
+    data[i + 3] = 0;
+    stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+  }
+
+  octx.putImageData(imgData, 0, 0);
+  return off;
 }
 
 function buildPortraitCard(person) {

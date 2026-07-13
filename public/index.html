@@ -106,7 +106,7 @@
 
         <div id="vn-panel" class="vn-panel hidden">
           <div id="vn-portrait-frame" class="pixel-panel-dialogue vn-portrait-frame">
-            <canvas id="vn-portrait" width="120" height="140"></canvas>
+            <canvas id="vn-portrait" width="180" height="180"></canvas>
           </div>
           <div class="pixel-panel-dialogue vn-text-frame">
             <button id="btn-close-vn" class="pixel-close-btn" aria-label="Close"></button>
@@ -122,7 +122,9 @@
                   <button id="btn-document-take" class="btn btn-primary">Pick up</button>
                 </div>
               </div>
-              <div id="vn-continue-indicator" class="vn-continue-indicator hidden">Click to continue &#9660;</div>
+              <div id="vn-continue-indicator" class="vn-continue-indicator hidden" aria-label="Click to continue">
+                <img src="/assets/ui/icons/ellipsis.png" class="vn-continue-icon" alt="Click to continue" />
+              </div>
             </div>
           </div>
         </div>
