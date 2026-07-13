@@ -535,12 +535,13 @@ async function handleObjectInteract(obj) {
 }
 
 function setVnPortrait(obj) {
+  const frame = document.getElementById("vn-portrait-frame");
   const canvas = document.getElementById("vn-portrait");
   if (obj && obj.portrait) {
-    canvas.classList.remove("hidden");
+    frame.classList.remove("hidden");
     drawFixedPortrait(canvas, obj.portrait);
   } else {
-    canvas.classList.add("hidden");
+    frame.classList.add("hidden");
   }
 }
 

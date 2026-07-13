@@ -606,28 +606,35 @@ input[type="text"]:focus {
 
 .vn-panel {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
   z-index: 10;
   display: flex;
-  gap: 14px;
-  padding: 16px 28px;
-  background: rgba(12,14,22,0.94);
-  border-top: 2px solid var(--candle);
-  border-radius: 0 0 var(--radius) var(--radius);
-  max-height: 220px;
-  overflow-y: auto;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.vn-portrait-frame {
+  flex-shrink: 0;
+  padding: 6px;
+  background: transparent;
 }
 
 #vn-portrait {
-  flex-shrink: 0;
+  display: block;
   width: 120px;
   height: 140px;
   image-rendering: pixelated;
-  background: var(--ink);
-  border: 1px solid rgba(var(--parchment-rgb),0.2);
-  border-radius: 2px;
+}
+
+.vn-text-frame {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  max-width: 700px;
+  padding: 16px 28px;
+  background: transparent;
 }
 
 .vn-body {
@@ -724,7 +731,7 @@ input[type="text"]:focus {
    Uses the parchment/wood panel art in public/assets/ui/.
    =================================================================== */
 
-#vn-panel.pixel-panel-dialogue {
+.pixel-panel-dialogue {
   border-image-source: url('/assets/ui/panel_dialogue.png');
   border-image-slice: 10 fill;
   border-image-width: 18px;
@@ -736,11 +743,11 @@ input[type="text"]:focus {
   image-rendering: pixelated;
 }
 
-#vn-panel.pixel-panel-dialogue .vn-name,
-#vn-panel.pixel-panel-dialogue .dialogue-line,
-#vn-panel.pixel-panel-dialogue .vn-prompt,
-#vn-panel.pixel-panel-dialogue .hint-text,
-#vn-panel.pixel-panel-dialogue label {
+.pixel-panel-dialogue .vn-name,
+.pixel-panel-dialogue .dialogue-line,
+.pixel-panel-dialogue .vn-prompt,
+.pixel-panel-dialogue .hint-text,
+.pixel-panel-dialogue label {
   color: #3a2a1c;
   font-style: normal;
 }
@@ -798,6 +805,11 @@ input[type="text"]:focus {
 .pixel-close-btn::before { transform: translate(-50%, -50%) rotate(45deg); }
 .pixel-close-btn::after { transform: translate(-50%, -50%) rotate(-45deg); }
 .pixel-close-btn:hover { filter: brightness(1.15); }
+
+.vn-text-frame .pixel-close-btn {
+  top: 6px;
+  right: 6px;
+}
 
 .inventory-btn {
   width: auto;

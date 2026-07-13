@@ -11843,38 +11843,6 @@
       }
     }
   ],
-  "interiorZones": [
-    {
-      "id": "stairs_up_0",
-      "targetZone": "manor_upper",
-      "targetX": 3,
-      "targetY": 12,
-      "x0": 6,
-      "y0": 12,
-      "x1": 8,
-      "y1": 14
-    },
-    {
-      "id": "stairs_up_1",
-      "targetZone": "manor_upper",
-      "targetX": 19,
-      "targetY": 12,
-      "x0": 18,
-      "y0": 12,
-      "x1": 20,
-      "y1": 14
-    },
-    {
-      "id": "exit_to_estate",
-      "targetZone": "estate",
-      "targetX": 50,
-      "targetY": 31,
-      "x0": 12,
-      "y0": 12,
-      "x1": 14,
-      "y1": 13
-    }
-  ],
   "spawn": {
     "x": 7,
     "y": 13

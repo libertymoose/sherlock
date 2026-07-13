@@ -11031,28 +11031,6 @@
       }
     }
   ],
-  "interiorZones": [
-    {
-      "id": "stairs_down_0",
-      "targetZone": "manor_ground",
-      "targetX": 7,
-      "targetY": 13,
-      "x0": 2,
-      "y0": 11,
-      "x1": 4,
-      "y1": 13
-    },
-    {
-      "id": "stairs_down_1",
-      "targetZone": "manor_ground",
-      "targetX": 19,
-      "targetY": 13,
-      "x0": 18,
-      "y0": 11,
-      "x1": 20,
-      "y1": 13
-    }
-  ],
   "spawn": {
     "x": 3,
     "y": 12

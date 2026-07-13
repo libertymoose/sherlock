@@ -128,24 +128,72 @@
     "title": "The Repair Ledger",
     "intro": "A ledger of seven repair-fund withdrawals sits beside a small tin of numbered receipt stubs.",
     "table": {
-      "headers": ["#", "Date", "Vendor", "Purpose", "Amount"],
+      "headers": [
+        "#",
+        "Date",
+        "Vendor",
+        "Purpose",
+        "Amount"
+      ],
       "rows": [
-        ["1", "3rd Wanning", "Coastwood Timber", "Scaffold planking", "40g"],
-        ["2", "6th Wanning", "Coastwood Timber", "Scaffold planking", "25g"],
-        ["3", "9th Wanning", "Ironbell Smithy", "Gate hinges", "15g"],
-        ["4", "14th Wanning", "Duskmere Estate", "Contingency reserve", "60g"],
-        ["5", "18th Wanning", "Coastwood Timber", "Roof beams", "55g"],
-        ["6", "21st Wanning", "Ironbell Smithy", "Fence repair", "20g"],
-        ["7", "25th Wanning", "Harrow & Vale", "Stone masonry", "90g"]
+        [
+          "1",
+          "3rd Wanning",
+          "Coastwood Timber",
+          "Scaffold planking",
+          "40g"
+        ],
+        [
+          "2",
+          "6th Wanning",
+          "Coastwood Timber",
+          "Scaffold planking",
+          "25g"
+        ],
+        [
+          "3",
+          "9th Wanning",
+          "Ironbell Smithy",
+          "Gate hinges",
+          "15g"
+        ],
+        [
+          "4",
+          "14th Wanning",
+          "Duskmere Estate",
+          "Contingency reserve",
+          "60g"
+        ],
+        [
+          "5",
+          "18th Wanning",
+          "Coastwood Timber",
+          "Roof beams",
+          "55g"
+        ],
+        [
+          "6",
+          "21st Wanning",
+          "Ironbell Smithy",
+          "Fence repair",
+          "20g"
+        ],
+        [
+          "7",
+          "25th Wanning",
+          "Harrow & Vale",
+          "Stone masonry",
+          "90g"
+        ]
       ]
     },
     "list": [
-      "Stub 401 — Coastwood Timber, 40g",
-      "Stub 402 — Coastwood Timber, 25g",
-      "Stub 403 — Ironbell Smithy, 15g",
-      "Stub 404 — Harrow & Vale, 90g",
-      "Stub 405 — Coastwood Timber, 55g",
-      "Stub 406 — Ironbell Smithy, 20g"
+      "Stub 401 \u2014 Coastwood Timber, 40g",
+      "Stub 402 \u2014 Coastwood Timber, 25g",
+      "Stub 403 \u2014 Ironbell Smithy, 15g",
+      "Stub 404 \u2014 Harrow & Vale, 90g",
+      "Stub 405 \u2014 Coastwood Timber, 55g",
+      "Stub 406 \u2014 Ironbell Smithy, 20g"
     ],
     "closing": "Six stubs for seven withdrawals. If they were issued in ledger order, simply skipping whichever entry lacked a receipt, stub 404 ought to belong to the fifth withdrawal, the Coastwood Timber roof beams. Instead it's stamped for Harrow & Vale, the seventh. Something's been renumbered to cover a gap. The fourteenth-of-Wanning withdrawal, paid straight to 'Duskmere Estate' itself for a contingency reserve, has no stub at all.",
     "itemId": "ledger_ashby"
@@ -169,13 +217,49 @@
     "title": "The Shipping Manifests",
     "intro": "A locked dock office, and inside, a stack of shipping manifests.",
     "table": {
-      "headers": ["Ship", "Cargo", "Departed", "Arrived", "Notes"],
+      "headers": [
+        "Ship",
+        "Cargo",
+        "Departed",
+        "Arrived",
+        "Notes"
+      ],
       "rows": [
-        ["Windward Gale", "Kestrel timber", "12th Wanning, dawn", "14th Wanning", "Standard Boralus route"],
-        ["Windward Gale", "Kestrel cloth", "19th Wanning, dawn", "21st Wanning", "Standard Boralus route"],
-        ["Providence's Grace", "Duskmere grain", "13th Wanning, dusk", "13th Wanning, dusk", "Boralus to Boralus"],
-        ["Fair Tide", "Kestrel spice", "22nd Wanning, dawn", "24th Wanning", "Standard Boralus route"],
-        ["Providence's Grace", "Duskmere grain", "20th Wanning, dawn", "20th Wanning, dawn", "Boralus to Duskwater"]
+        [
+          "Windward Gale",
+          "Kestrel timber",
+          "12th Wanning, dawn",
+          "14th Wanning",
+          "Standard Boralus route"
+        ],
+        [
+          "Windward Gale",
+          "Kestrel cloth",
+          "19th Wanning, dawn",
+          "21st Wanning",
+          "Standard Boralus route"
+        ],
+        [
+          "Providence's Grace",
+          "Duskmere grain",
+          "13th Wanning, dusk",
+          "13th Wanning, dusk",
+          "Boralus to Boralus"
+        ],
+        [
+          "Fair Tide",
+          "Kestrel spice",
+          "22nd Wanning, dawn",
+          "24th Wanning",
+          "Standard Boralus route"
+        ],
+        [
+          "Providence's Grace",
+          "Duskmere grain",
+          "20th Wanning, dawn",
+          "20th Wanning, dawn",
+          "Boralus to Duskwater"
+        ]
       ]
     },
     "closing": "Two of these describe the same ship, Providence's Grace, departing and arriving in the same instant, twice. No ship sails that fast. Something was filed on paper that never needed to happen on water.",
@@ -186,15 +270,39 @@
     "title": "The Blueprint Tube",
     "intro": "Buried near the survey marker, a tube holding two documents: the original contracted repairs, and a second sheet recording what actually got built.",
     "table": {
-      "headers": ["Contracted Repairs", "As Actually Built"],
+      "headers": [
+        "Contracted Repairs",
+        "As Actually Built"
+      ],
       "rows": [
-        ["Seawall patch", "Built as contracted"],
-        ["East wing roof", "Built as contracted"],
-        ["Courtyard fountain repair", "Built as contracted"],
-        ["Dock decking", "Built as contracted"],
-        ["Stable roof", "Built as contracted"],
-        ["(not on the contract)", "Rebuilt garden folly"],
-        ["(not on the contract)", "A second, larger dock extension"]
+        [
+          "Seawall patch",
+          "Built as contracted"
+        ],
+        [
+          "East wing roof",
+          "Built as contracted"
+        ],
+        [
+          "Courtyard fountain repair",
+          "Built as contracted"
+        ],
+        [
+          "Dock decking",
+          "Built as contracted"
+        ],
+        [
+          "Stable roof",
+          "Built as contracted"
+        ],
+        [
+          "(not on the contract)",
+          "Rebuilt garden folly"
+        ],
+        [
+          "(not on the contract)",
+          "A second, larger dock extension"
+        ]
       ]
     },
     "closing": "Two structures exist on the grounds that never appeared on the original contract. Marrow built them anyway, and was never paid for the overage.",
@@ -222,7 +330,7 @@
     "list": [
       "First Bell, dusk",
       "Second Bell, one candle-mark after dusk",
-      "Third Bell, two candle-marks after dusk — Reyes",
+      "Third Bell, two candle-marks after dusk \u2014 Reyes",
       "Fourth Bell, midnight",
       "Fifth Bell, two candle-marks after midnight"
     ],
@@ -243,14 +351,48 @@
   },
   "suspectBoard": {
     "pool": [
-      { "key": "ashby", "name": "Steward Wren Ashby", "sprite": "/assets/npcs/portraits/citizen1.png" },
-      { "key": "voss", "name": "Commodore Brannigan Voss", "sprite": "/assets/npcs/portraits/fighter2.png" },
-      { "key": "kestrel", "name": "Merchant Odalys Kestrel", "sprite": "/assets/npcs/portraits/citizen3.png" },
-      { "key": "marrow", "name": "Architect Tobias Marrow", "sprite": "/assets/npcs/portraits/citizen2.png" },
-      { "key": "ashgate", "name": "Lady Isobel Ashgate", "sprite": "/assets/npcs/portraits/ashgate_fancy.png" },
-      { "key": "reyes", "name": "Sergeant Reyes", "sprite": "/assets/npcs/portraits/fighter2.png" },
-      { "key": "maid", "name": "The Lady's Maid", "sprite": "/assets/npcs/portraits/citizen1.png" }
+      {
+        "key": "ashby",
+        "name": "Steward Wren Ashby",
+        "sprite": "/assets/npcs/portraits/citizen1.png"
+      },
+      {
+        "key": "voss",
+        "name": "Commodore Brannigan Voss",
+        "sprite": "/assets/npcs/portraits/fighter4.png"
+      },
+      {
+        "key": "kestrel",
+        "name": "Merchant Odalys Kestrel",
+        "sprite": "/assets/npcs/portraits/citizen3.png"
+      },
+      {
+        "key": "marrow",
+        "name": "Architect Tobias Marrow",
+        "sprite": "/assets/npcs/portraits/citizen2.png"
+      },
+      {
+        "key": "ashgate",
+        "name": "Lady Isobel Ashgate",
+        "sprite": "/assets/npcs/portraits/ashgate_fancy.png"
+      },
+      {
+        "key": "reyes",
+        "name": "Sergeant Reyes",
+        "sprite": "/assets/npcs/portraits/fighter2.png"
+      },
+      {
+        "key": "maid",
+        "name": "The Lady's Maid",
+        "sprite": "/assets/npcs/portraits/citizen6.png"
+      }
     ],
-    "correctSet": ["ashby", "voss", "kestrel", "marrow", "ashgate"]
+    "correctSet": [
+      "ashby",
+      "voss",
+      "kestrel",
+      "marrow",
+      "ashgate"
+    ]
   }
 }

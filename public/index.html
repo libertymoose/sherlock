@@ -100,19 +100,23 @@
         </button>
         <button id="btn-interact" class="btn btn-primary interact-btn hidden">Examine</button>
 
-        <div id="vn-panel" class="vn-panel pixel-panel-dialogue hidden">
-          <button id="btn-close-vn" class="pixel-close-btn" aria-label="Close"></button>
-          <canvas id="vn-portrait" width="120" height="140"></canvas>
-          <div class="vn-body">
-            <div id="vn-dialogue-set">
-              <h3 id="dialogue-title" class="vn-name"></h3>
-              <div id="dialogue-lines"></div>
-            </div>
-            <div id="vn-document-set" class="hidden">
-              <h3 id="document-title" class="vn-name"></h3>
-              <p id="document-intro" class="vn-prompt"></p>
-              <div class="vn-puzzle-footer">
-                <button id="btn-document-take" class="btn btn-primary">Pick up</button>
+        <div id="vn-panel" class="vn-panel hidden">
+          <div id="vn-portrait-frame" class="pixel-panel-dialogue vn-portrait-frame">
+            <canvas id="vn-portrait" width="120" height="140"></canvas>
+          </div>
+          <div class="pixel-panel-dialogue vn-text-frame">
+            <button id="btn-close-vn" class="pixel-close-btn" aria-label="Close"></button>
+            <div class="vn-body">
+              <div id="vn-dialogue-set">
+                <h3 id="dialogue-title" class="vn-name"></h3>
+                <div id="dialogue-lines"></div>
+              </div>
+              <div id="vn-document-set" class="hidden">
+                <h3 id="document-title" class="vn-name"></h3>
+                <p id="document-intro" class="vn-prompt"></p>
+                <div class="vn-puzzle-footer">
+                  <button id="btn-document-take" class="btn btn-primary">Pick up</button>
+                </div>
               </div>
             </div>
           </div>

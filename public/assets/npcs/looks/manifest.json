@@ -96,5 +96,89 @@
       "cols": 8,
       "rows": 1
     }
+  },
+  "citizen6": {
+    "idle": {
+      "src": "/assets/npcs/looks/citizen6_idle.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/citizen6_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
+  },
+  "citizen7": {
+    "idle": {
+      "src": "/assets/npcs/looks/citizen7_idle.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/citizen7_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
+  },
+  "citizen8": {
+    "idle": {
+      "src": "/assets/npcs/looks/citizen8_idle.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/citizen8_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
+  },
+  "citizen9": {
+    "idle": {
+      "src": "/assets/npcs/looks/citizen9_idle.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/citizen9_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
+  },
+  "fighter3": {
+    "idle": {
+      "src": "/assets/npcs/looks/fighter3_idle.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/fighter3_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
+  },
+  "fighter4": {
+    "idle": {
+      "src": "/assets/npcs/looks/fighter4_idle.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/fighter4_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
   }
 }
