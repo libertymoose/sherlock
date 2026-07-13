@@ -593,7 +593,7 @@ input[type="text"]:focus {
   z-index: 10;
   display: flex;
   gap: 14px;
-  padding: 16px;
+  padding: 20px 36px;
   background: rgba(12,14,22,0.94);
   border-top: 2px solid var(--candle);
   border-radius: 0 0 var(--radius) var(--radius);

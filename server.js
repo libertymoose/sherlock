@@ -472,20 +472,26 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("inventory:pickup", ({ objectId }) => {
+  socket.on("inventory:pickup", ({ objectId, itemId }) => {
     const code = socket.data.roomCode;
     const room = rooms[code];
     if (!room) return;
     const act = STORY.acts[room.actIndex];
     if (!act || act.type !== "explore") return;
 
-    const def = ITEMS[objectId];
+    // Old-style pickups (scraps) used the map object's own id as the item
+    // key, so itemId falls back to objectId when the caller doesn't send
+    // one. Evidence documents send both, since the object on the map
+    // (ev_maid_diary) and the item it yields (diary_maid) are named
+    // differently on purpose.
+    const lookupId = itemId || objectId;
+    const def = ITEMS[lookupId];
     if (!def) return;
     if (room.collectedPickups[objectId]) return; // someone else already got it
 
     room.collectedPickups[objectId] = true;
     getInventory(room, socket.id).push({
-      itemId: objectId,
+      itemId: lookupId,
       name: def.name,
       description: def.description,
       art: def.art,

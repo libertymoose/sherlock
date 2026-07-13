@@ -656,9 +656,11 @@ document.getElementById("btn-close-puzzle").addEventListener("click", () => {
 });
 
 let activeDocumentObj = null;
+let activeDocumentEntry = null;
 
 function openDocumentModal(obj, entry) {
   activeDocumentObj = obj;
+  activeDocumentEntry = entry;
 
   document.getElementById("vn-dialogue-set").classList.add("hidden");
   document.getElementById("vn-puzzle-set").classList.add("hidden");
@@ -718,10 +720,14 @@ function buildDocumentList(list) {
 
 document.getElementById("btn-document-take").addEventListener("click", () => {
   if (!activeDocumentObj) return;
-  socket.emit("inventory:pickup", { objectId: activeDocumentObj.id });
+  socket.emit("inventory:pickup", {
+    objectId: activeDocumentObj.id,
+    itemId: activeDocumentEntry && activeDocumentEntry.itemId,
+  });
   document.getElementById("vn-panel").classList.add("hidden");
   document.getElementById("btn-interact").classList.toggle("hidden", !isNearInteractable);
   activeDocumentObj = null;
+  activeDocumentEntry = null;
 });
 
 document.getElementById("btn-close-document").addEventListener("click", () => {

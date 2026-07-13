@@ -91,7 +91,8 @@ window.Overworld = (function () {
   }
 
   let resolvedLayers = []; // "sorted" layers only now: [{name, cells:[{x,y,img,sx,sy}]}]
-  let floorCanvas = null; // "floor" layers pre-rendered once at native (unscaled) resolution
+  // floorSegments (declared near resolveLayers) replaced the old single
+  // floorCanvas + animatedFloorCells pair, see the comment there for why.
 
   let animClock = 0; // ms, accumulated each frame, drives animated tile frames
   let zoneStates = {}; // zoneId -> { phase: 'closed'|'opening'|'open'|'closing', since: animClock at last transition }
@@ -254,16 +255,43 @@ window.Overworld = (function () {
     return null;
   }
 
-  let animatedFloorCells = []; // floor-kind cells with animation data, redrawn every frame instead of baked
+  // Floor rendering used to be: one big static bake of every non-animated
+  // floor tile, drawn first, then every animated floor tile (water shimmer,
+  // fish, etc) drawn on top of that in one final pass. That silently
+  // discarded z-order: in the actual Tiled layer stack, "Water" sits BELOW
+  // "Ground"/"Edges" (a grass bank edge is meant to paint over the water
+  // tile it borders), but since animated tiles always drew last regardless
+  // of source layer, water shimmer ended up on top of Ground/Edges/dock
+  // decking everywhere instead of only where it was actually the top layer.
+  // floorSegments preserves real layer order: an ordered list of either a
+  // baked static canvas (a contiguous run of non-animated floor content) or
+  // a list of animated cells belonging to one layer, interleaved in the
+  // same order the original Tiled layers were stacked in.
+  let floorSegments = [];
 
   function resolveLayers() {
     resolvedLayers = [];
-    animatedFloorCells = [];
-    const floorCells = []; // gathered across all floor (non-animated) layers, drawn once to floorCanvas
+    floorSegments = [];
+    let currentBatch = []; // accumulating static floor cells for the next baked segment
+
+    const flushBatch = () => {
+      if (!currentBatch.length) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = mapData.width * TILE;
+      canvas.height = mapData.height * TILE;
+      const bctx = canvas.getContext("2d");
+      bctx.imageSmoothingEnabled = false;
+      currentBatch.forEach((c) => {
+        bctx.drawImage(c.img, c.sx, c.sy, TILE, TILE, c.x * TILE, c.y * TILE, TILE, TILE);
+      });
+      floorSegments.push({ type: "static", canvas });
+      currentBatch = [];
+    };
 
     mapData.layers.forEach((layer) => {
       const cells = [];
       const isAnimatedLayer = (gid) => mapData.animations && mapData.animations[gid];
+      const layerAnimatedCells = [];
 
       // For "sorted" layers, tall objects (trees, bridge rails etc) are
       // often several rows of stacked tiles in the same layer. Sorting each
@@ -300,47 +328,50 @@ window.Overworld = (function () {
           if (!gid) continue;
           const x = i % w, y = Math.floor(i / w);
           if (layer.kind === "floor" && isAnimatedLayer(gid)) {
-            animatedFloorCells.push({ x, y, gid, layer, index: i });
+            layerAnimatedCells.push({ x, y, gid, layer, index: i });
             continue;
           }
           const r = resolveGid(gid);
           if (!r) continue;
+          if (layer.kind === "floor") {
+            currentBatch.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy });
+            continue;
+          }
           const sortRow = bottomOfRun ? bottomOfRun[i] : y;
           cells.push({ x, y, sortRow, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, layer, index: i, animated: !!isAnimatedLayer(gid) });
         }
       } else {
         layer.cells.forEach(([x, y, gid], idx) => {
           if (layer.kind === "floor" && isAnimatedLayer(gid)) {
-            animatedFloorCells.push({ x, y, gid, layer, index: idx });
+            layerAnimatedCells.push({ x, y, gid, layer, index: idx });
             return;
           }
           const r = resolveGid(gid);
           if (!r) return;
+          if (layer.kind === "floor") {
+            currentBatch.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy });
+            return;
+          }
           cells.push({ x, y, sortRow: y, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, layer, index: idx, animated: !!isAnimatedLayer(gid) });
         });
       }
+
       if (layer.kind === "floor") {
-        floorCells.push(...cells);
+        // This layer's static cells are already queued in currentBatch above.
+        // If it also has animated cells, that's a z-order boundary: bake
+        // everything queued so far (including this layer's own static
+        // tiles), emit this layer's animated cells as their own segment,
+        // then start a fresh batch for whatever floor layer comes next.
+        if (layerAnimatedCells.length) {
+          flushBatch();
+          floorSegments.push({ type: "animated", cells: layerAnimatedCells });
+        }
       } else {
         resolvedLayers.push({ name: layer.name, cells });
       }
     });
 
-    // Floor (grass/path/water/etc) never moves and rarely changes, so the
-    // non-animated majority is drawn once here into an offscreen canvas at
-    // native (1x) resolution instead of redrawing every tile of every floor
-    // layer on every single frame. Redrawing thousands of individual tiles
-    // per frame was slow enough to stall animation and cause visible
-    // flicker/dropped frames. Animated floor tiles (water shimmer etc) are
-    // kept out of this bake and drawn fresh each frame instead, see render().
-    floorCanvas = document.createElement("canvas");
-    floorCanvas.width = mapData.width * TILE;
-    floorCanvas.height = mapData.height * TILE;
-    const fctx = floorCanvas.getContext("2d");
-    fctx.imageSmoothingEnabled = false;
-    floorCells.forEach((c) => {
-      fctx.drawImage(c.img, c.sx, c.sy, TILE, TILE, c.x * TILE, c.y * TILE, TILE, TILE);
-    });
+    flushBatch();
   }
 
   function initNpcStates() {
@@ -354,7 +385,7 @@ window.Overworld = (function () {
         dir: "down",
         frame: 0,
         animTimer: 0,
-        pauseTimer: 3 + Math.random() * 5,
+        pauseTimer: 10 + Math.random() * 10,
         offsetX: 0,
         offsetY: 0,
         targetOffsetX: 0,
@@ -535,7 +566,7 @@ window.Overworld = (function () {
     }
   }
 
-  const NPC_WANDER_SPEED = 7; // px/sec, a slow amble, not a walk
+  const NPC_WANDER_SPEED = 3; // px/sec, a slow amble, not a walk
 
   function updateNpcs(dt) {
     if (!mapData) return;
@@ -579,7 +610,7 @@ window.Overworld = (function () {
           st.offsetY = st.targetOffsetY;
           st.phase = "idle";
           st.frame = 0;
-          st.pauseTimer = 5 + Math.random() * 6;
+          st.pauseTimer = 14 + Math.random() * 14;
         } else {
           st.offsetX += (dx / dist) * step;
           st.offsetY += (dy / dist) * step;
@@ -726,27 +757,28 @@ window.Overworld = (function () {
     const startRow = Math.max(0, Math.floor(camY / scaledTile));
     const endRow = Math.min(mapData.height - 1, Math.ceil((camY + h) / scaledTile));
 
-    // Floor: one single blit from the pre-rendered offscreen canvas (see
-    // resolveLayers), instead of redrawing thousands of individual tiles
-    // every frame.
-    if (floorCanvas) {
-      const sx = camX / RENDER_SCALE;
-      const sy = camY / RENDER_SCALE;
-      const sw = w / RENDER_SCALE;
-      const sh = h / RENDER_SCALE;
-      ctx.drawImage(floorCanvas, sx, sy, sw, sh, 0, 0, w, h);
-    }
-
-    // Animated floor tiles (water shimmer etc) aren't in the static bake,
-    // drawn fresh each frame instead, same viewport culling as everything else.
-    for (const cell of animatedFloorCells) {
-      if (cell.x < startCol - 2 || cell.x > endCol + 2 || cell.y < startRow - 2 || cell.y > endRow + 2) continue;
-      const curGid = currentGidFor(cell.gid, cell.layer, cell.index);
-      const r = resolveGid(curGid);
-      if (!r) continue;
-      const dx = Math.round(cell.x * scaledTile - camX);
-      const dy = Math.round(cell.y * scaledTile - camY);
-      ctx.drawImage(getImg(r.src), r.sx, r.sy, TILE, TILE, dx, dy, scaledTile, scaledTile);
+    // Floor: drawn as an ordered sequence of segments (see resolveLayers),
+    // preserving real layer z-order between static bakes and animated
+    // tiles, instead of one static blit followed by every animated tile
+    // unconditionally on top.
+    const sx = camX / RENDER_SCALE;
+    const sy = camY / RENDER_SCALE;
+    const sw = w / RENDER_SCALE;
+    const sh = h / RENDER_SCALE;
+    for (const seg of floorSegments) {
+      if (seg.type === "static") {
+        ctx.drawImage(seg.canvas, sx, sy, sw, sh, 0, 0, w, h);
+      } else {
+        for (const cell of seg.cells) {
+          if (cell.x < startCol - 2 || cell.x > endCol + 2 || cell.y < startRow - 2 || cell.y > endRow + 2) continue;
+          const curGid = currentGidFor(cell.gid, cell.layer, cell.index);
+          const r = resolveGid(curGid);
+          if (!r) continue;
+          const dx = Math.round(cell.x * scaledTile - camX);
+          const dy = Math.round(cell.y * scaledTile - camY);
+          ctx.drawImage(getImg(r.src), r.sx, r.sy, TILE, TILE, dx, dy, scaledTile, scaledTile);
+        }
+      }
     }
 
     // Build a draw list: characters + interactive objects + "tall" scenery
