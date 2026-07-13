@@ -94,13 +94,15 @@ window.Overworld = (function () {
   let floorCanvas = null; // "floor" layers pre-rendered once at native (unscaled) resolution
 
   let animClock = 0; // ms, accumulated each frame, drives animated tile frames
-  let activatedZones = new Set(); // animation trigger zones that have been walked into
+  let zoneStates = {}; // zoneId -> { phase: 'closed'|'opening'|'open'|'closing', since: animClock at last transition }
+  let insideAnimZones = new Set(); // which zones the player is inside right now, for edge detection
   let insideInteriorZone = null; // which INTERIORS rect (if any) the player is currently standing in, for edge-triggering
 
   async function loadMap(url) {
     const res = await fetch(url);
     mapData = await res.json();
-    activatedZones = new Set();
+    zoneStates = {};
+    insideAnimZones = new Set();
     insideInteriorZone = null;
 
     // Load every tileset image this map references, plus static props.
@@ -142,24 +144,96 @@ window.Overworld = (function () {
     return mapData;
   }
 
+  const doorFrameInfoCache = new Map();
+
+  // Authored Tiled animations for gated tiles are a full round-trip loop
+  // (rest -> opening -> held open -> closing back to rest). We only want the
+  // "opening" half to play forward on entry and backward on exit, so this
+  // finds the held-open frame (the gid that repeats most, other than the
+  // resting gid itself) and the frames that lead up to it.
+  function getDoorFrameInfo(baseGid, frames) {
+    if (doorFrameInfoCache.has(baseGid)) return doorFrameInfoCache.get(baseGid);
+    const restGid = frames[0].gid;
+    const counts = {};
+    for (const f of frames) counts[f.gid] = (counts[f.gid] || 0) + 1;
+    let peakGid = restGid, peakCount = 0;
+    for (const gid in counts) {
+      if (Number(gid) !== restGid && counts[gid] > peakCount) {
+        peakGid = Number(gid);
+        peakCount = counts[gid];
+      }
+    }
+    let firstPeakIdx = frames.findIndex((f) => f.gid === peakGid);
+    if (firstPeakIdx === -1) firstPeakIdx = frames.length - 1;
+    let startIdx = 0;
+    while (startIdx < firstPeakIdx && frames[startIdx].gid === restGid) startIdx++;
+    const opening = frames.slice(startIdx, firstPeakIdx + 1);
+    const info = { restGid, peakGid, opening: opening.length ? opening : [{ gid: peakGid, duration: 150 }] };
+    doorFrameInfoCache.set(baseGid, info);
+    return info;
+  }
+
   // Given a tile's base gid, returns whichever gid should actually be drawn
-  // right now: itself if it has no animation data, or if it belongs to a
-  // building-animation trigger zone that hasn't been walked into yet (stays
-  // on its resting frame until then), otherwise the frame its animation
-  // cycle is currently on.
+  // right now. Ambient tiles (no gate) just loop forever. Gated tiles
+  // (building doors/windows etc) sit frozen at rest until a player walks
+  // into the matching zone, play forward once, hold open, then play
+  // backward once when a player leaves the zone.
   function currentGidFor(baseGid, layer, index) {
     const frames = mapData.animations && mapData.animations[baseGid];
     if (!frames || !frames.length) return baseGid;
     const zone = layer.gatedCells && layer.gatedCells[index];
-    if (zone && !activatedZones.has(zone)) return baseGid;
-    const total = frames.reduce((s, f) => s + f.duration, 0);
-    if (total <= 0) return baseGid;
-    let t = animClock % total;
-    for (const f of frames) {
-      if (t < f.duration) return f.gid;
-      t -= f.duration;
+
+    if (!zone) {
+      const total = frames.reduce((s, f) => s + f.duration, 0);
+      if (total <= 0) return baseGid;
+      let t = animClock % total;
+      for (const f of frames) {
+        if (t < f.duration) return f.gid;
+        t -= f.duration;
+      }
+      return frames[frames.length - 1].gid;
     }
-    return frames[frames.length - 1].gid;
+
+    const info = getDoorFrameInfo(baseGid, frames);
+    const state = zoneStates[zone] || { phase: "closed", since: 0 };
+    const openDur = info.opening.reduce((s, f) => s + f.duration, 0) || 1;
+    const elapsed = animClock - state.since;
+
+    if (state.phase === "closed") return info.restGid;
+    if (state.phase === "open") return info.peakGid;
+
+    if (state.phase === "opening") {
+      if (elapsed >= openDur) {
+        state.phase = "open";
+        state.since = animClock;
+        zoneStates[zone] = state;
+        return info.peakGid;
+      }
+      let t = elapsed;
+      for (const f of info.opening) {
+        if (t < f.duration) return f.gid;
+        t -= f.duration;
+      }
+      return info.peakGid;
+    }
+
+    if (state.phase === "closing") {
+      if (elapsed >= openDur) {
+        state.phase = "closed";
+        state.since = animClock;
+        zoneStates[zone] = state;
+        return info.restGid;
+      }
+      let t = elapsed;
+      const rev = [...info.opening].reverse();
+      for (const f of rev) {
+        if (t < f.duration) return f.gid;
+        t -= f.duration;
+      }
+      return info.restGid;
+    }
+
+    return baseGid;
   }
 
   // Ground tiles come from a real Tiled export: a list of tilesets (each
@@ -190,6 +264,35 @@ window.Overworld = (function () {
     mapData.layers.forEach((layer) => {
       const cells = [];
       const isAnimatedLayer = (gid) => mapData.animations && mapData.animations[gid];
+
+      // For "sorted" layers, tall objects (trees, bridge rails etc) are
+      // often several rows of stacked tiles in the same layer. Sorting each
+      // row purely by its own y let a player standing right behind a tree's
+      // trunk draw in FRONT of the canopy rows above it, since those rows
+      // individually had a smaller y than the player. Instead, every tile in
+      // a contiguous vertical run within one column shares the run's bottom
+      // row as its sort key, so the whole tree/rail segment sorts as one
+      // object relative to the player, the way it visually reads.
+      let bottomOfRun = null;
+      if (layer.kind !== "floor" && layer.dense) {
+        const w = mapData.width, h = mapData.height;
+        bottomOfRun = new Int16Array(w * h).fill(-1);
+        for (let x = 0; x < w; x++) {
+          let y = h - 1;
+          while (y >= 0) {
+            if (layer.data[y * w + x]) {
+              let bottom = y;
+              while (y >= 0 && layer.data[y * w + x]) {
+                bottomOfRun[y * w + x] = bottom;
+                y--;
+              }
+            } else {
+              y--;
+            }
+          }
+        }
+      }
+
       if (layer.dense) {
         const w = mapData.width;
         for (let i = 0; i < layer.data.length; i++) {
@@ -202,7 +305,8 @@ window.Overworld = (function () {
           }
           const r = resolveGid(gid);
           if (!r) continue;
-          cells.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, layer, index: i, animated: !!isAnimatedLayer(gid) });
+          const sortRow = bottomOfRun ? bottomOfRun[i] : y;
+          cells.push({ x, y, sortRow, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, layer, index: i, animated: !!isAnimatedLayer(gid) });
         }
       } else {
         layer.cells.forEach(([x, y, gid], idx) => {
@@ -212,7 +316,7 @@ window.Overworld = (function () {
           }
           const r = resolveGid(gid);
           if (!r) return;
-          cells.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, layer, index: idx, animated: !!isAnimatedLayer(gid) });
+          cells.push({ x, y, sortRow: y, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, layer, index: idx, animated: !!isAnimatedLayer(gid) });
         });
       }
       if (layer.kind === "floor") {
@@ -367,18 +471,40 @@ window.Overworld = (function () {
     updateNpcs(dt);
   }
 
-  // Building animations (doors opening etc) stay on their resting frame by
-  // default and only start playing once a player has actually walked into
-  // the matching ANIMATION TRIGGERS zone, rather than looping forever from
-  // the moment the map loads.
+  // Building animations (doors opening etc) sit frozen at rest by default.
+  // Walking into the matching zone plays the animation forward once and
+  // holds it open; walking back out plays it backward once, closing it.
   function checkAnimationZones() {
     if (!mapData || !mapData.animationZones) return;
     const tx = me.x / TILE, ty = me.y / TILE;
+    const currentlyInside = new Set();
     for (const z of mapData.animationZones) {
       if (tx >= z.x0 && tx < z.x1 && ty >= z.y0 && ty < z.y1) {
-        activatedZones.add(z.id);
+        currentlyInside.add(z.id);
       }
     }
+
+    for (const zid of currentlyInside) {
+      if (!insideAnimZones.has(zid)) {
+        const s = zoneStates[zid] || { phase: "closed", since: 0 };
+        if (s.phase === "closed" || s.phase === "closing") {
+          s.phase = "opening";
+          s.since = animClock;
+        }
+        zoneStates[zid] = s;
+      }
+    }
+    for (const zid of insideAnimZones) {
+      if (!currentlyInside.has(zid)) {
+        const s = zoneStates[zid] || { phase: "open", since: 0 };
+        if (s.phase === "open" || s.phase === "opening") {
+          s.phase = "closing";
+          s.since = animClock;
+        }
+        zoneStates[zid] = s;
+      }
+    }
+    insideAnimZones = currentlyInside;
   }
 
   // Walking anywhere into an INTERIORS rectangle moves the party into that
@@ -636,7 +762,7 @@ window.Overworld = (function () {
         const dy = Math.round(cell.y * scaledTile - camY);
         if (cell.animated) {
           drawList.push({
-            y: cell.y * TILE + TILE,
+            y: cell.sortRow * TILE + TILE,
             draw: () => {
               const curGid = currentGidFor(cell.gid, cell.layer, cell.index);
               const r = resolveGid(curGid);
@@ -646,7 +772,7 @@ window.Overworld = (function () {
           });
         } else {
           drawList.push({
-            y: cell.y * TILE + TILE,
+            y: cell.sortRow * TILE + TILE,
             draw: () => ctx.drawImage(cell.img, cell.sx, cell.sy, TILE, TILE, dx, dy, scaledTile, scaledTile),
           });
         }
