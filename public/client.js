@@ -426,8 +426,6 @@ initCharacterCreator();
 
 // --- Explore mode (overworld) ---
 let interactionsCache = null;
-let activePuzzleObj = null;
-let activePuzzleEntry = null;
 let isNearInteractable = false;
 
 async function getInteractions() {
@@ -514,9 +512,6 @@ async function handleObjectInteract(obj) {
     if (entry) openDialogueModal(entry.title, entry.lines, obj);
   } else if (kind === "note") {
     openDialogueModal(obj.name, [obj.interaction.text], obj);
-  } else if (kind === "puzzle") {
-    const entry = data[obj.interaction.puzzleId];
-    if (entry) openPuzzleModal(obj, entry);
   } else if (kind === "evidence_document") {
     const entry = data[obj.interaction.documentId];
     if (entry) openDocumentModal(obj, entry);
@@ -550,8 +545,8 @@ function setVnPortrait(obj) {
 }
 
 function openDialogueModal(title, lines, obj) {
-  document.getElementById("vn-puzzle-set").classList.add("hidden");
   document.getElementById("vn-dialogue-set").classList.remove("hidden");
+  document.getElementById("vn-document-set").classList.add("hidden");
   setVnPortrait(obj);
 
   document.getElementById("dialogue-title").textContent = title;
@@ -567,92 +562,15 @@ function openDialogueModal(title, lines, obj) {
   document.getElementById("btn-interact").classList.add("hidden");
 }
 
-document.getElementById("btn-close-dialogue").addEventListener("click", () => {
+function closeVnPanel() {
   document.getElementById("vn-panel").classList.add("hidden");
   document.getElementById("btn-interact").classList.toggle("hidden", !isNearInteractable);
-});
+}
+
+document.getElementById("btn-close-vn").addEventListener("click", closeVnPanel);
 
 socket.on("explore:dialogue", (data) => {
   openDialogueModal(data.title, data.lines);
-});
-
-function openPuzzleModal(obj, entry) {
-  activePuzzleObj = obj;
-  activePuzzleEntry = entry;
-
-  document.getElementById("vn-dialogue-set").classList.add("hidden");
-  document.getElementById("vn-puzzle-set").classList.remove("hidden");
-  setVnPortrait(obj);
-
-  document.getElementById("puzzle-title").textContent = entry.title;
-  document.getElementById("puzzle-prompt").textContent = entry.prompt;
-  document.getElementById("puzzle-feedback").textContent = "";
-  document.getElementById("puzzle-feedback").className = "feedback";
-  document.getElementById("puzzle-answer-input").value = "";
-
-  const extra = document.getElementById("puzzle-extra");
-  extra.innerHTML = "";
-  if (entry.render === "wordsearch") {
-    extra.appendChild(buildLetterGrid(entry.grid, []));
-    const wordList = document.createElement("div");
-    wordList.className = "word-list";
-    entry.wordList.forEach((w) => {
-      const chip = document.createElement("span");
-      chip.className = "word-chip";
-      chip.textContent = w;
-      wordList.appendChild(chip);
-    });
-    extra.appendChild(wordList);
-  } else if (entry.render === "highlightgrid") {
-    extra.appendChild(buildLetterGrid(entry.grid, entry.highlightPath));
-  }
-
-  const hintToggle = document.getElementById("puzzle-hint-toggle");
-  hintToggle.textContent = "Need a hint?";
-  hintToggle.style.cursor = "pointer";
-  hintToggle.style.textDecoration = "underline";
-  hintToggle.onclick = () => {
-    hintToggle.textContent = entry.hint || "No hint available.";
-    hintToggle.style.cursor = "default";
-    hintToggle.style.textDecoration = "none";
-  };
-
-  document.getElementById("vn-panel").classList.remove("hidden");
-  document.getElementById("btn-interact").classList.add("hidden");
-}
-
-function buildLetterGrid(grid, highlightPath) {
-  const size = grid.length;
-  const wrap = document.createElement("div");
-  wrap.className = "letter-grid";
-  wrap.style.gridTemplateColumns = `repeat(${size}, 26px)`;
-
-  const highlightMap = {};
-  (highlightPath || []).forEach((p, i) => {
-    highlightMap[`${p.r},${p.c}`] = i + 1;
-  });
-
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      const cell = document.createElement("div");
-      const key = `${r},${c}`;
-      cell.className = "letter-cell" + (highlightMap[key] ? " highlighted" : "");
-      cell.textContent = grid[r][c];
-      if (highlightMap[key]) {
-        const badge = document.createElement("span");
-        badge.className = "path-index";
-        badge.textContent = highlightMap[key];
-        cell.appendChild(badge);
-      }
-      wrap.appendChild(cell);
-    }
-  }
-  return wrap;
-}
-
-document.getElementById("btn-close-puzzle").addEventListener("click", () => {
-  document.getElementById("vn-panel").classList.add("hidden");
-  document.getElementById("btn-interact").classList.toggle("hidden", !isNearInteractable);
 });
 
 let activeDocumentObj = null;
@@ -663,18 +581,16 @@ function openDocumentModal(obj, entry) {
   activeDocumentEntry = entry;
 
   document.getElementById("vn-dialogue-set").classList.add("hidden");
-  document.getElementById("vn-puzzle-set").classList.add("hidden");
   document.getElementById("vn-document-set").classList.remove("hidden");
   setVnPortrait(obj);
 
+  // Deliberately shows only the flavor/quest text here (entry.intro), never
+  // the actual puzzle content (entry.table/list/closing). That stays hidden
+  // until the item is on the Evidence Table and gets Investigated properly,
+  // see openInvestigateModal, so examining evidence in the field can't
+  // accidentally spoil the solve.
   document.getElementById("document-title").textContent = entry.title;
   document.getElementById("document-intro").textContent = entry.intro || "";
-  document.getElementById("document-closing").textContent = entry.closing || "";
-
-  const extra = document.getElementById("document-extra");
-  extra.innerHTML = "";
-  if (entry.table) extra.appendChild(buildDocumentTable(entry.table));
-  if (entry.list) extra.appendChild(buildDocumentList(entry.list));
 
   document.getElementById("vn-panel").classList.remove("hidden");
   document.getElementById("btn-interact").classList.add("hidden");
@@ -724,48 +640,9 @@ document.getElementById("btn-document-take").addEventListener("click", () => {
     objectId: activeDocumentObj.id,
     itemId: activeDocumentEntry && activeDocumentEntry.itemId,
   });
-  document.getElementById("vn-panel").classList.add("hidden");
-  document.getElementById("btn-interact").classList.toggle("hidden", !isNearInteractable);
+  closeVnPanel();
   activeDocumentObj = null;
   activeDocumentEntry = null;
-});
-
-document.getElementById("btn-close-document").addEventListener("click", () => {
-  document.getElementById("vn-panel").classList.add("hidden");
-  document.getElementById("btn-interact").classList.toggle("hidden", !isNearInteractable);
-});
-
-function submitPuzzleAnswer() {
-  if (!activePuzzleObj) return;
-  const val = document.getElementById("puzzle-answer-input").value.trim();
-  if (!val) return;
-  socket.emit("explore:submitAnswer", { puzzleId: activePuzzleObj.interaction.puzzleId, answer: val });
-}
-
-document.getElementById("btn-puzzle-submit").addEventListener("click", submitPuzzleAnswer);
-document.getElementById("puzzle-answer-input").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") submitPuzzleAnswer();
-});
-
-socket.on("explore:result", (data) => {
-  const fb = document.getElementById("puzzle-feedback");
-  if (data.correct) {
-    fb.className = "feedback correct";
-    const successText = activePuzzleEntry && activePuzzleEntry.successText;
-    fb.textContent = successText || "Correct! Logged to the case file.";
-    const delay = successText ? 4000 : 1200;
-    setTimeout(() => {
-      document.getElementById("vn-panel").classList.add("hidden");
-      document.getElementById("btn-interact").classList.toggle("hidden", !isNearInteractable);
-    }, delay);
-  } else {
-    fb.className = "feedback incorrect";
-    fb.textContent = "Not quite. Try again.";
-  }
-});
-
-socket.on("explore:clueSolved", (data) => {
-  Overworld.markSolved(data.puzzleId);
 });
 
 socket.on("map:objectRemoved", (data) => {
@@ -875,8 +752,23 @@ function renderTableAddGrid() {
   });
 }
 
-// --- Investigate an exhibit (illustrated art plus description) ---
-function openInvestigateModal(exhibit) {
+// --- Investigate an exhibit (the real puzzle content lives here) ---
+let documentByItemId = null;
+
+async function findDocumentForItem(itemId) {
+  if (!documentByItemId) {
+    const data = await getInteractions();
+    documentByItemId = {};
+    Object.values(data).forEach((entry) => {
+      if (entry && entry.type === "document" && entry.itemId) {
+        documentByItemId[entry.itemId] = entry;
+      }
+    });
+  }
+  return documentByItemId[itemId] || null;
+}
+
+async function openInvestigateModal(exhibit) {
   document.getElementById("investigate-title").textContent = `Exhibit ${exhibit.letter}: ${exhibit.name}`;
   const art = document.getElementById("investigate-art");
   if (exhibit.art) {
@@ -885,8 +777,21 @@ function openInvestigateModal(exhibit) {
   } else {
     art.classList.add("hidden");
   }
-  document.getElementById("investigate-text").textContent =
-    exhibit.description || "No further details recorded yet.";
+
+  const extra = document.getElementById("investigate-extra");
+  extra.innerHTML = "";
+  const doc = await findDocumentForItem(exhibit.itemId);
+  if (doc) {
+    document.getElementById("investigate-intro").textContent = doc.intro || "";
+    if (doc.table) extra.appendChild(buildDocumentTable(doc.table));
+    if (doc.list) extra.appendChild(buildDocumentList(doc.list));
+    document.getElementById("investigate-closing").textContent = doc.closing || "";
+  } else {
+    document.getElementById("investigate-intro").textContent =
+      exhibit.description || "No further details recorded yet.";
+    document.getElementById("investigate-closing").textContent = "";
+  }
+
   document.getElementById("modal-investigate").classList.remove("hidden");
 }
 
@@ -926,7 +831,9 @@ function drawFixedPortrait(canvas, src) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const img = new Image();
   img.onload = () => {
-    const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight) * 3.2;
+    // Contain-fit: works whether the source is a small pixel-art icon or a
+    // larger illustrated portrait, without a size-specific magic number.
+    const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight);
     const w = img.naturalWidth * scale;
     const h = img.naturalHeight * scale;
     const x = (canvas.width - w) / 2;

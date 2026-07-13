@@ -89,47 +89,30 @@
           <p class="zone-label" id="explore-zone-label"></p>
         </div>
         <div class="explore-hud-right">
-          <div id="explore-progress" class="progress-text" style="margin:0"></div>
-          <button id="btn-open-inventory" class="btn btn-secondary inventory-btn">
-            Inventory <span id="inventory-count" class="inventory-count">0</span>
-          </button>
           <button id="btn-explore-force-advance" class="btn btn-secondary hidden">Host: Advance &rarr;</button>
         </div>
       </div>
       <div class="explore-viewport" id="explore-viewport">
         <canvas id="explore-canvas"></canvas>
+        <div id="explore-progress" class="progress-text explore-progress-hud"></div>
+        <button id="btn-open-inventory" class="btn btn-secondary inventory-btn inventory-btn-hud">
+          Inventory <span id="inventory-count" class="inventory-count">0</span>
+        </button>
         <button id="btn-interact" class="btn btn-primary interact-btn hidden">Examine</button>
 
         <div id="vn-panel" class="vn-panel pixel-panel-dialogue hidden">
-          <canvas id="vn-portrait" width="60" height="80"></canvas>
+          <button id="btn-close-vn" class="pixel-close-btn" aria-label="Close"></button>
+          <canvas id="vn-portrait" width="120" height="140"></canvas>
           <div class="vn-body">
             <div id="vn-dialogue-set">
               <h3 id="dialogue-title" class="vn-name"></h3>
               <div id="dialogue-lines"></div>
-              <button id="btn-close-dialogue" class="btn btn-secondary vn-close-btn">Close</button>
-            </div>
-            <div id="vn-puzzle-set" class="hidden">
-              <h3 id="puzzle-title" class="vn-name"></h3>
-              <p id="puzzle-prompt" class="vn-prompt"></p>
-              <div id="puzzle-extra"></div>
-              <div class="answer-row">
-                <input id="puzzle-answer-input" type="text" placeholder="Type your answer..." />
-                <button id="btn-puzzle-submit" class="btn btn-primary">Submit</button>
-              </div>
-              <div id="puzzle-feedback" class="feedback"></div>
-              <div class="vn-puzzle-footer">
-                <span id="puzzle-hint-toggle" class="hint-toggle">Need a hint?</span>
-                <button id="btn-close-puzzle" class="btn btn-secondary vn-close-btn">Close</button>
-              </div>
             </div>
             <div id="vn-document-set" class="hidden">
               <h3 id="document-title" class="vn-name"></h3>
               <p id="document-intro" class="vn-prompt"></p>
-              <div id="document-extra"></div>
-              <p id="document-closing" class="vn-prompt"></p>
               <div class="vn-puzzle-footer">
                 <button id="btn-document-take" class="btn btn-primary">Pick up</button>
-                <button id="btn-close-document" class="btn btn-secondary vn-close-btn">Close</button>
               </div>
             </div>
           </div>
@@ -164,7 +147,7 @@
   <!-- Player inventory (private, held items not yet added to the Evidence Table) -->
   <div id="modal-inventory" class="modal-overlay hidden">
     <div class="pixel-panel pixel-panel-popup modal-box">
-      <button id="btn-close-inventory" class="pixel-close-btn" aria-label="Close">&times;</button>
+      <button id="btn-close-inventory" class="pixel-close-btn" aria-label="Close"></button>
       <h3 class="pixel-panel-title">Your Findings</h3>
       <p class="hint-text" style="margin-top:0">Carry these to the Evidence Table to add them as exhibits.</p>
       <div class="item-grid" id="inventory-grid"></div>
@@ -175,7 +158,7 @@
   <!-- Evidence table (shared, synced across the whole party) -->
   <div id="modal-table" class="modal-overlay hidden">
     <div class="pixel-panel pixel-panel-popup modal-box modal-box-wide">
-      <button id="btn-close-table" class="pixel-close-btn" aria-label="Close">&times;</button>
+      <button id="btn-close-table" class="pixel-close-btn" aria-label="Close"></button>
       <h3 class="pixel-panel-title">The Evidence Table</h3>
       <div class="sync-banner">Shared with your whole party &mdash; everyone sees this update live</div>
 
@@ -191,13 +174,16 @@
     </div>
   </div>
 
-  <!-- Investigate an exhibit: illustrated art plus description -->
+  <!-- Investigate an exhibit: the real puzzle content lives here, only -->
+  <!-- available once the evidence is actually on the table -->
   <div id="modal-investigate" class="modal-overlay hidden">
-    <div class="pixel-panel pixel-panel-popup modal-box">
-      <button id="btn-close-investigate" class="pixel-close-btn" aria-label="Close">&times;</button>
+    <div class="pixel-panel pixel-panel-popup modal-box modal-box-wide">
+      <button id="btn-close-investigate" class="pixel-close-btn" aria-label="Close"></button>
       <h3 class="pixel-panel-title" id="investigate-title"></h3>
-      <img id="investigate-art" class="investigate-art" src="" alt="" />
-      <p class="hint-text" id="investigate-text"></p>
+      <img id="investigate-art" class="investigate-art hidden" src="" alt="" />
+      <p class="hint-text" id="investigate-intro"></p>
+      <div id="investigate-extra"></div>
+      <p class="hint-text" id="investigate-closing"></p>
     </div>
   </div>
 

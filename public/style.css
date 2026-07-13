@@ -585,6 +585,25 @@ input[type="text"]:focus {
   z-index: 5;
 }
 
+.explore-progress-hud {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+  margin: 0;
+  background: rgba(12,14,22,0.75);
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(var(--candle-rgb),0.2);
+}
+
+.inventory-btn-hud {
+  position: absolute;
+  right: 14px;
+  bottom: 60px;
+  z-index: 5;
+}
+
 .vn-panel {
   position: absolute;
   left: 0;
@@ -593,18 +612,18 @@ input[type="text"]:focus {
   z-index: 10;
   display: flex;
   gap: 14px;
-  padding: 20px 36px;
+  padding: 16px 28px;
   background: rgba(12,14,22,0.94);
   border-top: 2px solid var(--candle);
   border-radius: 0 0 var(--radius) var(--radius);
-  max-height: 78%;
+  max-height: 220px;
   overflow-y: auto;
 }
 
 #vn-portrait {
   flex-shrink: 0;
-  width: 60px;
-  height: 80px;
+  width: 120px;
+  height: 140px;
   image-rendering: pixelated;
   background: var(--ink);
   border: 1px solid rgba(var(--parchment-rgb),0.2);
@@ -647,132 +666,6 @@ input[type="text"]:focus {
 
 .modal-box-wide {
   max-width: 640px;
-}
-
-#puzzle-extra {
-  margin: 14px 0;
-}
-
-.letter-grid {
-  display: grid;
-  gap: 2px;
-  justify-content: center;
-  margin: 14px auto;
-  background: var(--ink);
-  padding: 8px;
-  border-radius: var(--radius);
-  border: 1px solid rgba(var(--candle-rgb),0.15);
-}
-
-.letter-cell {
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Inter', -apple-system, sans-serif;
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--parchment-dim);
-  background: transparent;
-  border-radius: 2px;
-  position: relative;
-}
-
-.letter-cell.highlighted {
-  background: rgba(var(--candle-rgb),0.25);
-  color: var(--candle-bright);
-  border: 1px solid var(--candle);
-}
-
-.letter-cell .path-index {
-  position: absolute;
-  top: -6px;
-  right: -4px;
-  font-size: 9px;
-  color: var(--candle-bright);
-  background: var(--ink);
-  border-radius: 50%;
-  width: 12px;
-  height: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-.word-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  margin-top: 10px;
-}
-
-.word-chip {
-  background: var(--ink-surface-2);
-  border: 1px solid rgba(var(--parchment-rgb),0.15);
-  padding: 4px 10px;
-  border-radius: 14px;
-  font-size: 13px;
-  letter-spacing: 0.04em;
-}
-
-.table-slots {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin: 20px 0;
-  padding: 20px 14px;
-  background:
-    repeating-linear-gradient(90deg, rgba(0,0,0,0.08) 0 3px, transparent 3px 34px),
-    linear-gradient(180deg, #7a5233, #5c3a27);
-  border: 1px solid #3d2718;
-  border-radius: var(--radius);
-  box-shadow: inset 0 0 24px rgba(0,0,0,0.35);
-}
-
-.table-slot {
-  width: 84px;
-  height: 64px;
-  border: 2px dashed rgba(0,0,0,0.25);
-  border-radius: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  font-size: 12px;
-  color: rgba(255,255,255,0.35);
-  background: rgba(0,0,0,0.12);
-}
-
-.table-slot.filled {
-  border: none;
-  background: #e8dcc0;
-  color: #3a2f1e;
-  font-family: 'Inter', -apple-system, sans-serif;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: grab;
-  clip-path: polygon(4% 8%, 96% 2%, 100% 92%, 6% 100%, 0% 55%);
-  box-shadow: 1px 2px 4px rgba(0,0,0,0.4);
-  transform: rotate(-1.5deg);
-}
-
-.table-slot.filled:nth-child(even) {
-  clip-path: polygon(2% 4%, 94% 8%, 100% 96%, 8% 100%, 0% 40%);
-  transform: rotate(1.5deg);
-}
-
-.table-slot.solved {
-  background: #dff0e2;
-  color: #1c5c34;
-  box-shadow: 0 0 0 2px var(--success), 1px 2px 4px rgba(0,0,0,0.4);
-}
-
-.table-slot.drag-over {
-  box-shadow: 0 0 0 2px var(--candle-bright);
 }
 
 .modal-overlay {
@@ -889,10 +782,21 @@ input[type="text"]:focus {
   background: url('/assets/ui/btn_square.png') center/contain no-repeat;
   image-rendering: pixelated;
   cursor: pointer;
-  color: #fff;
-  font-size: 14px;
-  line-height: 1;
+  z-index: 20;
 }
+.pixel-close-btn::before,
+.pixel-close-btn::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 2px;
+  background: #fff;
+  border-radius: 1px;
+}
+.pixel-close-btn::before { transform: translate(-50%, -50%) rotate(45deg); }
+.pixel-close-btn::after { transform: translate(-50%, -50%) rotate(-45deg); }
 .pixel-close-btn:hover { filter: brightness(1.15); }
 
 .inventory-btn {

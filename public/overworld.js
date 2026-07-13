@@ -833,6 +833,10 @@ window.Overworld = (function () {
           y: o.y * TILE + TILE,
           draw: () => drawStaticSprite("/assets/props/evidence_table.png", centerX, topY, 32),
         });
+      } else if (o.interaction && o.interaction.kind === "evidence_document") {
+        // These already have a custom ground icon (the EVIDENCE TILES layer),
+        // the generic purple interact-dot on top of that read as redundant
+        // clutter, so evidence objects get no marker of their own.
       } else {
         drawList.push({ y: o.y * TILE + TILE, draw: () => drawObjectMarker(o, camX, camY) });
       }
