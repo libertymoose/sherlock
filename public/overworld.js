@@ -45,6 +45,7 @@ window.Overworld = (function () {
   let me = { x: 0, y: 0, dir: "down", moving: false, gender: "male", color: "red" };
   let myName = "";
   let currentZone = "estate";
+  let mySpawnIndex = null; // this player's stable roster index, for maps with multiple spawnPoints
   let others = {}; // socketId -> {x,y,dir,moving,gender,color,name}
   let keys = {};
   let animTimer = 0;
@@ -57,7 +58,7 @@ window.Overworld = (function () {
   let wildlifeTimer = 0;
   let wildlifeFrame = 0;
 
-  let callbacks = { onInteract: null, onNearbyChange: null };
+  let callbacks = { onInteract: null, onNearbyChange: null, onPlateEnter: null, onPlateLeave: null };
 
   function loadImage(src) {
     if (images[src]) return images[src].promise;
@@ -98,6 +99,7 @@ window.Overworld = (function () {
   let zoneStates = {}; // zoneId -> { phase: 'closed'|'opening'|'open'|'closing', since: animClock at last transition }
   let insideAnimZones = new Set(); // which zones the player is inside right now, for edge detection
   let insideInteriorZone = null; // which INTERIORS rect (if any) the player is currently standing in, for edge-triggering
+  let insidePlateId = null; // which pressure plate (if any) the player is currently standing on, for edge-triggering
 
   async function loadMap(url) {
     const res = await fetch(url);
@@ -105,6 +107,7 @@ window.Overworld = (function () {
     zoneStates = {};
     insideAnimZones = new Set();
     insideInteriorZone = null;
+    insidePlateId = null;
 
     // Load every tileset image this map references, plus static props.
     const srcs = new Set(mapData.tilesets.map((t) => t.image));
@@ -137,8 +140,22 @@ window.Overworld = (function () {
     charSrcs.push(...allFrameSrcs(WILDLIFE_MANIFEST));
     await Promise.all(charSrcs.map(loadImage));
 
-    me.x = mapData.spawn.x * TILE + TILE / 2;
-    me.y = mapData.spawn.y * TILE + TILE / 2;
+    // Most maps have one spawn everyone lands on. A few (the jail cells,
+    // so far) define spawnPoints instead, one per player, so the party
+    // actually starts split up rather than stacked on one tile. Falls
+    // back to the single spawn when a map doesn't define spawnPoints, or
+    // when we were never told which index we are (e.g. this map was
+    // reached by walking through a zone exit, which sets position itself
+    // right after this runs anyway).
+    if (mapData.spawnPoints && mapData.spawnPoints.length && mySpawnIndex != null && mySpawnIndex >= 0) {
+      const idx = mySpawnIndex % mapData.spawnPoints.length;
+      const sp = mapData.spawnPoints[idx];
+      me.x = sp.x * TILE + TILE / 2;
+      me.y = sp.y * TILE + TILE / 2;
+    } else {
+      me.x = mapData.spawn.x * TILE + TILE / 2;
+      me.y = mapData.spawn.y * TILE + TILE / 2;
+    }
 
     initNpcStates();
 
@@ -150,18 +167,21 @@ window.Overworld = (function () {
   // Authored Tiled animations for gated tiles are a full round-trip loop
   // (rest -> opening -> held open -> closing back to rest). We only want the
   // "opening" half to play forward on entry and backward on exit, so this
-  // finds the held-open frame (the gid that repeats most, other than the
-  // resting gid itself) and the frames that lead up to it.
+  // finds the held-open frame and the frames that lead up to it. Different
+  // maps author "hold" differently, some repeat the held frame many times
+  // in the frame list, others just give it one long duration, so this picks
+  // whichever non-rest gid accounts for the most total time in the loop,
+  // which works for either convention.
   function getDoorFrameInfo(baseGid, frames) {
     if (doorFrameInfoCache.has(baseGid)) return doorFrameInfoCache.get(baseGid);
     const restGid = frames[0].gid;
-    const counts = {};
-    for (const f of frames) counts[f.gid] = (counts[f.gid] || 0) + 1;
-    let peakGid = restGid, peakCount = 0;
-    for (const gid in counts) {
-      if (Number(gid) !== restGid && counts[gid] > peakCount) {
+    const timeByGid = {};
+    for (const f of frames) timeByGid[f.gid] = (timeByGid[f.gid] || 0) + f.duration;
+    let peakGid = restGid, peakTime = 0;
+    for (const gid in timeByGid) {
+      if (Number(gid) !== restGid && timeByGid[gid] > peakTime) {
         peakGid = Number(gid);
-        peakCount = counts[gid];
+        peakTime = timeByGid[gid];
       }
     }
     let firstPeakIdx = frames.findIndex((f) => f.gid === peakGid);
@@ -398,7 +418,21 @@ window.Overworld = (function () {
     const tx = Math.floor(px / TILE);
     const ty = Math.floor(py / TILE);
     if (tx < 0 || ty < 0 || tx >= mapData.width || ty >= mapData.height) return true;
-    return mapData.collision[ty][tx] === 1;
+    if (mapData.collision[ty][tx] === 1) return true;
+
+    // Barriers are tile rects that are only passable while their linked
+    // animation zone is fully open, used for things like the jail windows:
+    // solid until a pressure plate elsewhere opens them, solid again the
+    // moment that zone starts closing.
+    if (mapData.barriers) {
+      for (const b of mapData.barriers) {
+        if (tx >= b.x0 && tx < b.x1 && ty >= b.y0 && ty < b.y1) {
+          const state = zoneStates[b.animZoneId];
+          if (!state || state.phase !== "open") return true;
+        }
+      }
+    }
+    return false;
   }
 
   function canStandAt(x, y) {
@@ -499,6 +533,7 @@ window.Overworld = (function () {
     animClock += dt * 1000; // Tiled animation durations are in ms
     checkAnimationZones();
     checkInteriorZones();
+    checkPressurePlates();
 
     findNearbyObject();
     maybeSendPosition();
@@ -569,7 +604,35 @@ window.Overworld = (function () {
     }
   }
 
-  const NPC_WANDER_SPEED = 3; // px/sec, a slow amble, not a walk
+  // Pressure plates are walk-onto zones, edge-triggered like interior zones.
+  // Standing on one notifies the server, which decides (based on how many
+  // players are actually in this zone) whether that opens someone else's
+  // door for as long as you hold it, or, solo, pulses your own door open
+  // on a short timer instead. The actual open/closed state always comes
+  // back from the server via Overworld.setRemoteDoorPhase(), never assumed
+  // locally, so it stays correct for everyone watching.
+  function checkPressurePlates() {
+    if (!mapData || !mapData.pressurePlates) return;
+    const tx = me.x / TILE, ty = me.y / TILE;
+    const plate = mapData.pressurePlates.find(
+      (z) => tx >= z.x0 && tx < z.x1 && ty >= z.y0 && ty < z.y1
+    );
+    const plateId = plate ? plate.id : null;
+    if (plateId !== insidePlateId) {
+      if (insidePlateId && callbacks.onPlateLeave) {
+        callbacks.onPlateLeave({ id: insidePlateId });
+      }
+      insidePlateId = plateId;
+      if (plate && callbacks.onPlateEnter) {
+        callbacks.onPlateEnter({
+          id: plate.id,
+          targetDoorZoneId: plate.targetDoorZoneId,
+          selfDoorZoneId: plate.selfDoorZoneId,
+        });
+      }
+    }
+  }
+
 
   function updateNpcs(dt) {
     if (!mapData) return;
@@ -922,9 +985,13 @@ window.Overworld = (function () {
       socket = opts.socket;
       callbacks.onInteract = opts.onInteract || null;
       callbacks.onNearbyChange = opts.onNearbyChange || null;
+      callbacks.onPlateEnter = opts.onPlateEnter || null;
+      callbacks.onPlateLeave = opts.onPlateLeave || null;
       me.gender = opts.myGender || "male";
       me.color = opts.myColor || "red";
       myName = opts.myName || "";
+      mySpawnIndex = typeof opts.spawnIndex === "number" ? opts.spawnIndex : null;
+      currentZone = opts.startZone || "estate";
 
       await loadMap(opts.mapUrl);
 
@@ -988,6 +1055,26 @@ window.Overworld = (function () {
         nearbyObject = null;
         if (callbacks.onNearbyChange) callbacks.onNearbyChange(null);
       }
+    },
+
+    // Drives a door/window open or closed from a server event rather than
+    // local proximity, used for pressure-plate mechanics where one player's
+    // action opens a barrier for someone else. Reuses the same phase state
+    // machine as the local ANIMATION TRIGGERS zones, so any door tile
+    // animation already set up in Tiled just works here too, and the
+    // barrier collision check in isBlockedTile() reads the same state.
+    setRemoteDoorPhase(zoneId, open) {
+      const s = zoneStates[zoneId] || { phase: "closed", since: 0 };
+      const wantPhase = open ? "opening" : "closing";
+      if (
+        (open && (s.phase === "open" || s.phase === "opening")) ||
+        (!open && (s.phase === "closed" || s.phase === "closing"))
+      ) {
+        return; // already headed the right way, don't restart the animation
+      }
+      s.phase = wantPhase;
+      s.since = animClock;
+      zoneStates[zoneId] = s;
     },
 
     async changeZone(zoneId, mapUrl, tileX, tileY) {

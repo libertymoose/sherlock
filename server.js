@@ -33,6 +33,11 @@ const rooms = {};
 const GENDERS = ["male", "female"];
 const COLORS = ["red", "blue", "green", "yellow", "orange", "purple", "pink", "cyan", "white", "black", "brown", "lime"];
 
+// How long a solo-tested pressure plate holds its own door open, in ms.
+// Real sessions (6-10 players) always hit the multiplayer hold-based path
+// instead, this is purely the fallback for testing alone.
+const SOLO_PLATE_OPEN_MS = 5000;
+
 function cleanGender(gender) {
   return GENDERS.includes(gender) ? gender : "male";
 }
@@ -73,7 +78,11 @@ function buildActPayloadForPlayer(room, socketId) {
   const base = { index: room.actIndex, total: STORY.acts.length, type: act.type, title: act.title };
 
   if (act.type === "reveal") {
-    return { ...base, body: act.body, image: act.image || null };
+    return { ...base, body: act.body, image: act.image || null, showEvidenceReview: !!act.showEvidenceReview };
+  }
+
+  if (act.type === "cutscene") {
+    return { ...base, pages: act.pages || [], fadeOut: !!act.fadeOut };
   }
 
   if (act.type === "final") {
@@ -113,6 +122,7 @@ function buildActPayloadForPlayer(room, socketId) {
     return {
       ...base,
       mapUrl: act.mapUrl,
+      zone: act.zone || "estate",
       intro: act.intro || null,
       solvedClues: Object.keys(room.actState.solvedClues || {}),
       requiredCount: act.completionCount,
@@ -166,7 +176,7 @@ function emitProgress(code) {
       total: totalPlayers,
       threshold: act.completionThreshold || 1.0,
     });
-  } else if (act.type === "reveal") {
+  } else if (act.type === "reveal" || act.type === "cutscene") {
     const ackCount = Object.keys(room.actState.ackBy || {}).length;
     io.to(code).emit("act:progress", {
       kind: "reveal",
@@ -252,6 +262,8 @@ io.on("connection", (socket) => {
       inventories: {},
       evidence: [],
       collectedPickups: {},
+      // zone -> plateId -> { holders: Set<socketId>, targetDoorZoneId, selfDoorZoneId }
+      zonePlates: {},
     };
     const room = rooms[code];
     room.players[socket.id] = {
@@ -332,7 +344,7 @@ io.on("connection", (socket) => {
     const room = rooms[code];
     if (!room) return;
     const act = STORY.acts[room.actIndex];
-    if (!act || act.type !== "reveal") return;
+    if (!act || (act.type !== "reveal" && act.type !== "cutscene")) return;
     room.actState.ackBy[socket.id] = true;
     emitProgress(code);
     const totalPlayers = Object.keys(room.players).length;
@@ -397,6 +409,57 @@ io.on("connection", (socket) => {
       dir: data.dir,
       moving: !!data.moving,
     });
+  });
+
+  // Pressure plates: multiplayer, hold the plate to keep someone else's
+  // door open, step off and it shuts immediately. Solo (only one player
+  // actually in this zone, e.g. testing alone), there's no one to hold it
+  // for you, so it pulses your own door open on a short timer instead.
+  socket.on("plate:enter", ({ zone, plateId, targetDoorZoneId, selfDoorZoneId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !plateId) return;
+    const z = zone || "estate";
+
+    const playersHere = Object.values(room.players).filter(
+      (p) => p.connected && (p.zone || "estate") === z
+    ).length;
+
+    if (playersHere <= 1) {
+      const doorId = selfDoorZoneId || targetDoorZoneId;
+      if (!doorId) return;
+      io.to(`${code}:${z}`).emit("door:state", { doorZoneId: doorId, open: true });
+      setTimeout(() => {
+        io.to(`${code}:${z}`).emit("door:state", { doorZoneId: doorId, open: false });
+      }, SOLO_PLATE_OPEN_MS);
+      return;
+    }
+
+    if (!targetDoorZoneId) return;
+    if (!room.zonePlates[z]) room.zonePlates[z] = {};
+    let plate = room.zonePlates[z][plateId];
+    if (!plate) {
+      plate = { holders: new Set(), targetDoorZoneId, selfDoorZoneId };
+      room.zonePlates[z][plateId] = plate;
+    }
+    const wasEmpty = plate.holders.size === 0;
+    plate.holders.add(socket.id);
+    if (wasEmpty) {
+      io.to(`${code}:${z}`).emit("door:state", { doorZoneId: plate.targetDoorZoneId, open: true });
+    }
+  });
+
+  socket.on("plate:leave", ({ zone, plateId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !plateId) return;
+    const z = zone || "estate";
+    const plate = room.zonePlates[z] && room.zonePlates[z][plateId];
+    if (!plate) return; // solo pulse mode never registers a holder entry
+    plate.holders.delete(socket.id);
+    if (plate.holders.size === 0) {
+      io.to(`${code}:${z}`).emit("door:state", { doorZoneId: plate.targetDoorZoneId, open: false });
+    }
   });
 
   // Players can walk into buildings independently, they don't need to be
@@ -554,7 +617,7 @@ io.on("connection", (socket) => {
     if (zone.length < correctSet.length) {
       message = "\"I think we're missing someone. Look again.\"";
     } else if (zone.length > correctSet.length) {
-      message = "\"That's too many. Narrow it down \u2014 not everyone with a grudge is a killer.\"";
+      message = "\"That's too many. Narrow it down, not everyone with a grudge is a killer.\"";
     } else {
       const zoneSet = new Set(zone);
       const isExact = correctSet.every((k) => zoneSet.has(k));
@@ -585,6 +648,18 @@ io.on("connection", (socket) => {
       socket.to(`${code}:${zone}`).emit("zone:playerLeft", { id: socket.id });
       broadcastRoomState(code);
     }
+
+    // If they were mid-hold on a pressure plate when they dropped, let go
+    // of it for them so whichever door it fed doesn't stay open forever.
+    Object.entries(room.zonePlates || {}).forEach(([zone, plates]) => {
+      Object.entries(plates).forEach(([plateId, plate]) => {
+        if (!plate.holders.has(socket.id)) return;
+        plate.holders.delete(socket.id);
+        if (plate.holders.size === 0) {
+          io.to(`${code}:${zone}`).emit("door:state", { doorZoneId: plate.targetDoorZoneId, open: false });
+        }
+      });
+    });
 
     if (room.hostSocketId === socket.id) {
       io.to(code).emit("host:disconnected");

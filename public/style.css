@@ -393,6 +393,47 @@ input[type="text"]:focus {
   color: var(--parchment);
 }
 
+.cutscene-box {
+  min-height: 100px;
+}
+
+.cutscene-speaker {
+  font-weight: 700;
+  color: var(--candle);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 13px;
+}
+
+.cutscene-line {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--parchment);
+}
+
+.cutscene-fade-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.9s ease;
+  z-index: 500;
+}
+
+.cutscene-fade-overlay.visible {
+  opacity: 1;
+}
+
+.cutscene-continue-btn {
+  position: fixed;
+  left: 50%;
+  top: 62%;
+  transform: translate(-50%, -50%);
+  z-index: 600;
+}
+
 .fragment-card {
   background: var(--ink-surface-2);
   border-left: 3px solid var(--candle);

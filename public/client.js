@@ -256,6 +256,8 @@ socket.on("act:show", (act) => {
 
   if (act.type === "reveal") {
     renderReveal(container, act);
+  } else if (act.type === "cutscene") {
+    renderCutscene(container, act);
   } else if (act.type === "puzzle_group") {
     renderGroupPuzzle(container, act);
   } else if (act.type === "puzzle_individual") {
@@ -273,6 +275,14 @@ function renderReveal(container, act) {
   p.innerHTML = `<p>${act.body}</p>`;
   container.appendChild(p);
 
+  if (act.showEvidenceReview) {
+    const reviewBtn = document.createElement("button");
+    reviewBtn.className = "btn btn-secondary";
+    reviewBtn.textContent = "Review the Evidence";
+    reviewBtn.addEventListener("click", () => openTableModal());
+    container.appendChild(reviewBtn);
+  }
+
   const btn = document.createElement("button");
   btn.className = "btn btn-primary";
   btn.textContent = "I'm Ready. Continue";
@@ -282,6 +292,71 @@ function renderReveal(container, act) {
     socket.emit("act:acknowledgeReveal");
   });
   container.appendChild(btn);
+}
+
+// A cutscene is a short paginated sequence of speaker lines, click to advance
+// through each one, optionally fading the whole screen to black before the
+// party is allowed to continue (used for beats like an arrest or a scene
+// change that shouldn't feel like just another reveal card).
+function renderCutscene(container, act) {
+  const pages = act.pages && act.pages.length ? act.pages : [{ speaker: "", text: "" }];
+  let pageIndex = 0;
+
+  const speakerEl = document.createElement("p");
+  speakerEl.className = "cutscene-speaker";
+  const textEl = document.createElement("p");
+  textEl.className = "cutscene-line";
+  const box = document.createElement("div");
+  box.className = "act-body cutscene-box";
+  box.appendChild(speakerEl);
+  box.appendChild(textEl);
+  container.appendChild(box);
+
+  const advanceBtn = document.createElement("button");
+  advanceBtn.className = "btn btn-primary";
+  container.appendChild(advanceBtn);
+
+  function showPage(i) {
+    const page = pages[i];
+    speakerEl.textContent = page.speaker || "";
+    speakerEl.classList.toggle("hidden", !page.speaker);
+    textEl.textContent = page.text || "";
+    advanceBtn.textContent = i < pages.length - 1 ? "Continue" : "Continue";
+  }
+
+  function finishCutscene() {
+    if (act.fadeOut) {
+      const overlay = document.getElementById("cutscene-fade-overlay");
+      overlay.classList.add("visible");
+      setTimeout(() => showContinueButton(), 900);
+    } else {
+      showContinueButton();
+    }
+  }
+
+  function showContinueButton() {
+    box.classList.add("hidden");
+    advanceBtn.textContent = "I'm Ready. Continue";
+    if (act.fadeOut) advanceBtn.classList.add("cutscene-continue-btn");
+    advanceBtn.onclick = () => {
+      advanceBtn.disabled = true;
+      advanceBtn.textContent = "Waiting for the rest of the table...";
+      socket.emit("act:acknowledgeReveal");
+      const overlay = document.getElementById("cutscene-fade-overlay");
+      overlay.classList.remove("visible");
+    };
+  }
+
+  advanceBtn.onclick = () => {
+    if (pageIndex < pages.length - 1) {
+      pageIndex += 1;
+      showPage(pageIndex);
+    } else {
+      finishCutscene();
+    }
+  };
+
+  showPage(0);
 }
 
 function renderGroupPuzzle(container, act) {
@@ -436,19 +511,30 @@ async function getInteractions() {
 }
 
 async function enterExplore(act) {
-  ZONE_MAPS.estate = act.mapUrl;
+  const zoneId = act.zone || "estate";
+  ZONE_MAPS[zoneId] = act.mapUrl;
   document.getElementById("explore-title").textContent = act.title;
   document.getElementById("explore-progress-count").textContent = "0";
   document.getElementById("btn-explore-force-advance").classList.toggle("hidden", state.hostId !== state.myId);
 
+  // Walking through a zone_exit already tells the server which zone-room
+  // to join (player:changeZone). Starting a brand new act never did, every
+  // player was only ever joined to :estate at connection time, so anything
+  // zone-scoped (pressure plate doors, the zone roster) would silently
+  // never reach them here. Exact x/y doesn't matter much, the next move
+  // update corrects it almost immediately.
+  socket.emit("player:changeZone", { zone: zoneId, x: 0, y: 0 });
+
   const canvas = document.getElementById("explore-canvas");
   await Overworld.init({
+    startZone: zoneId,
     canvas,
     socket,
     mapUrl: act.mapUrl,
     myGender: state.myGender,
     myColor: state.myColor,
     myName: (currentPlayers.find((p) => p.id === socket.id) || {}).name || "",
+    spawnIndex: currentPlayers.findIndex((p) => p.id === socket.id),
     onNearbyChange: (obj) => {
       isNearInteractable = !!obj;
       const panelOpen = !document.getElementById("vn-panel").classList.contains("hidden");
@@ -461,6 +547,17 @@ async function enterExplore(act) {
       }
     },
     onInteract: (obj) => handleObjectInteract(obj),
+    onPlateEnter: (plate) => {
+      socket.emit("plate:enter", {
+        zone: Overworld.getZone(),
+        plateId: plate.id,
+        targetDoorZoneId: plate.targetDoorZoneId,
+        selfDoorZoneId: plate.selfDoorZoneId,
+      });
+    },
+    onPlateLeave: (plate) => {
+      socket.emit("plate:leave", { zone: Overworld.getZone(), plateId: plate.id });
+    },
   });
 
   Overworld.resize();
@@ -491,6 +588,7 @@ document.getElementById("btn-explore-force-advance").addEventListener("click", (
 // explore act is using, set in enterExplore().
 const ZONE_MAPS = {
   estate: null,
+  jail_cells: null,
   barn_interior: "/assets/maps/barn_interior.json",
   dock_interior: "/assets/maps/dock_interior.json",
   manor_ground: "/assets/maps/manor_ground.json",
@@ -709,6 +807,14 @@ document.getElementById("btn-document-take").addEventListener("click", () => {
 
 socket.on("map:objectRemoved", (data) => {
   Overworld.removeObject(data.objectId);
+});
+
+// Pressure-plate doors: the server decides open/closed (based on who's
+// standing where, and whether this is the solo timed-pulse fallback), this
+// just applies whatever it says to the local engine's animation/collision
+// state machine.
+socket.on("door:state", (data) => {
+  Overworld.setRemoteDoorPhase(data.doorZoneId, data.open);
 });
 
 // --- Player inventory (private, held items not yet on the Evidence Table) ---
