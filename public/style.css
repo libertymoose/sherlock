@@ -154,6 +154,24 @@ html, body {
   background: rgba(var(--candle-rgb),0.1);
 }
 
+/* Same two problems as the text inputs: the inactive button's solid dark
+   fill is another jarring dark box on the cream card, and the active
+   state's bright green text is nearly invisible against cream. Inactive
+   gets the same soft tint as the inputs; active gets a solid fill instead
+   of a translucent tint, the same pattern the primary buttons already use
+   successfully elsewhere on this screen. */
+#screen-landing .height-btn {
+  background: rgba(52, 32, 47, 0.08);
+  border: 1px solid rgba(52, 32, 47, 0.35);
+  color: var(--parchment-dim);
+}
+
+#screen-landing .height-btn.active {
+  border-color: var(--accent-btn);
+  background: var(--accent-btn);
+  color: var(--accent-btn-text);
+}
+
 .swatch-row {
   display: flex;
   flex-wrap: wrap;
@@ -255,7 +273,7 @@ html, body {
   font-family: 'Inter', -apple-system, sans-serif;
   font-size: 24px;
   margin: 0 0 8px;
-  color: var(--candle-bright);
+  color: var(--parchment-dim);
 }
 
 .card p {
@@ -282,6 +300,22 @@ input[type="text"] {
   border-radius: var(--radius);
   font-family: 'Inter', -apple-system, sans-serif;
   font-size: 16px;
+}
+
+/* The landing/lobby cards are light cream, a solid near-black fill (right
+   for the dark in-game theme) reads as a jarring dark slab here instead.
+   A soft tint of the same ink color, plus dark text, keeps it readable
+   without breaking the warm parchment look. */
+#screen-landing input[type="text"],
+#screen-lobby input[type="text"] {
+  background: rgba(52, 32, 47, 0.08);
+  border: 1px solid rgba(52, 32, 47, 0.35);
+  color: var(--parchment-dim);
+}
+
+#screen-landing input[type="text"]::placeholder,
+#screen-lobby input[type="text"]::placeholder {
+  color: rgba(52, 32, 47, 0.45);
 }
 
 input[type="text"]:focus {
