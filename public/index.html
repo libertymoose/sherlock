@@ -134,11 +134,13 @@
     </div>
 
     <div class="board-frame hidden" id="board-frame">
-      <p class="eyebrow" id="board-eyebrow">The Suspect Board</p>
+      <p class="eyebrow" id="board-eyebrow">The Evidence Room</p>
       <h2 class="act-title" id="board-title"></h2>
       <p class="modal-prompt" id="board-intro"></p>
 
-      <div class="sync-banner">Shared with your whole party &mdash; everyone sees this update live</div>
+      <div class="sync-banner">Shared with your whole party, everyone sees this update live</div>
+
+      <button id="btn-review-evidence" class="btn btn-secondary" style="margin-bottom:14px">Review the Evidence</button>
 
       <div class="board-columns">
         <div class="board-column">
@@ -153,6 +155,7 @@
 
       <div id="board-feedback" class="feedback" style="min-height:20px"></div>
       <button id="btn-board-submit" class="btn btn-primary">Submit to Captain Thorne</button>
+      <p class="hint-text" id="board-submit-progress"></p>
     </div>
   </section>
 
@@ -172,7 +175,7 @@
     <div class="pixel-panel pixel-panel-popup modal-box modal-box-wide">
       <button id="btn-close-table" class="pixel-close-btn" aria-label="Close"></button>
       <h3 class="pixel-panel-title">The Evidence Table</h3>
-      <div class="sync-banner">Shared with your whole party &mdash; everyone sees this update live</div>
+      <div class="sync-banner">Shared with your whole party, everyone sees this update live</div>
 
       <div class="item-grid" id="table-grid"></div>
       <p class="hint-text" id="table-empty-note">No exhibits added yet.</p>
@@ -183,6 +186,30 @@
       </div>
 
       <button id="btn-close-table-2" class="btn btn-secondary" style="margin-top:10px">Close</button>
+    </div>
+  </div>
+
+  <!-- The desk, once everything's been found: a ready-vote gating the move
+       from free exploration into the shared Evidence Room stage -->
+  <div id="modal-ready-check" class="modal-overlay hidden">
+    <div class="pixel-panel pixel-panel-popup modal-box">
+      <button id="btn-close-ready-check" class="pixel-close-btn" aria-label="Close"></button>
+      <h3 class="pixel-panel-title">Lord Duskmere's Desk</h3>
+      <p class="hint-text" style="margin-top:0">Everything you've found is here. Ready to go through it properly with the rest of the table?</p>
+      <button id="btn-ready-check" class="btn btn-primary">I'm Ready. Continue</button>
+      <p class="hint-text" id="ready-check-progress"></p>
+    </div>
+  </div>
+
+  <!-- Thorne's evidence-complete line. She doesn't have portrait art yet,
+       so this is a text-only announcement rather than the full VN dialogue
+       treatment the NPCs with real portraits get. -->
+  <div id="modal-thorne" class="modal-overlay hidden">
+    <div class="pixel-panel pixel-panel-popup modal-box">
+      <button id="btn-close-thorne" class="pixel-close-btn" aria-label="Close"></button>
+      <h3 class="pixel-panel-title">Captain Thorne</h3>
+      <p class="hint-text" id="thorne-message-text" style="margin-top:0"></p>
+      <button id="btn-close-thorne-2" class="btn btn-secondary">Close</button>
     </div>
   </div>
 

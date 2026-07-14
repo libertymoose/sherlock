@@ -17,21 +17,16 @@
       "type": "explore",
       "title": "Investigate the Estate",
       "mapUrl": "/assets/maps/estate.json",
-      "intro": "Walk the grounds and talk to everyone: guests, suspects, staff. Most people here have nothing to hide. A few do. Pick up whatever you find and bring it back to the Evidence Table, every piece matters, and Captain Thorne won't move things forward until it's all there.",
+      "zone": "estate",
+      "intro": "Walk the grounds and talk to everyone: guests, suspects, staff. Most people here have nothing to hide. A few do. Pick up whatever you find and bring it back to the Evidence Table, every piece matters. Once you've got it all, Captain Thorne wants everyone up in the study.",
       "completionMode": "evidence",
-      "completionCount": 7
+      "completionCount": 7,
+      "onEvidenceCompleteMessage": "Captain Thorne finds you. \"Right, that's everything. I'm commandeering poor Alaric's office, he won't be needing it any time soon, and it gives us somewhere to go through what we've got properly. Head upstairs when you're ready to go through the evidence.\""
     },
     {
-      "type": "reveal",
-      "title": "Weighing the Evidence",
-      "body": "Before you name names, Captain Thorne has you lay everything out on the table one more time, all seven exhibits together. Open each one, read it again with the whole case in mind, and decide who actually belongs on the board.",
-      "image": "",
-      "showEvidenceReview": true
-    },
-    {
-      "type": "suspect_board",
-      "title": "The Suspect Board",
-      "intro": "Captain Thorne has laid out what you've found on a table by the gate. 'Alright. Drag forward everyone you believe actually had a real motive. Leave off anyone whose story checks out. When you're confident, submit it to me, and know that I'll send you back to think again if you've got it wrong.'"
+      "type": "evidence_room",
+      "title": "The Evidence Room",
+      "intro": "Everything you've found is laid out across the desk. Review it all, then work out together who actually belongs on the Suspect Board. You can go back and forth between the two as much as you need, submit to Captain Thorne once the table agrees."
     },
     {
       "type": "cutscene",
@@ -39,7 +34,7 @@
       "fadeOut": true,
       "pages": [
         { "speaker": "Captain Thorne", "text": "Good work. Now we find out which one of them actually had the means, and the opportunity." },
-        { "speaker": "", "text": "She leads you into the manor's study to go through the study one more time, this time asking how, not why." },
+        { "speaker": "", "text": "You go through it all one more time, right there at the desk, this time asking how, not why." },
         { "speaker": "Commodore Voss", "text": "Captain! They were the only ones anywhere near the study all night. And I found this among their things." },
         { "speaker": "", "text": "He holds it up. A blade, dark at the edge. Thorne's face goes still." },
         { "speaker": "Captain Thorne", "text": "I gave you a chance. Take them down to the cells." }

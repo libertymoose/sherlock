@@ -237,7 +237,16 @@ socket.on("game:reset", () => {
 // --- Act rendering ---
 socket.on("act:show", (act) => {
   if (!act) return;
+  currentAct = act;
   showScreen("screen-game");
+
+  // The cutscene fade-to-black only ever gets cleared by its own button
+  // being clicked. If the host force-advances past a cutscene mid-fade
+  // instead (or a player reconnects mid-fade), that click never happens,
+  // and the overlay would otherwise sit there opaque forever. Every act
+  // transition goes through here, so this is the one place that's always
+  // guaranteed to run, regardless of how the transition happened.
+  document.getElementById("cutscene-fade-overlay").classList.remove("visible");
 
   const actFrame = document.getElementById("act-frame");
   const exploreFrame = document.getElementById("explore-frame");
@@ -252,7 +261,7 @@ socket.on("act:show", (act) => {
     return;
   }
 
-  if (act.type === "suspect_board") {
+  if (act.type === "evidence_room") {
     actFrame.classList.add("hidden");
     exploreFrame.classList.add("hidden");
     boardFrame.classList.remove("hidden");
@@ -642,7 +651,12 @@ async function handleObjectInteract(obj) {
   } else if (kind === "inventory_pickup") {
     socket.emit("inventory:pickup", { objectId: obj.id });
   } else if (kind === "table") {
-    openTableModal();
+    const allFound = currentAct && currentAct.completionCount && tableExhibits.length >= currentAct.completionCount;
+    if (allFound && currentAct.type === "explore") {
+      openReadyCheckModal();
+    } else {
+      openTableModal();
+    }
   } else if (kind === "zone_exit") {
     const targetZone = obj.interaction.targetZone;
     const mapUrl = ZONE_MAPS[targetZone];
@@ -905,6 +919,7 @@ function buildItemCard(item, opts) {
 
 // --- The Evidence Table (shared, synced across the whole party) ---
 let tableExhibits = [];
+let currentAct = null; // the act payload from the most recent act:show, used by interactions that need to know completion state (e.g. the desk)
 
 function openTableModal() {
   socket.emit("evidence:requestState");
@@ -918,6 +933,40 @@ function closeTableModal() {
 
 document.getElementById("btn-close-table").addEventListener("click", closeTableModal);
 document.getElementById("btn-close-table-2").addEventListener("click", closeTableModal);
+
+// --- The ready-check at the desk, once everything's been found ---
+function openReadyCheckModal() {
+  document.getElementById("ready-check-progress").textContent = "";
+  const btn = document.getElementById("btn-ready-check");
+  btn.disabled = false;
+  btn.textContent = "I'm Ready. Continue";
+  document.getElementById("modal-ready-check").classList.remove("hidden");
+}
+function closeReadyCheckModal() {
+  document.getElementById("modal-ready-check").classList.add("hidden");
+}
+document.getElementById("btn-close-ready-check").addEventListener("click", closeReadyCheckModal);
+document.getElementById("btn-ready-check").addEventListener("click", () => {
+  const btn = document.getElementById("btn-ready-check");
+  btn.disabled = true;
+  btn.textContent = "Waiting for the rest of the table...";
+  socket.emit("evidenceRoom:ready");
+});
+socket.on("evidenceRoom:readyProgress", ({ ready, total }) => {
+  document.getElementById("ready-check-progress").textContent = `${ready} / ${total} ready`;
+});
+
+// --- Captain Thorne's evidence-complete announcement ---
+function openThorneModal(text) {
+  document.getElementById("thorne-message-text").textContent = text || "";
+  document.getElementById("modal-thorne").classList.remove("hidden");
+}
+function closeThorneModal() {
+  document.getElementById("modal-thorne").classList.add("hidden");
+}
+document.getElementById("btn-close-thorne").addEventListener("click", closeThorneModal);
+document.getElementById("btn-close-thorne-2").addEventListener("click", closeThorneModal);
+socket.on("thorne:message", ({ text }) => openThorneModal(text));
 
 socket.on("evidence:state", (exhibits) => {
   tableExhibits = exhibits || [];
@@ -1012,6 +1061,8 @@ function enterSuspectBoard(act) {
   document.getElementById("board-intro").textContent = act.intro || "";
   document.getElementById("board-feedback").textContent = "";
   document.getElementById("board-feedback").className = "feedback";
+  document.getElementById("board-submit-progress").textContent = "";
+  resetBoardSubmitButton();
   suspectPoolData = act.pool || [];
   renderBoard(act.zone || []);
 }
@@ -1148,12 +1199,29 @@ function wireDropzone(el, toZone) {
 wireDropzone(document.getElementById("board-pool"), "pool");
 wireDropzone(document.getElementById("board-zone"), "suspects");
 
+document.getElementById("btn-review-evidence").addEventListener("click", () => openTableModal());
+
 document.getElementById("btn-board-submit").addEventListener("click", () => {
+  const btn = document.getElementById("btn-board-submit");
+  btn.disabled = true;
+  btn.textContent = "Waiting for the rest of the table...";
   socket.emit("board:submit");
 });
 
 socket.on("board:state", (state) => {
   renderBoard(state.zone || []);
+});
+
+function resetBoardSubmitButton() {
+  const btn = document.getElementById("btn-board-submit");
+  btn.disabled = false;
+  btn.textContent = "Submit to Captain Thorne";
+}
+
+socket.on("board:submitProgress", ({ ready, total }) => {
+  document.getElementById("board-submit-progress").textContent =
+    ready > 0 ? `${ready} / ${total} ready to submit` : "";
+  if (ready === 0) resetBoardSubmitButton();
 });
 
 socket.on("board:result", (data) => {
@@ -1164,5 +1232,7 @@ socket.on("board:result", (data) => {
   } else {
     fb.className = "feedback incorrect";
     fb.textContent = data.message || "That's not right. Try again.";
+    resetBoardSubmitButton();
+    document.getElementById("board-submit-progress").textContent = "";
   }
 });

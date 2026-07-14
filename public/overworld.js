@@ -973,8 +973,16 @@ window.Overworld = (function () {
     if (!running) return;
     const dt = lastTime ? Math.min((ts - lastTime) / 1000, 0.05) : 0;
     lastTime = ts;
-    update(dt);
-    render();
+    // update()/render() throwing here used to kill the loop permanently and
+    // silently, requestAnimationFrame simply never got called again, no
+    // error visible anywhere, the game just stopped. Logging and continuing
+    // means a bad frame degrades instead of hard-freezing the whole session.
+    try {
+      update(dt);
+      render();
+    } catch (err) {
+      console.error("Overworld frame error (continuing):", err);
+    }
     rafId = requestAnimationFrame(loop);
   }
 
