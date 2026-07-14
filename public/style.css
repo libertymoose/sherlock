@@ -543,9 +543,9 @@ input[type="text"]:focus {
 .feedback.incorrect { color: var(--blood); }
 
 .sync-banner {
-  background: rgba(77,155,230,0.14);
-  border: 1px solid rgba(77,155,230,0.4);
-  color: #8fd3ff;
+  background: rgba(15,76,117,0.1);
+  border: 1px solid rgba(15,76,117,0.35);
+  color: #0f4c75;
   font-size: 12px;
   letter-spacing: 0.03em;
   text-align: center;
@@ -962,6 +962,8 @@ input[type="text"]:focus {
   font-size: 18px;
   font-weight: 700;
   margin: 0 0 10px;
+  padding-right: 24px;
+  overflow-wrap: break-word;
 }
 
 .pixel-close-btn {
@@ -1028,13 +1030,13 @@ input[type="text"]:focus {
 
 .item-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 10px;
   margin: 12px 0;
 }
 
 .item-grid-small {
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
 }
 
 .item-card {
@@ -1049,8 +1051,8 @@ input[type="text"]:focus {
 .item-card:hover { transform: translateY(-2px); background: rgba(62,31,29,0.12); }
 
 .item-card-icon {
-  width: 32px;
-  height: 32px;
+  width: 56px;
+  height: 56px;
   margin: 0 auto 6px;
   background: #d9c9a3;
   border: 1px solid #6b4a2f;
@@ -1064,8 +1066,8 @@ input[type="text"]:focus {
 }
 
 .item-card-icon-img {
-  width: 20px;
-  height: 20px;
+  width: 38px;
+  height: 38px;
   object-fit: contain;
   image-rendering: pixelated;
 }
