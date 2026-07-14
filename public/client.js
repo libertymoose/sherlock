@@ -1,5 +1,24 @@
 const socket = io();
 
+// Act labels read "Act IV", not "Act 4 of 12", the number of acts left is
+// not something the party needs advertised mid-story.
+const ROMAN_NUMERALS = [
+  [1000, "M"], [900, "CM"], [500, "D"], [400, "CD"],
+  [100, "C"], [90, "XC"], [50, "L"], [40, "XL"],
+  [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"],
+];
+function toRoman(num) {
+  let result = "";
+  let n = num;
+  for (const [value, symbol] of ROMAN_NUMERALS) {
+    while (n >= value) {
+      result += symbol;
+      n -= value;
+    }
+  }
+  return result || String(num);
+}
+
 const GENDERS = [
   { key: "male", label: "Male" },
   { key: "female", label: "Female" },
@@ -247,7 +266,7 @@ socket.on("act:show", (act) => {
   actFrame.classList.remove("hidden");
   Overworld.stop();
 
-  document.getElementById("act-eyebrow").textContent = `Act ${act.index + 1} of ${act.total}`;
+  document.getElementById("act-eyebrow").textContent = `Act ${toRoman(act.index + 1)}`;
   document.getElementById("act-title").textContent = act.title;
 
   const container = document.getElementById("act-body-container");
@@ -272,7 +291,8 @@ socket.on("act:show", (act) => {
 function renderReveal(container, act) {
   const p = document.createElement("div");
   p.className = "act-body";
-  p.innerHTML = `<p>${act.body}</p>`;
+  const lines = String(act.body).split("\n").filter((l) => l.trim().length);
+  p.innerHTML = lines.map((l) => `<p>${l}</p>`).join("");
   container.appendChild(p);
 
   if (act.showEvidenceReview) {

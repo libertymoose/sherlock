@@ -31,7 +31,7 @@ const rooms = {};
 // colour tint, Among-Us style. No species/look-number selection any more,
 // that's reserved for NPCs/creature presets elsewhere in the game.
 const GENDERS = ["male", "female"];
-const COLORS = ["red", "blue", "green", "yellow", "orange", "purple", "pink", "cyan", "white", "black", "brown", "lime"];
+const COLORS = ["red", "maroon", "brown", "orange", "yellow", "lime", "green", "teal", "cyan", "blue", "navy", "violet", "purple", "pink", "white", "black"];
 
 // How long a solo-tested pressure plate holds its own door open, in ms.
 // Real sessions (6-10 players) always hit the multiplayer hold-based path

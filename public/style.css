@@ -346,6 +346,16 @@ input[type="text"]:focus {
   margin: 8px 0 24px;
 }
 
+/* The lobby's hint lines sit directly on the dark page background, not
+   inside a light card, so they need the light text color, not the dark
+   "text on a tan card" one --parchment-dim gets reassigned to for this
+   theme. Everywhere else .hint-text is used, it's on a dark in-game
+   background already, where the default --parchment-dim is fine. */
+#screen-lobby .hint-text {
+  color: var(--parchment);
+  opacity: 0.75;
+}
+
 .player-roster {
   display: flex;
   flex-wrap: wrap;
@@ -363,6 +373,7 @@ input[type="text"]:focus {
   padding: 6px 14px 6px 8px;
   border-radius: 20px;
   font-size: 14px;
+  color: var(--parchment-dim);
 }
 
 .player-chip.disconnected { opacity: 0.4; text-decoration: line-through; }
@@ -391,6 +402,7 @@ input[type="text"]:focus {
   font-size: 17px;
   line-height: 1.6;
   color: var(--parchment);
+  text-align: center;
 }
 
 .cutscene-box {
