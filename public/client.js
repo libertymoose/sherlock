@@ -1102,8 +1102,12 @@ function drawFixedPortrait(canvas, src) {
     // Cover-fit anchored at the bottom: fills the whole frame the way a
     // Stardew-style bust portrait does, cropping off any excess (usually
     // the top of the hair) rather than leaving empty space around a
-    // smaller contained image.
-    const scale = Math.max(canvas.width / source.width, canvas.height / source.height);
+    // smaller contained image. A small extra zoom on top of pure cover-fit
+    // keeps this tight even when a source image has some breathing room
+    // baked in around the character, rather than only filling the frame
+    // exactly when the source happens to already be a perfect crop.
+    const ZOOM = 1.15;
+    const scale = Math.max(canvas.width / source.width, canvas.height / source.height) * ZOOM;
     const w = source.width * scale;
     const h = source.height * scale;
     const x = (canvas.width - w) / 2;

@@ -19,8 +19,19 @@ const ITEMS = JSON.parse(
 );
 
 const app = express();
-app.use(express.static(path.join(__dirname, "public")));
-app.use("/content", express.static(path.join(__dirname, "content")));
+// Railway's edge CDN caches static assets by default whenever the origin
+// sends no Cache-Control header at all, independent of anyone's browser
+// cache. During active development that means map/art updates can look
+// "stuck" on Railway's edge even in a clean incognito window. Sending an
+// explicit no-cache header (still allows fast conditional revalidation via
+// ETag, just never serves a stale copy without checking first) makes
+// Railway respect this instead of applying its own fallback TTL.
+const noCacheStatic = (dir) =>
+  express.static(dir, {
+    setHeaders: (res) => res.setHeader("Cache-Control", "no-cache"),
+  });
+app.use(noCacheStatic(path.join(__dirname, "public")));
+app.use("/content", noCacheStatic(path.join(__dirname, "content")));
 
 const server = http.createServer(app);
 const io = new Server(server);
