@@ -129,7 +129,7 @@ function buildActPayloadForPlayer(room, socketId) {
     };
   }
 
-  if (act.type === "suspect_board") {
+  if (act.type === "evidence_room") {
     return {
       ...base,
       intro: act.intro || null,
@@ -567,15 +567,38 @@ io.on("connection", (socket) => {
     io.to(code).emit("evidence:state", buildEvidenceState(room));
     emitProgress(code);
 
-    // Evidence-gated acts (the Estate stage) advance once every required
-    // exhibit is on the table, not on a typed answer. completionMode stays
-    // opt-in on the act so other explore-type stages can keep using the
-    // solvedClues/typed-answer path if that ever fits them better.
+    // Evidence-gated acts (the Estate stage) used to auto-advance once every
+    // exhibit was on the table. Now that finding everything just means
+    // Thorne wants the party upstairs, not an automatic scene change, this
+    // fires her line once (never again, even if this handler somehow runs
+    // again) and leaves the actual advance to the ready-vote at the desk.
     const act = STORY.acts[room.actIndex];
     if (act && act.type === "explore" && act.completionMode === "evidence" && act.completionCount) {
-      if (room.evidence.length >= act.completionCount) {
-        setTimeout(() => advanceAct(code), 2500);
+      if (room.evidence.length >= act.completionCount && !room.actState.evidenceThorneShown) {
+        room.actState.evidenceThorneShown = true;
+        io.to(code).emit("thorne:message", { text: act.onEvidenceCompleteMessage || "" });
       }
+    }
+  });
+
+  // The "ready to review" vote at the Evidence Room desk. Only makes sense
+  // once every exhibit has actually been found, and only fires once per
+  // player, same ack-counting pattern as reveal/cutscene acts, just gating
+  // the explore -> evidence_room transition instead.
+  socket.on("evidenceRoom:ready", () => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room) return;
+    const act = STORY.acts[room.actIndex];
+    if (!act || act.type !== "explore" || act.completionMode !== "evidence") return;
+    if (room.evidence.length < act.completionCount) return;
+
+    room.actState.ackBy[socket.id] = true;
+    const totalPlayers = Object.keys(room.players).length;
+    const ackCount = Object.keys(room.actState.ackBy).length;
+    io.to(code).emit("evidenceRoom:readyProgress", { ready: ackCount, total: totalPlayers });
+    if (ackCount >= totalPlayers) {
+      advanceAct(code);
     }
   });
 
@@ -584,13 +607,14 @@ io.on("connection", (socket) => {
     const room = rooms[code];
     if (!room) return;
     const act = STORY.acts[room.actIndex];
-    if (!act || act.type !== "suspect_board") return;
+    if (!act || act.type !== "evidence_room") return;
 
     const pool = (INTERACTIONS.suspectBoard && INTERACTIONS.suspectBoard.pool) || [];
     if (!pool.find((p) => p.key === key)) return;
 
     const zone = room.actState.boardZone;
     const idx = zone.indexOf(key);
+    const changed = toZone === "suspects" ? idx === -1 : idx !== -1;
 
     if (toZone === "suspects") {
       if (idx === -1) zone.push(key);
@@ -598,15 +622,35 @@ io.on("connection", (socket) => {
       if (idx !== -1) zone.splice(idx, 1);
     }
 
+    // Editing the board after someone's already agreed to submit it means
+    // that agreement no longer means what it did, clear it so submission
+    // needs a fresh, unanimous look at whatever the board is now.
+    if (changed && Object.keys(room.actState.ackBy).length) {
+      room.actState.ackBy = {};
+      io.to(code).emit("board:submitProgress", { ready: 0, total: Object.keys(room.players).length });
+    }
+
     io.to(code).emit("board:state", { zone: room.actState.boardZone });
   });
 
+  // "Submit to Captain Thorne" is a vote, not a single click, same
+  // ack-counting idea as the ready check. Everyone has to agree the board
+  // is right before it's actually evaluated. A wrong answer resets the
+  // vote (not the board itself) so the party can adjust and re-submit
+  // without every last player needing to re-click something that already
+  // worked for them.
   socket.on("board:submit", () => {
     const code = socket.data.roomCode;
     const room = rooms[code];
     if (!room) return;
     const act = STORY.acts[room.actIndex];
-    if (!act || act.type !== "suspect_board") return;
+    if (!act || act.type !== "evidence_room") return;
+
+    room.actState.ackBy[socket.id] = true;
+    const totalPlayers = Object.keys(room.players).length;
+    const ackCount = Object.keys(room.actState.ackBy).length;
+    io.to(code).emit("board:submitProgress", { ready: ackCount, total: totalPlayers });
+    if (ackCount < totalPlayers) return;
 
     const correctSet = (INTERACTIONS.suspectBoard && INTERACTIONS.suspectBoard.correctSet) || [];
     const zone = room.actState.boardZone;
@@ -633,6 +677,7 @@ io.on("connection", (socket) => {
       io.to(code).emit("board:result", { correct: true });
       setTimeout(() => advanceAct(code), 2500);
     } else {
+      room.actState.ackBy = {};
       io.to(code).emit("board:result", { correct: false, message });
     }
   });
