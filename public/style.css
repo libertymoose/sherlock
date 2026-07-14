@@ -593,6 +593,9 @@ input[type="text"]:focus {
   bottom: 14px;
   z-index: 5;
 }
+.interact-btn:hover {
+  transform: translateX(-50%) translateY(-1px);
+}
 
 .explore-progress-hud {
   position: absolute;
@@ -643,6 +646,8 @@ input[type="text"]:focus {
   flex-shrink: 0;
   padding: 6px;
   background: transparent;
+  box-sizing: border-box;
+  height: 228px;
 }
 
 #vn-portrait {
@@ -659,7 +664,8 @@ input[type="text"]:focus {
   flex: 1 1 700px;
   min-width: 0;
   max-width: 700px;
-  max-height: 30vh;
+  height: 228px;
+  box-sizing: border-box;
   padding: 12px 20px;
   background: transparent;
   display: flex;
@@ -822,13 +828,13 @@ input[type="text"]:focus {
 }
 
 .pixel-panel-popup {
-  border-image-source: url('/assets/ui/panel_popup.png');
-  border-image-slice: 8 fill;
-  border-image-width: 16px;
+  border-image-source: url('/assets/ui/panel_dialogue.png');
+  border-image-slice: 10 fill;
+  border-image-width: 18px;
   border-image-repeat: stretch;
   background: transparent;
   border-style: solid;
-  border-width: 16px;
+  border-width: 18px;
   border-radius: 0;
   image-rendering: pixelated;
   position: relative;
@@ -945,6 +951,13 @@ input[type="text"]:focus {
   font-size: 11px;
   font-weight: 700;
   color: #6b4a2f;
+}
+
+.item-card-icon-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
 .item-card-label {

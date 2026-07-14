@@ -28,33 +28,69 @@
     },
     {
       "type": "reveal",
-      "title": "Means and Opportunity",
-      "body": "'Good work,' Thorne says, looking over your list. 'Now we find out which one of them actually did it, and how.' [PLACEHOLDER: Phase 2 puzzles go here: alibis, timelines, opportunity, the poison itself. This is where the frame-up interrupts you partway through.]",
-      "image": ""
-    },
-    {
-      "type": "reveal",
       "title": "The Frame-Up",
-      "body": "Before you can finish, Commodore Brannigan Voss 'discovers' the murder weapon planted among your belongings. Someone mutters about Tol Dagor, and is immediately shut down: half that prison's still got cannonball holes in it from the last time someone broke a prisoner out. Instead, you're marched down to the docks and thrown in the brig of Duskmere's Providence, her timbers still creaking, not even properly crewed yet.",
+      "body": "'Good work,' Thorne says, looking over your list, and sends you back to the Evidence Table to log the last of what you've found. You're barely through the door when Commodore Brannigan Voss 'discovers' the murder weapon planted right among your things. Thorne's face goes cold. 'I gave you a chance,' she says, and means it. 'Take them down to the cells.'",
       "image": ""
     },
     {
       "type": "reveal",
-      "title": "Duskmere's Providence",
-      "body": "What happens next isn't fully built yet, but here's how the night goes: you pick the brig's lock, slip past a skeleton crew doing their rounds, and find something in the cargo hold that changes everything: manifests showing the poison's rare ingredient moved through this very ship. Old Silas Corwin makes good on his word and shows you a way out through the smuggler's tunnels beneath the harbor. You surface back on the docks. Free, and with enough evidence to make your case.",
+      "title": "The Cells",
+      "body": "[PLACEHOLDER: playable jail escape not built yet. Design is confirmed: a held-window mechanic, a plate or trigger stays live for a short countdown after being tripped, so a solo player can reach the second point in time without needing a true simultaneous press. Uses the dungeon tile pack. For now: you talk your way past a bored guard, find the one loose bar Old Silas Corwin told you about weeks ago and never explained why, and slip out into the dark.]",
+      "image": ""
+    },
+    {
+      "type": "reveal",
+      "title": "The Guild Hall Basement",
+      "body": "You come up through a trapdoor into a cellar stacked with crates and old banners, the Guild Hall's basement. Corwin is waiting, like he knew exactly when you'd surface. 'Nobody in this town wants Duskmere's business made public either,' he says. 'That works in your favor. Get out there, ask around, quietly. I'll be here when you've got something.'",
+      "image": ""
+    },
+    {
+      "type": "reveal",
+      "title": "Into Town",
+      "body": "[PLACEHOLDER: playable town map not built yet. Built from the tavern, blacksmith, chapel, ruined temple, mage tower, and training arena packs. Open design questions: how many clue-gathering stops, and whether it's barter based, trading items between players and NPCs, or simple talk-to-NPC. Depends on how many NPCs the finished town map ends up supporting. For now: you make the rounds quietly, and what you hear starts pointing at contradictions in what the five remaining suspects told Thorne earlier that night.]",
+      "image": ""
+    },
+    {
+      "type": "reveal",
+      "title": "Means and Opportunity",
+      "body": "[PLACEHOLDER: the 5 Means and Opportunity puzzles are not built yet, content design is next. Back at the Guild Hall, you lay out what you gathered in town against what Ashby, Voss, Kestrel, Marrow, and Ashgate told Thorne, and the contradictions start to surface, one per suspect.]",
+      "image": ""
+    },
+    {
+      "type": "reveal",
+      "title": "The Maid Returns",
+      "body": "[PLACEHOLDER, not built yet. The maid, cleared alongside Reyes back at the estate, turns up at the Guild Hall with something she'd been too frightened to hand over earlier: Lord Duskmere's own goblet, still faintly sticky at the rim. Whatever killed him, it went in through this.]",
+      "image": ""
+    },
+    {
+      "type": "reveal",
+      "title": "The Herbalist's Hut",
+      "body": "[PLACEHOLDER: playable poison-ID puzzle not built yet. Design is confirmed: plant-matching deduction, leaf shape, smell, growing conditions, matched against a reference chart rather than a straight cipher, at a Herbalist's Hut out in the swamp. For now: the herbalist takes one look at the residue in the goblet and names the plant without hesitation.]",
+      "image": ""
+    },
+    {
+      "type": "reveal",
+      "title": "Back to the Estate",
+      "body": "You make your way back to Duskmere Estate with everything: motive, contradiction, and now the poison itself. Thorne is waiting at the gate.",
+      "image": ""
+    },
+    {
+      "type": "reveal",
+      "title": "The Commodore's Challenge",
+      "body": "Commodore Voss steps in before Thorne can even speak. 'If you've escaped from a City Watch cell,' he says, folding his arms, 'you had better have solved it.'",
       "image": ""
     },
     {
       "type": "puzzle_group",
-      "title": "Naming the Culprit",
-      "prompt": "You corner Lady Isobel Ashgate with everything you've gathered. Cornered, she finally gives up the word scratched into the ship's cargo manifest: the code the smugglers used for their poison shipment. What was it?",
-      "answer": "nightshade",
-      "hint": "[Placeholder: this ties back to the poison-ID puzzle we haven't designed yet.]"
+      "title": "Point the Finger",
+      "prompt": "[PLACEHOLDER: real accusation-vote mechanic not built yet, the party votes and submits who they believe did it, this typed-answer box is a stopgap using the same code path as the old Naming the Culprit act. Everyone agree on a name and type it below.]",
+      "answer": "ashgate",
+      "hint": "Weigh the motive, the contradiction, and the poison together."
     },
     {
       "type": "final",
       "title": "Case Closed... Or Is It?",
-      "body": "Lady Ashgate hands over the word, cool as ever, almost too composed for someone just caught out. 'Nightshade,' she says. 'That's what they called it.' But as she says it, her eyes flick, just for a moment, toward the estate, toward the steward, quietly straightening papers by the door, who suddenly finds something very interesting to do with his hands. Ashby was the one panicking about an audit. Ashby had access to every ledger, every shipment record, every excuse to be anywhere in that house at any hour. Maybe Lady Ashgate simply knows how to take a fall gracefully. Or maybe she's not the one who should be taking it at all. Take your answer back to Discord. The case is closed, even if the truth might not be.",
+      "body": "The guards take Lady Isobel Ashgate away, and she goes without much of a fight, almost too composed for someone just caught out. But as they lead her past the garden, she rounds on Old Silas Corwin, still watching from the shadows. 'Ask him,' she spits, 'what he was really doing for Alaric all these years.' Corwin doesn't answer. Thorne tells you the case is closed and sends you home. Take your findings back to Discord to see if it really is.",
       "finalWord": "NIGHTSHADE"
     }
   ]

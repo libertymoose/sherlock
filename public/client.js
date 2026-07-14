@@ -740,12 +740,28 @@ function renderInventoryGrid() {
   });
 }
 
+// Icons for each evidence item, falling back to a plain star for anything
+// without a good thematic match in the icon packs.
+const EVIDENCE_ICONS = {
+  ledger_ashby: "/assets/ui/icons/star.png",
+  satchel_voss: "/assets/ui/icons/star.png",
+  manifests_kestrel: "/assets/ui/icons/evidence/bundle.png",
+  blueprint_marrow: "/assets/ui/icons/star.png",
+  letter_ashgate: "/assets/ui/icons/evidence/letter.png",
+  rota_reyes: "/assets/ui/icons/evidence/scroll.png",
+  diary_maid: "/assets/ui/icons/star.png",
+};
+
 function buildItemCard(item, opts) {
   const card = document.createElement("div");
   card.className = "item-card";
   const icon = document.createElement("div");
   icon.className = "item-card-icon";
-  icon.textContent = (opts.label || item.name || "?").slice(0, 1).toUpperCase();
+  const img = document.createElement("img");
+  img.src = EVIDENCE_ICONS[item.itemId] || "/assets/ui/icons/star.png";
+  img.alt = "";
+  img.className = "item-card-icon-img";
+  icon.appendChild(img);
   const label = document.createElement("div");
   label.className = "item-card-label";
   label.textContent = opts.label || item.name;
@@ -906,7 +922,11 @@ function drawFixedPortrait(canvas, src) {
       source = chromaKeyWhiteBackground(img);
     }
 
-    const scale = Math.min(canvas.width / source.width, canvas.height / source.height);
+    // Cover-fit anchored at the bottom: fills the whole frame the way a
+    // Stardew-style bust portrait does, cropping off any excess (usually
+    // the top of the hair) rather than leaving empty space around a
+    // smaller contained image.
+    const scale = Math.max(canvas.width / source.width, canvas.height / source.height);
     const w = source.width * scale;
     const h = source.height * scale;
     const x = (canvas.width - w) / 2;
