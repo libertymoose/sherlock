@@ -8,6 +8,14 @@ const { customAlphabet } = require("nanoid");
 // Room codes use an alphabet with no easily-confused characters (no 0/O, 1/I/L)
 const genCode = customAlphabet("ABCDEFGHJKMNPQRSTUVWXYZ23456789", 5);
 
+// Reconnect tokens: long enough to not be guessable, stored client-side
+// (localStorage) and handed back on player:rejoin to reclaim a seat after
+// a disconnect or page refresh. Not a room code, never shown to anyone.
+const genToken = customAlphabet(
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+  32
+);
+
 const STORY = JSON.parse(
   fs.readFileSync(path.join(__dirname, "content", "story.json"), "utf8")
 );
@@ -250,6 +258,47 @@ function getInventory(room, socketId) {
   return room.inventories[socketId];
 }
 
+// A page refresh (or any dropped connection) gets a brand new socket.id from
+// socket.io, but every piece of room state - players, inventories, act
+// progress, held pressure plates, join order - is keyed by the OLD one.
+// Reconnecting with a valid token means finding that old id and moving all
+// of it over to the new one, in place, so nothing about the player's
+// progress or position in the join order changes from anyone else's view.
+function remapSocketId(room, oldId, newId) {
+  if (oldId === newId) return;
+
+  const rekey = (obj) => {
+    if (!obj || !(oldId in obj)) return;
+    const rebuilt = {};
+    for (const [key, value] of Object.entries(obj)) {
+      rebuilt[key === oldId ? newId : key] = value;
+    }
+    for (const key of Object.keys(obj)) delete obj[key];
+    Object.assign(obj, rebuilt);
+  };
+
+  rekey(room.players);
+  if (room.players[newId]) room.players[newId].id = newId;
+  rekey(room.inventories);
+  if (room.actState) {
+    rekey(room.actState.solvedBy);
+    rekey(room.actState.ackBy);
+  }
+
+  room.joinOrder = room.joinOrder.map((id) => (id === oldId ? newId : id));
+
+  Object.values(room.zonePlates || {}).forEach((plates) => {
+    Object.values(plates).forEach((plate) => {
+      if (plate.holders.has(oldId)) {
+        plate.holders.delete(oldId);
+        plate.holders.add(newId);
+      }
+    });
+  });
+
+  if (room.hostSocketId === oldId) room.hostSocketId = newId;
+}
+
 function buildInventoryState(room, socketId) {
   return getInventory(room, socketId).map((it) => ({
     itemId: it.itemId,
@@ -301,6 +350,7 @@ io.on("connection", (socket) => {
       zonePlates: {},
     };
     const room = rooms[code];
+    const token = genToken();
     room.players[socket.id] = {
       id: socket.id,
       name: cleanName,
@@ -308,13 +358,14 @@ io.on("connection", (socket) => {
       color: cleanColor(data && data.color),
       connected: true,
       zone: "estate",
+      token,
     };
     room.joinOrder.push(socket.id);
     socket.join(code);
     socket.join(`${code}:estate`);
     socket.data.roomCode = code;
     socket.data.isHost = true;
-    cb && cb({ ok: true, code });
+    cb && cb({ ok: true, code, token });
     broadcastRoomState(code);
   });
 
@@ -330,6 +381,7 @@ io.on("connection", (socket) => {
       return;
     }
     const cleanName = String(name || "Detective").trim().slice(0, 24) || "Detective";
+    const token = genToken();
     room.players[socket.id] = {
       id: socket.id,
       name: cleanName,
@@ -337,13 +389,57 @@ io.on("connection", (socket) => {
       color: cleanColor(color),
       connected: true,
       zone: "estate",
+      token,
     };
     room.joinOrder.push(socket.id);
     socket.join(code);
     socket.join(`${code}:estate`);
     socket.data.roomCode = code;
-    cb && cb({ ok: true, code });
+    cb && cb({ ok: true, code, token });
     broadcastRoomState(code);
+  });
+
+  // Reclaiming a seat after a disconnect or page refresh. Unlike
+  // player:joinRoom this is allowed even once the game has started, since
+  // it's not letting a stranger in, it's the same player's browser coming
+  // back with the token it was handed on the way in.
+  socket.on("player:rejoin", ({ code, token }, cb) => {
+    code = String(code || "").toUpperCase().trim();
+    const room = rooms[code];
+    if (!room) {
+      cb && cb({ ok: false, error: "That game no longer exists." });
+      return;
+    }
+    const oldId = Object.keys(room.players).find(
+      (id) => room.players[id].token === token
+    );
+    if (!oldId) {
+      cb && cb({ ok: false, error: "Couldn't find your seat in that game." });
+      return;
+    }
+
+    remapSocketId(room, oldId, socket.id);
+    const player = room.players[socket.id];
+    player.connected = true;
+    socket.data.roomCode = code;
+    socket.data.isHost = room.hostSocketId === socket.id;
+    socket.join(code);
+    // Deliberately not joining the player's zone room here - act:show below
+    // (for explore acts) makes the client call player:changeZone on its
+    // own, which does the full join/announce/roster handshake correctly.
+    // Joining it early here would just mean that call becomes a same-zone
+    // no-op and everyone else's client never learns this player is back.
+
+    cb && cb({ ok: true, code, token, started: room.started });
+    broadcastRoomState(code);
+
+    if (room.started && room.actIndex >= 0) {
+      const payload = buildActPayloadForPlayer(room, socket.id);
+      io.to(socket.id).emit("act:show", payload);
+      io.to(socket.id).emit("inventory:state", buildInventoryState(room, socket.id));
+      io.to(socket.id).emit("evidence:state", buildEvidenceState(room));
+      emitProgress(code);
+    }
   });
 
   socket.on("host:startGame", () => {
@@ -506,7 +602,11 @@ io.on("connection", (socket) => {
     if (!room || !room.players[socket.id]) return;
     const player = room.players[socket.id];
     const oldZone = player.zone || "estate";
-    if (oldZone === zone) return;
+    // Comparing zone *names* isn't enough to know this socket can skip the
+    // join handshake below - a reconnecting player has a brand new socket
+    // that was never actually a member of that zone's Socket.io room, even
+    // though their stored zone (from before they dropped) still matches.
+    if (oldZone === zone && socket.rooms.has(`${code}:${zone}`)) return;
 
     socket.leave(`${code}:${oldZone}`);
     socket.to(`${code}:${oldZone}`).emit("zone:playerLeft", { id: socket.id });
@@ -715,6 +815,35 @@ io.on("connection", (socket) => {
       room.actState.ackBy = {};
       io.to(code).emit("board:result", { correct: false, message });
     }
+  });
+
+  // A deliberate "not you" / "start a different game" click, distinct from
+  // disconnect: this player is done with this room for good, so their seat
+  // and token are actually removed instead of just being marked offline.
+  socket.on("player:leave", () => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !room.players[socket.id]) return;
+
+    const zone = room.players[socket.id].zone || "estate";
+    delete room.players[socket.id];
+    delete room.inventories[socket.id];
+    if (room.actState) {
+      delete room.actState.solvedBy[socket.id];
+      delete room.actState.ackBy[socket.id];
+    }
+    room.joinOrder = room.joinOrder.filter((id) => id !== socket.id);
+    Object.values(room.zonePlates || {}).forEach((plates) => {
+      Object.values(plates).forEach((plate) => {
+        if (plate.holders.has(socket.id)) plate.holders.delete(socket.id);
+      });
+    });
+
+    socket.to(`${code}:${zone}`).emit("zone:playerLeft", { id: socket.id });
+    socket.leave(code);
+    socket.leave(`${code}:${zone}`);
+    socket.data.roomCode = null;
+    broadcastRoomState(code);
   });
 
   socket.on("disconnect", () => {

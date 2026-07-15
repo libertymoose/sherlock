@@ -15,6 +15,13 @@
 
 <div id="app">
 
+  <!-- SCREEN: Reconnecting (shown briefly while a saved session token is
+       checked against the server; falls back to Landing if it fails) -->
+  <section id="screen-reconnecting" class="screen">
+    <div class="seal">&#9993;</div>
+    <p class="hint-text" style="text-align:center;margin-top:20px">Rejoining your case...</p>
+  </section>
+
   <!-- SCREEN: Landing -->
   <section id="screen-landing" class="screen active">
     <div class="seal">&#9993;</div>
@@ -65,6 +72,7 @@
       <button id="btn-start" class="btn btn-primary">Begin the Case</button>
     </div>
     <p id="waiting-text" class="hint-text">Waiting for the host to begin...</p>
+    <button id="btn-leave-lobby" class="btn btn-secondary" style="margin-top:16px">Not you? Leave this game</button>
   </section>
 
   <!-- SCREEN: Game -->
@@ -236,6 +244,7 @@
     <div id="end-body" class="hint-text"></div>
     <div class="final-word" id="final-word"></div>
     <p class="hint-text">Return to Discord and type it in to close out the night.</p>
+    <button id="btn-leave-game" class="btn btn-secondary" style="margin-top:16px">Start a Different Game</button>
   </section>
 
 </div>

@@ -33,6 +33,61 @@ let state = {
   myColor: "red",
 };
 
+// --- Session persistence across disconnects/refreshes ---
+// The server hands back a reconnect token on host:createRoom/player:joinRoom
+// that's unrelated to socket.id (which changes every connection). Saving it
+// here means a refreshed tab, a dropped wifi connection, or a phone that
+// went to sleep can all reclaim the same seat, same inventory, same act,
+// instead of the player being locked out once the game has started.
+const SESSION_KEY = "sherlockSession";
+
+function saveSession(code, token) {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ code, token }));
+  } catch (e) {
+    // Private browsing / storage disabled: reconnect just won't be
+    // available for this tab, not worth failing the game over.
+  }
+}
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function clearSession() {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch (e) {
+    // ignore
+  }
+}
+
+function attemptResume() {
+  const session = loadSession();
+  if (!session || !session.code || !session.token) return;
+
+  showScreen("screen-reconnecting");
+  socket.emit("player:rejoin", session, (res) => {
+    if (!res || !res.ok) {
+      clearSession();
+      showScreen("screen-landing");
+      return;
+    }
+    state.isHost = false; // corrected for real by the room:update that follows
+    state.roomCode = res.code;
+    saveSession(res.code, res.token);
+    document.getElementById("room-code-display").textContent = res.code;
+    // If the game hasn't started, room:update drives us to the lobby.
+    // If it has, the server follows this callback with act:show, which
+    // switches to screen-game on its own. Nothing else to do here.
+  });
+}
+
 let BASE_MANIFEST = null;
 let PALETTE = null;
 let manifestReady = false;
@@ -142,6 +197,7 @@ document.getElementById("btn-host").addEventListener("click", () => {
     if (!res || !res.ok) return;
     state.isHost = true;
     state.roomCode = res.code;
+    saveSession(res.code, res.token);
     document.getElementById("room-code-display").textContent = res.code;
     document.getElementById("host-controls").classList.remove("hidden");
     document.getElementById("waiting-text").classList.add("hidden");
@@ -167,6 +223,7 @@ document.getElementById("btn-join").addEventListener("click", () => {
     }
     state.isHost = false;
     state.roomCode = res.code;
+    saveSession(res.code, res.token);
     document.getElementById("room-code-display").textContent = res.code;
     showScreen("screen-lobby");
   });
@@ -174,6 +231,8 @@ document.getElementById("btn-join").addEventListener("click", () => {
 
 // --- Lobby / room updates ---
 let currentPlayers = [];
+
+attemptResume();
 
 socket.on("room:update", (data) => {
   state.myId = socket.id;
@@ -221,6 +280,14 @@ socket.on("room:update", (data) => {
 document.getElementById("btn-start").addEventListener("click", () => {
   socket.emit("host:startGame");
 });
+
+function leaveGame() {
+  socket.emit("player:leave");
+  clearSession();
+  location.reload();
+}
+document.getElementById("btn-leave-lobby").addEventListener("click", leaveGame);
+document.getElementById("btn-leave-game").addEventListener("click", leaveGame);
 
 document.getElementById("btn-force-advance").addEventListener("click", () => {
   socket.emit("host:advanceAct");
