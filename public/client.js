@@ -688,6 +688,7 @@ async function enterExplore(act) {
     myColor: state.myColor,
     myName: (currentPlayers.find((p) => p.id === socket.id) || {}).name || "",
     spawnIndex: currentPlayers.findIndex((p) => p.id === socket.id),
+    collectedIds: act.collectedPickups || [],
     onNearbyChange: (obj) => {
       isNearInteractable = !!obj;
       const panelOpen = !document.getElementById("vn-panel").classList.contains("hidden");

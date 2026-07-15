@@ -169,6 +169,11 @@ function buildActPayloadForPlayer(room, socketId) {
       intro: act.intro || null,
       solvedClues: Object.keys(room.actState.solvedClues || {}),
       requiredCount: act.completionCount,
+      // Every zone load re-fetches the raw map file from scratch, so
+      // anything already picked up (by anyone, possibly before this
+      // particular client connected) needs to be listed explicitly or it'll
+      // visually reappear the moment this player loads or re-loads a zone.
+      collectedPickups: Object.keys(room.collectedPickups || {}),
     };
   }
 

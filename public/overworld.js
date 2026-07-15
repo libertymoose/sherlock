@@ -101,9 +101,21 @@ window.Overworld = (function () {
   let insideInteriorZone = null; // which INTERIORS rect (if any) the player is currently standing in, for edge-triggering
   let insidePlateId = null; // which pressure plate (if any) the player is currently standing on, for edge-triggering
 
+  // Evidence/pickups already collected (by anyone), across the whole explore
+  // act. loadMap() re-fetches the raw map file from scratch every time a
+  // zone loads - on first entering the act, but also on every ordinary walk
+  // in and out of a building - so without this, an already-collected item
+  // would silently reappear the moment anyone re-entered that zone. The
+  // server rejects picking it up again, but says nothing, so it would just
+  // look like pickup was broken. Seeded from the server on init (covers
+  // reconnects/refreshes), and added to locally the moment anything gets
+  // removed (covers normal zone walking within the same session).
+  let collectedIds = new Set();
+
   async function loadMap(url) {
     const res = await fetch(url);
     mapData = await res.json();
+    mapData.objects = mapData.objects.filter((o) => !collectedIds.has(o.id));
     zoneStates = {};
     insideAnimZones = new Set();
     insideInteriorZone = null;
@@ -1031,6 +1043,7 @@ window.Overworld = (function () {
       myName = opts.myName || "";
       mySpawnIndex = typeof opts.spawnIndex === "number" ? opts.spawnIndex : null;
       currentZone = opts.startZone || "estate";
+      collectedIds = new Set(opts.collectedIds || []);
 
       await loadMap(opts.mapUrl);
 
@@ -1087,6 +1100,7 @@ window.Overworld = (function () {
     },
 
     removeObject(objId) {
+      collectedIds.add(objId);
       if (!mapData) return;
       const idx = mapData.objects.findIndex((o) => o.id === objId);
       if (idx !== -1) mapData.objects.splice(idx, 1);
