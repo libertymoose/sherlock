@@ -189,8 +189,24 @@
     </div>
   </div>
 
-  <!-- The desk, once everything's been found: a ready-vote gating the move
-       from free exploration into the shared Evidence Room stage -->
+  <!-- Thorne's evidence-complete line. She doesn't have portrait art yet,
+       so this is a text-only announcement rather than the full VN dialogue
+       treatment the NPCs with real portraits get. Broadcasts to every
+       player at once, and now carries the "ready to continue" vote itself
+       instead of requiring a separate walk to the desk to trigger it. -->
+  <div id="modal-thorne" class="modal-overlay hidden">
+    <div class="pixel-panel pixel-panel-popup modal-box">
+      <button id="btn-close-thorne" class="pixel-close-btn" aria-label="Close"></button>
+      <h3 class="pixel-panel-title">Captain Thorne</h3>
+      <p class="hint-text" id="thorne-message-text" style="margin-top:0"></p>
+      <button id="btn-thorne-ready" class="btn btn-primary">I'm Ready. Continue</button>
+      <p class="hint-text" id="thorne-ready-progress"></p>
+    </div>
+  </div>
+
+  <!-- The desk, once everything's been found: same ready-vote as above, kept
+       as a fallback so anyone who closed the Thorne pop-up before voting can
+       still find and cast it by walking back to the desk. -->
   <div id="modal-ready-check" class="modal-overlay hidden">
     <div class="pixel-panel pixel-panel-popup modal-box">
       <button id="btn-close-ready-check" class="pixel-close-btn" aria-label="Close"></button>
@@ -198,18 +214,6 @@
       <p class="hint-text" style="margin-top:0">Everything you've found is here. Ready to go through it properly with the rest of the table?</p>
       <button id="btn-ready-check" class="btn btn-primary">I'm Ready. Continue</button>
       <p class="hint-text" id="ready-check-progress"></p>
-    </div>
-  </div>
-
-  <!-- Thorne's evidence-complete line. She doesn't have portrait art yet,
-       so this is a text-only announcement rather than the full VN dialogue
-       treatment the NPCs with real portraits get. -->
-  <div id="modal-thorne" class="modal-overlay hidden">
-    <div class="pixel-panel pixel-panel-popup modal-box">
-      <button id="btn-close-thorne" class="pixel-close-btn" aria-label="Close"></button>
-      <h3 class="pixel-panel-title">Captain Thorne</h3>
-      <p class="hint-text" id="thorne-message-text" style="margin-top:0"></p>
-      <button id="btn-close-thorne-2" class="btn btn-secondary">Close</button>
     </div>
   </div>
 
@@ -222,7 +226,6 @@
       <img id="investigate-art" class="investigate-art hidden" src="" alt="" />
       <p class="hint-text" id="investigate-intro"></p>
       <div id="investigate-extra"></div>
-      <p class="hint-text" id="investigate-closing"></p>
     </div>
   </div>
 

@@ -275,7 +275,7 @@ socket.on("act:show", (act) => {
   actFrame.classList.remove("hidden");
   Overworld.stop();
 
-  document.getElementById("act-eyebrow").textContent = `Act ${toRoman(act.index + 1)}`;
+  document.getElementById("act-eyebrow").textContent = `Act ${toRoman(act.chapter || 1)}`;
   document.getElementById("act-title").textContent = act.title;
 
   const container = document.getElementById("act-body-container");
@@ -329,6 +329,12 @@ function renderReveal(container, act) {
 // change that shouldn't feel like just another reveal card).
 function renderCutscene(container, act) {
   const pages = act.pages && act.pages.length ? act.pages : [{ speaker: "", text: "" }];
+
+  if (act.singlePage) {
+    renderSinglePageCutscene(container, act, pages);
+    return;
+  }
+
   let pageIndex = 0;
 
   const speakerEl = document.createElement("p");
@@ -386,6 +392,57 @@ function renderCutscene(container, act) {
   };
 
   showPage(0);
+}
+
+// Same content as a regular cutscene, but shown as one stacked block of
+// dialogue rather than click-through pages, for beats that read better as
+// a single scene than a series of taps.
+function renderSinglePageCutscene(container, act, pages) {
+  const box = document.createElement("div");
+  box.className = "act-body cutscene-box cutscene-box-stacked";
+
+  pages.forEach((page) => {
+    if (page.speaker) {
+      const speakerEl = document.createElement("p");
+      speakerEl.className = "cutscene-speaker";
+      speakerEl.textContent = page.speaker;
+      box.appendChild(speakerEl);
+    }
+    const textEl = document.createElement("p");
+    textEl.className = "cutscene-line";
+    textEl.textContent = page.text || "";
+    box.appendChild(textEl);
+  });
+
+  container.appendChild(box);
+
+  const advanceBtn = document.createElement("button");
+  advanceBtn.className = "btn btn-primary";
+  container.appendChild(advanceBtn);
+
+  function showContinueButton() {
+    box.classList.add("hidden");
+    advanceBtn.textContent = "I'm Ready. Continue";
+    if (act.fadeOut) advanceBtn.classList.add("cutscene-continue-btn");
+    advanceBtn.onclick = () => {
+      advanceBtn.disabled = true;
+      advanceBtn.textContent = "Waiting for the rest of the table...";
+      socket.emit("act:acknowledgeReveal");
+      const overlay = document.getElementById("cutscene-fade-overlay");
+      overlay.classList.remove("visible");
+    };
+  }
+
+  advanceBtn.onclick = () => {
+    if (act.fadeOut) {
+      const overlay = document.getElementById("cutscene-fade-overlay");
+      overlay.classList.add("visible");
+      setTimeout(() => showContinueButton(), 900);
+    } else {
+      showContinueButton();
+    }
+  };
+  advanceBtn.textContent = "Continue";
 }
 
 function renderGroupPuzzle(container, act) {
@@ -952,21 +1009,38 @@ document.getElementById("btn-ready-check").addEventListener("click", () => {
   btn.textContent = "Waiting for the rest of the table...";
   socket.emit("evidenceRoom:ready");
 });
-socket.on("evidenceRoom:readyProgress", ({ ready, total }) => {
-  document.getElementById("ready-check-progress").textContent = `${ready} / ${total} ready`;
-});
 
 // --- Captain Thorne's evidence-complete announcement ---
+// This pop-up is broadcast to every player the moment the last piece of
+// evidence is found (server-side io.to(code).emit, not per-socket), and now
+// carries the ready vote itself so the party can agree to continue right
+// from here, no separate desk walk required. The desk (modal-ready-check)
+// still works too, same vote, same progress counter, for anyone who closed
+// this pop-up first.
 function openThorneModal(text) {
   document.getElementById("thorne-message-text").textContent = text || "";
+  const btn = document.getElementById("btn-thorne-ready");
+  btn.disabled = false;
+  btn.textContent = "I'm Ready. Continue";
+  document.getElementById("thorne-ready-progress").textContent = "";
   document.getElementById("modal-thorne").classList.remove("hidden");
 }
 function closeThorneModal() {
   document.getElementById("modal-thorne").classList.add("hidden");
 }
 document.getElementById("btn-close-thorne").addEventListener("click", closeThorneModal);
-document.getElementById("btn-close-thorne-2").addEventListener("click", closeThorneModal);
+document.getElementById("btn-thorne-ready").addEventListener("click", () => {
+  const btn = document.getElementById("btn-thorne-ready");
+  btn.disabled = true;
+  btn.textContent = "Waiting for the rest of the table...";
+  socket.emit("evidenceRoom:ready");
+});
 socket.on("thorne:message", ({ text }) => openThorneModal(text));
+
+socket.on("evidenceRoom:readyProgress", ({ ready, total }) => {
+  document.getElementById("ready-check-progress").textContent = `${ready} / ${total} ready`;
+  document.getElementById("thorne-ready-progress").textContent = `${ready} / ${total} ready`;
+});
 
 socket.on("evidence:state", (exhibits) => {
   tableExhibits = exhibits || [];
@@ -1038,11 +1112,13 @@ async function openInvestigateModal(exhibit) {
     document.getElementById("investigate-intro").textContent = doc.intro || "";
     if (doc.table) extra.appendChild(buildDocumentTable(doc.table));
     if (doc.list) extra.appendChild(buildDocumentList(doc.list));
-    document.getElementById("investigate-closing").textContent = doc.closing || "";
+    // doc.closing deliberately not shown here. It's the actual deduction
+    // (why the evidence doesn't add up), and the party needs to work that
+    // out themselves at the table, not have it handed to them the moment
+    // they investigate the exhibit.
   } else {
     document.getElementById("investigate-intro").textContent =
       exhibit.description || "No further details recorded yet.";
-    document.getElementById("investigate-closing").textContent = "";
   }
 
   document.getElementById("modal-investigate").classList.remove("hidden");

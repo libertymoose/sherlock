@@ -458,6 +458,18 @@ input[type="text"]:focus {
   color: var(--parchment);
 }
 
+.cutscene-box-stacked .cutscene-line {
+  margin: 0 0 14px;
+}
+
+.cutscene-box-stacked .cutscene-speaker {
+  margin-top: 10px;
+}
+
+.cutscene-box-stacked .cutscene-speaker:first-child {
+  margin-top: 0;
+}
+
 .cutscene-fade-overlay {
   position: fixed;
   inset: 0;
@@ -891,6 +903,10 @@ input[type="text"]:focus {
   font-size: 16px;
   line-height: 1.6;
   margin: 0 0 4px;
+}
+
+#board-intro {
+  white-space: pre-line;
 }
 
 .dialogue-line {

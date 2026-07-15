@@ -3,18 +3,21 @@
   "acts": [
     {
       "type": "reveal",
+      "chapter": 1,
       "title": "The Gala",
       "body": "Months after the Siege of Boralus, House Duskmere has been steadily funding repairs to Tiragarde Sound. Tonight, they celebrate the work's completion with a gala at their estate.\nAs Champions of Azeroth, you were invited guests.\nThen the toasts stopped.\nLord Alaric Duskmere has been found dead.",
       "image": ""
     },
     {
       "type": "reveal",
+      "chapter": 1,
       "title": "The Investigation Begins",
       "body": "Captain Mira Thorne of the City Watch has arrived before the body's even cold, and takes one look at the gathered guests.\n\"Nobody leaves. Every single one of you is a suspect until I say otherwise. That includes our Champions of Azeroth.\"\nThe crowd begins murmuring amongst themselves as Captain Thorne turns to you.\n\"Which is exactly why I need your help. I don't have the manpower to watch this whole gala at once, and I trust the Champions.\"\n\"Move through the grounds, talk to people, find out who actually had reason to want Duskmere dead. Motive first. We'll worry about how it was done after.\"",
       "image": ""
     },
     {
       "type": "explore",
+      "chapter": 1,
       "title": "Investigate the Estate",
       "mapUrl": "/assets/maps/estate.json",
       "zone": "estate",
@@ -25,58 +28,82 @@
     },
     {
       "type": "evidence_room",
+      "chapter": 1,
       "title": "The Evidence Room",
-      "intro": "Everything you've found is laid out across the desk. Review it all, then work out together who actually belongs on the Suspect Board. You can go back and forth between the two as much as you need, submit to Captain Thorne once the table agrees."
+      "intro": "Everything you've found is laid out across the desk. Review it all, then work out together who actually belongs on the Suspect Board.\n\nYou can go back and forth between the two as much as you need, submit to Captain Thorne once the table agrees."
     },
     {
       "type": "cutscene",
+      "chapter": 1,
       "title": "Means and Opportunity, Interrupted",
       "fadeOut": true,
+      "singlePage": true,
       "pages": [
-        { "speaker": "Captain Thorne", "text": "Good work. Now we find out which one of them actually had the means, and the opportunity." },
-        { "speaker": "", "text": "You go through it all one more time, right there at the desk, this time asking how, not why." },
-        { "speaker": "Commodore Voss", "text": "Captain! They were the only ones anywhere near the study all night. And I found this among their things." },
-        { "speaker": "", "text": "He holds it up. A blade, dark at the edge. Thorne's face goes still." },
-        { "speaker": "Captain Thorne", "text": "I gave you a chance. Take them down to the cells." }
+        {
+          "speaker": "Captain Thorne",
+          "text": "Good work. Now we find out which one of them actually had the means, and the opportunity."
+        },
+        {
+          "speaker": "",
+          "text": "You go through it all one more time, right there at the desk, this time asking how, not why."
+        },
+        {
+          "speaker": "Commodore Voss",
+          "text": "Captain! They were the only ones anywhere near the study all night. And I found this among their things."
+        },
+        {
+          "speaker": "",
+          "text": "He holds it up. A blade, dark at the edge. Thorne's face goes still."
+        },
+        {
+          "speaker": "Captain Thorne",
+          "text": "I gave you a chance. Take them down to the cells."
+        }
       ]
     },
     {
       "type": "explore",
-      "title": "The Escape",
+      "chapter": 2,
+      "title": "The Dungeons",
       "zone": "jail_cells",
       "mapUrl": "/assets/maps/jail_cells.json",
-      "intro": "You come to in separate holding cells, no way to reach each other directly, but each cell has a window, and each cell's floor plate opens the window in the cell next door. Hold your plate for someone else, or step off and it shuts. [PLACEHOLDER: this is playable, the window escape is real, but the graffiti, the notebook pages, the false trail notes, and the tunnel maze past the cells aren't built yet, and the room past the exit (Guild Hall Basement) doesn't exist yet either, so there's nowhere for the exit to actually lead right now. Host can force-advance once everyone's out.]"
+      "intro": "You come to in separate holding cells, no way to reach each other directly. Get back together with your party, and get out of the dungeons."
     },
     {
       "type": "reveal",
-      "title": "The Guild Hall",
-      "body": "Corwin brings you to the Guild Hall, and it's clear this is home base now. 'I knew you didn't do it,' he says. 'But somebody did, and I want to know who as much as you do. I'm resourceful, I've got favors to call in and a few strings left to pull. Let's use them.'",
+      "chapter": 2,
+      "title": "Means and Opportunity",
+      "body": "Corwin brings you to the Guild Hall on the edge of the nearby village.\n\"I knew you didn't do it,\" he chuckles.\n\"But somebody did, and I want to know who as much as you do. I'm resourceful, I've got favours to call in and a few strings left to pull. Let's use them and clear your name.\"",
       "image": ""
     },
     {
       "type": "reveal",
       "title": "Into Town",
       "body": "[PLACEHOLDER: playable town map not built yet, and what actually happens here isn't designed yet either, worth a proper planning pass when we get to it. Confirmed so far: the party splits up and talks to townsfolk around the Market, the Training Grounds, the Mage Tower, the Tavern, and other town locations, hunting for opportunity rather than motive this time, using the tavern/blacksmith/chapel/ruined temple/mage tower/training arena packs already in the project. The act ends with the maid from the Estate stage turning up with Lord Duskmere's goblet and a wine bottle that never belonged to the manor's own cellar, confirming poison. Open idea, not locked in: Lord Duskmere was colorblind and the wine looked red to him, when the poison had actually tinted it green, worth discussing before writing it in.]",
-      "image": ""
+      "image": "",
+      "chapter": 2
     },
     {
       "type": "reveal",
       "title": "The Herbalist's Hut",
       "body": "[PLACEHOLDER: playable poison-ID puzzle not built yet. Design is confirmed: plant-matching deduction, leaf shape, smell, growing conditions, matched against a reference chart rather than a straight cipher, at a Herbalist's Hut out in the swamp, working from the goblet and bottle the maid brought in. The act ends once the poison is identified. Corwin, who's stuck with the party this whole stretch, says he knows an old tunnel back onto the estate grounds.",
-      "image": ""
+      "image": "",
+      "chapter": 2
     },
     {
       "type": "puzzle_group",
       "title": "The Finale",
       "prompt": "[PLACEHOLDER: real presentation/accusation mechanic not built yet, this typed-answer box is a stopgap reusing the old Naming the Culprit code path. Design so far: you sneak back onto the estate through Corwin's tunnel and lay out everything, motive, means and opportunity, and the poison, in front of the whole household, then declare a suspect. A wrong accusation should get real pushback, that suspect arguing back with their own alibi or counter-evidence, not a vague 'try again.' Only Ashgate's correct-answer content exists so far, the other 4 finalists each need their own wrong-answer rebuttal written before this can ship.]",
       "answer": "ashgate",
-      "hint": "Weigh the motive, the means and opportunity, and the poison together."
+      "hint": "Weigh the motive, the means and opportunity, and the poison together.",
+      "chapter": 2
     },
     {
       "type": "final",
       "title": "Case Closed... Or Is It?",
       "body": "Lady Isobel Ashgate doesn't bother denying it once you lay it all out, motive, means, the poison itself. [PLACEHOLDER: Ashgate's actual confrontation dialogue and argument, not written yet.] The guards take her away, and as they lead her past the garden, she rounds on Old Silas Corwin, still watching from the shadows. 'Ask him,' she spits, 'what he was really doing for Alaric all these years.' Corwin doesn't answer. Thorne and Corwin see you off with a brief thanks, the case closed, at least as far as the City Watch is concerned. Take your findings back to Discord to see if it really is.",
-      "finalWord": "NIGHTSHADE"
+      "finalWord": "NIGHTSHADE",
+      "chapter": 2
     }
   ]
 }

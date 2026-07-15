@@ -1,17 +1,17 @@
 {
   "ledger_ashby": {
     "name": "Repair Ledger",
-    "description": "Seven withdrawals against the repair fund, and a tin of numbered receipt stubs that don't quite line up.",
+    "description": "Several withdrawals against the repair fund, and a stack of numbered receipt stubs.",
     "art": null
   },
   "satchel_voss": {
     "name": "Burnt Satchel",
-    "description": "Torn, part-burned betting slips, the debts inside them climbing right up to the night of the gala.",
+    "description": "A worn leather satchel that someone has attempted to burn. Torn, partially burned, slips of paper are scattered inside.",
     "art": null
   },
   "manifests_kestrel": {
     "name": "Shipping Manifests",
-    "description": "A stack of dock paperwork. Two entries describe a ship arriving before it could possibly have left.",
+    "description": "A hefty stack of dock paperwork.",
     "art": null
   },
   "blueprint_marrow": {
@@ -20,18 +20,18 @@
     "art": null
   },
   "letter_ashgate": {
-    "name": "Torn Correspondence",
-    "description": "A letter torn into six pieces, mixed in with a few things that don't matter at all.",
+    "name": "Torn Paperwork",
+    "description": "An important-looking letter torn into pieces, mixed in with various other poorly shredded papers.",
     "art": null
   },
   "rota_reyes": {
     "name": "Patrol Rota",
-    "description": "A watch schedule, and a half-torn note about a shift swap nobody was told about.",
+    "description": "A watch schedule. A half-torn note about a shift swap is stapled to the top.",
     "art": null
   },
   "diary_maid": {
     "name": "Hidden Diary",
-    "description": "Half plain hand, half a lover's code. Someone was being careful not to name names.",
+    "description": "Half plain hand, half a lover's code. Someone was being overly careful.",
     "art": null
   }
 }

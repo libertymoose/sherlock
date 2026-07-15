@@ -31,6 +31,30 @@ const noCacheStatic = (dir) =>
     setHeaders: (res) => res.setHeader("Cache-Control", "no-cache"),
   });
 app.use(noCacheStatic(path.join(__dirname, "public")));
+
+// The client fetches interactions.json directly to render dialogue/document
+// content in the field. `closing` on each doc_* entry is the actual solved
+// deduction, meant to be worked out by the party at the table, not handed
+// over. The client UI already doesn't render it, but since /content used to
+// be a plain static mount, the raw answer was still sitting in the network
+// response for anyone who opened devtools. This route intercepts that one
+// file (added before the static mount below, so it takes priority) and
+// strips `closing` before it ever leaves the server; the full version with
+// closing intact stays in the in-memory INTERACTIONS object for server-side
+// use only.
+app.get("/content/interactions.json", (req, res) => {
+  const sanitized = {};
+  for (const [key, entry] of Object.entries(INTERACTIONS)) {
+    if (entry && typeof entry === "object" && "closing" in entry) {
+      const { closing, ...rest } = entry;
+      sanitized[key] = rest;
+    } else {
+      sanitized[key] = entry;
+    }
+  }
+  res.setHeader("Cache-Control", "no-cache");
+  res.json(sanitized);
+});
 app.use("/content", noCacheStatic(path.join(__dirname, "content")));
 
 const server = http.createServer(app);
@@ -86,14 +110,14 @@ function orderedPlayerIds(room) {
 function buildActPayloadForPlayer(room, socketId) {
   const act = STORY.acts[room.actIndex];
   if (!act) return null;
-  const base = { index: room.actIndex, total: STORY.acts.length, type: act.type, title: act.title };
+  const base = { index: room.actIndex, total: STORY.acts.length, type: act.type, title: act.title, chapter: act.chapter || 1 };
 
   if (act.type === "reveal") {
     return { ...base, body: act.body, image: act.image || null, showEvidenceReview: !!act.showEvidenceReview };
   }
 
   if (act.type === "cutscene") {
-    return { ...base, pages: act.pages || [], fadeOut: !!act.fadeOut };
+    return { ...base, pages: act.pages || [], fadeOut: !!act.fadeOut, singlePage: !!act.singlePage };
   }
 
   if (act.type === "final") {

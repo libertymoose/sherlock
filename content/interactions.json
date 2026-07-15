@@ -53,7 +53,7 @@
     "title": "Nell Cobb",
     "lines": [
       "\"Didn't expect to see Champions of Azeroth at a fancy garden party!\"",
-      "\"Free drinks though, can't complain. Shame about the poisoning. Really put a damper on the evening.\"",
+      "\"Free drinks though, can't complain. Shame about the whole murder-death-thing. Really put a damper on the evening.\" she slurs.",
       "\"Between us? I saw the Commodore down by the river a few nights back. Didn't think much of it at the time, but now murder? Suspect if you ask me.\""
     ]
   },
@@ -69,8 +69,8 @@
     "type": "dialogue",
     "title": "A Lady's Maid",
     "lines": [
-      "She's refilling glasses that don't need refilling, doing her best to look busy.",
-      "\"I've been working the whole evening, sir. Haven't left the courtyard once.\" Her hands are shaking, and she keeps glancing toward the farm animals.",
+      "She's pacing around near the farm animals, doing her best not to look nervous.",
+      "\"I've been working the whole evening, sir. I swear. I haven't gone nowhere.\" Her hands are shaking, and she keeps glancing toward the farm animals.",
       "Then again, maybe she just doesn't like cows?"
     ]
   },
@@ -113,7 +113,7 @@
     "type": "dialogue",
     "title": "A Gala Guest",
     "lines": [
-      "\"Lady Ashgate looked awfully calm when they found the body, don't you think? ...No, I'm sure that means nothing.\""
+      "\"Kestrel looked awfully calm when they found the body, don't you think? ...No, I'm sure that means nothing.\""
     ]
   },
   "npc_guest_c2": {
@@ -126,7 +126,7 @@
   "doc_ashby": {
     "type": "document",
     "title": "The Repair Ledger",
-    "intro": "A ledger of seven repair-fund withdrawals sits beside a small tin of numbered receipt stubs.",
+    "intro": "A ledger of several repair-fund withdrawals sits beside a small stack of numbered receipt stubs.",
     "table": {
       "headers": [
         "#",
@@ -138,84 +138,84 @@
       "rows": [
         [
           "1",
-          "3rd Wanning",
+          "3rd",
           "Coastwood Timber",
           "Scaffold planking",
-          "40g"
+          "40,000g"
         ],
         [
           "2",
-          "6th Wanning",
+          "6th",
           "Coastwood Timber",
           "Scaffold planking",
-          "25g"
+          "25,000g"
         ],
         [
           "3",
-          "9th Wanning",
+          "9th",
           "Ironbell Smithy",
           "Gate hinges",
-          "15g"
+          "15,000g"
         ],
         [
           "4",
-          "14th Wanning",
+          "14th",
           "Duskmere Estate",
           "Contingency reserve",
-          "60g"
+          "60,000g"
         ],
         [
           "5",
-          "18th Wanning",
+          "18th",
           "Coastwood Timber",
           "Roof beams",
-          "55g"
+          "55,000g"
         ],
         [
           "6",
-          "21st Wanning",
+          "21st",
           "Ironbell Smithy",
           "Fence repair",
-          "20g"
+          "20,000g"
         ],
         [
           "7",
-          "25th Wanning",
+          "25th",
           "Harrow & Vale",
           "Stone masonry",
-          "90g"
+          "90,000g"
         ]
       ]
     },
     "list": [
-      "Stub 401 \u2014 Coastwood Timber, 40g",
-      "Stub 402 \u2014 Coastwood Timber, 25g",
-      "Stub 403 \u2014 Ironbell Smithy, 15g",
-      "Stub 404 \u2014 Harrow & Vale, 90g",
-      "Stub 405 \u2014 Coastwood Timber, 55g",
-      "Stub 406 \u2014 Ironbell Smithy, 20g"
+      "Stub 401 \u2014 Coastwood Timber, 40,000g",
+      "Stub 402 \u2014 Coastwood Timber, 25,000g",
+      "Stub 403 \u2014 Ironbell Smithy, 15,000g",
+      "Stub 404 \u2014 Harrow & Vale, 90,000g",
+      "Stub 405 \u2014 Coastwood Timber, 55,000g",
+      "Stub 406 \u2014 Ironbell Smithy, 20,000g"
     ],
-    "closing": "Six stubs for seven withdrawals. If they were issued in ledger order, simply skipping whichever entry lacked a receipt, stub 404 ought to belong to the fifth withdrawal, the Coastwood Timber roof beams. Instead it's stamped for Harrow & Vale, the seventh. Something's been renumbered to cover a gap. The fourteenth-of-Wanning withdrawal, paid straight to 'Duskmere Estate' itself for a contingency reserve, has no stub at all.",
+    "closing": "Six stubs for seven withdrawals. If they were issued in ledger order, simply skipping whichever entry lacked a receipt, stub 404 ought to belong to the fifth withdrawal, the Coastwood Timber roof beams. Instead it's stamped for Harrow & Vale, the seventh. Something's been renumbered to cover a gap. The 14th withdrawal, paid straight to 'Duskmere Estate' itself for a contingency reserve, has no stub at all.",
     "itemId": "ledger_ashby"
   },
   "doc_voss": {
     "type": "document",
     "title": "The Burnt Satchel",
-    "intro": "Half-buried among the reeds, a satchel holds five torn, part-burned betting slips. None show a full date, only fragments of context.",
+    "intro": "Half-buried, a satchel holds five torn, part-burned betting slips. None show a full date, only fragments of context.",
     "list": [
-      "\"...paid in full after the regatta, no hard feelings, B.V.\" (5g)",
-      "\"...third marker this month, Voss, I'm done extending you credit\" (20g)",
-      "\"...since the Siege repairs started, you've been good for it, but this one's steep\" (35g)",
-      "\"...if this isn't settled by the gala I'm bringing it to Thorne myself\" (80g)",
+      "\"...paid in full after the regatta on the 2nd, no hard feelings, B.V.\" (5,000g)",
+      "\"...third marker this month, Voss, I'm done extending you credit\" (20,000g)",
+      "\"...since the Siege repairs started, you've been good for it, but this one's steep\" (35,000g)",
+      "\"...if this isn't settled by the gala tomorrow I'm bringing it to Thorne myself\" (80,000g)",
       "\"...he swears the ship's coming in any day now. It never does.\" (a side note, different hand, no amount)"
     ],
-    "closing": "The regatta came before the Siege repairs began. Read in that order, the debt only grows, and the largest, most recent slip threatens to go straight to Thorne by the night of the gala.",
+    "closing": "The regatta came before the Siege repairs began. Read in that order, the debt only grows, and the largest, most recent slip threatens to go straight to Thorne by tomorrow night.",
     "itemId": "satchel_voss"
   },
   "doc_kestrel": {
     "type": "document",
     "title": "The Shipping Manifests",
-    "intro": "A locked dock office, and inside, a stack of shipping manifests.",
+    "intro": "A dock office, and inside, a stack of shipping manifests.",
     "table": {
       "headers": [
         "Ship",
@@ -228,36 +228,36 @@
         [
           "Windward Gale",
           "Kestrel timber",
-          "12th Wanning, dawn",
-          "14th Wanning",
+          "12th, dawn",
+          "14th",
           "Standard Boralus route"
         ],
         [
           "Windward Gale",
           "Kestrel cloth",
-          "19th Wanning, dawn",
-          "21st Wanning",
+          "19th, dawn",
+          "21st",
           "Standard Boralus route"
         ],
         [
           "Providence's Grace",
           "Duskmere grain",
-          "13th Wanning, dusk",
-          "13th Wanning, dusk",
+          "13th, dusk",
+          "13th, dusk",
           "Boralus to Boralus"
         ],
         [
           "Fair Tide",
           "Kestrel spice",
-          "22nd Wanning, dawn",
-          "24th Wanning",
+          "22nd, dawn",
+          "24th",
           "Standard Boralus route"
         ],
         [
           "Providence's Grace",
           "Duskmere grain",
-          "20th Wanning, dawn",
-          "20th Wanning, dawn",
+          "20th, dawn",
+          "20th, dawn",
           "Boralus to Duskwater"
         ]
       ]
@@ -310,15 +310,15 @@
   },
   "doc_ashgate": {
     "type": "document",
-    "title": "Torn Correspondence",
-    "intro": "A locked travelling chest holds a letter torn into six pieces, mixed in with a shawl-mending receipt and a dinner invitation that don't matter at all.",
+    "title": "Torn Paperwork",
+    "intro": "A chest holds a letter torn into six pieces, mixed in with a receipt and a dinner invitation that don't seem to matter at all.",
     "list": [
-      "\"...the solicitor confirms House Ashgate's holdings will not...\"",
-      "\"...cover the debts by autumn. If the engagement proceeds as...\"",
-      "\"...planned, everything changes. I am told the...\"",
-      "\"...paperwork can be finalized within the month, well before...\"",
       "\"...the anniversary of the Siege. I cannot say this...\"",
-      "\"...to anyone, least of all him, until it is settled...\""
+      "\"...cover the debts by autumn. If the engagement proceeds as...\"",
+      "\"...to anyone, least of all him, until it is settled...\"",
+      "\"...the solicitor confirms House Ashgate's holdings will not...\"",
+      "\"...paperwork can be finalized within the month, well before...\"",
+      "\"...planned, everything changes. I am told the...\""
     ],
     "closing": "Pieced together in order, the letter reads: 'The solicitor confirms House Ashgate's holdings will not cover the debts by autumn. If the engagement proceeds as planned, everything changes. I am told the paperwork can be finalized within the month, well before the anniversary of the Siege. I cannot say this to anyone, least of all him, until it is settled.' Weeks before the gala, and already a matter of real urgency.",
     "itemId": "letter_ashgate"
@@ -326,22 +326,22 @@
   "doc_reyes": {
     "type": "document",
     "title": "The Patrol Rota",
-    "intro": "Folded inside a broken lantern near the bridge: a watch schedule, in Boralus City Watch bells rather than plain hours.",
+    "intro": "Folded inside a broken lantern near the bridge: a watch schedule, in City Watch bells rather than plain hours.",
     "list": [
       "First Bell, dusk",
       "Second Bell, one candle-mark after dusk",
-      "Third Bell, two candle-marks after dusk \u2014 Reyes",
+      "Third Bell, two candle-marks after dusk",
       "Fourth Bell, midnight",
       "Fifth Bell, two candle-marks after midnight"
     ],
-    "closing": "A second note, half-torn: 'R. asked to swap Third for Fourth, said he'd cover the gap himself, told no one.' A crossed-out watch log shows someone else covering Fourth Bell instead. Reyes' actual post, Third Bell, two candle-marks after dusk, was empty.",
+    "closing": "A second note is stapled to the top, half-torn: 'R. asked to swap Third for Fourth, said he'd cover the gap himself, told no one.' A crossed-out watch log shows someone else covering Fourth Bell instead. Reyes' actual post, Third Bell, two candle-marks after dusk, was empty.",
     "itemId": "rota_reyes"
   },
   "doc_maid": {
     "type": "document",
     "title": "The Hidden Diary",
-    "intro": "Buried beneath a loose stone in the kitchen garden: a diary, half in plain hand, half in a simple lover's code.",
-    "closing": "Decoded, one entry reads: 'He waits for me where the old boathouse used to stand, past the willow, where no one from the house ever walks after dark.' Whoever she's meeting, she's gone to real trouble to avoid naming him.",
+    "intro": "Buried beneath a loose stone: a diary, half in plain hand, half in a simple lover's code.",
+    "closing": "One entry reads: 'He waits for me where the old boathouse used to stand, past the willow, where no one from the house ever walks after dark.' Whoever she's meeting, she's gone to real trouble to avoid naming him.",
     "itemId": "diary_maid"
   },
   "evidence_table": {
