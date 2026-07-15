@@ -641,6 +641,22 @@ window.Overworld = (function () {
       const st = npcStates[o.id];
       if (!st) return;
 
+      // A single NPC's wander state corrupting (or hitting a bad edge case)
+      // used to throw partway through this shared forEach, which aborts
+      // the whole loop immediately, every NPC after the broken one in
+      // iteration order would silently never move again for the rest of
+      // the session. Isolating each NPC means a broken one just stays
+      // put, the rest of the party still gets to see everyone else amble
+      // around normally.
+      try {
+        updateOneNpc(o, st, dt);
+      } catch (err) {
+        console.error(`NPC update error for ${o.id} (continuing):`, err);
+      }
+    });
+  }
+
+  function updateOneNpc(o, st, dt) {
       st.animTimer += dt;
       const fps = st.phase === "walking" ? AMBLE_FPS : IDLE_FPS;
       if (st.animTimer > 1 / fps) {
@@ -682,7 +698,6 @@ window.Overworld = (function () {
           st.offsetY += (dy / dist) * step;
         }
       }
-    });
   }
 
   // Tries a few random points within the NPC's wander radius (in tiles) and
@@ -927,7 +942,18 @@ window.Overworld = (function () {
     });
 
     drawList.sort((a, b) => a.y - b.y);
-    drawList.forEach((item) => item.draw());
+    // Each entry isolated on purpose: without this, one item throwing (a
+    // broken NPC sprite, most plausibly) aborts the whole forEach immediately,
+    // and everything sorted after it, potentially other players, even our
+    // own character, silently never gets drawn again, every single frame,
+    // looking exactly like the game froze even though nothing crashed the tab.
+    drawList.forEach((item) => {
+      try {
+        item.draw();
+      } catch (err) {
+        console.error("Draw error for one item (continuing):", err);
+      }
+    });
 
     // Interaction prompt
     if (nearbyObject) {
@@ -973,15 +999,20 @@ window.Overworld = (function () {
     if (!running) return;
     const dt = lastTime ? Math.min((ts - lastTime) / 1000, 0.05) : 0;
     lastTime = ts;
-    // update()/render() throwing here used to kill the loop permanently and
-    // silently, requestAnimationFrame simply never got called again, no
-    // error visible anywhere, the game just stopped. Logging and continuing
-    // means a bad frame degrades instead of hard-freezing the whole session.
+    // Separate try/catches on purpose: these used to share one block, so a
+    // repeating crash in update() (thrown fresh every single frame) meant
+    // render() never ran either, forever, the canvas would look frozen
+    // solid even though nothing had crashed the tab. Now a broken update()
+    // still lets the screen keep painting whatever state already exists.
     try {
       update(dt);
+    } catch (err) {
+      console.error("Overworld update error (continuing):", err);
+    }
+    try {
       render();
     } catch (err) {
-      console.error("Overworld frame error (continuing):", err);
+      console.error("Overworld render error (continuing):", err);
     }
     rafId = requestAnimationFrame(loop);
   }
