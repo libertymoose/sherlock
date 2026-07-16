@@ -555,9 +555,10 @@ input[type="text"]:focus {
 .feedback.incorrect { color: var(--blood); }
 
 .sync-banner {
-  background: rgba(15,76,117,0.1);
-  border: 1px solid rgba(15,76,117,0.35);
-  color: #0f4c75;
+  background: rgba(var(--candle-rgb),0.12);
+  border: 1px solid rgba(var(--candle-rgb),0.4);
+  color: var(--candle-bright);
+  font-weight: 600;
   font-size: 12px;
   letter-spacing: 0.03em;
   text-align: center;
@@ -570,14 +571,20 @@ input[type="text"]:focus {
   background:
     repeating-linear-gradient(
       115deg,
-      rgba(0,0,0,0.06) 0px,
-      rgba(0,0,0,0.06) 2px,
+      rgba(0,0,0,0.05) 0px,
+      rgba(0,0,0,0.05) 2px,
       transparent 2px,
       transparent 26px
     ),
-    linear-gradient(160deg, #6b4324 0%, #4a2d18 55%, #3a2212 100%);
+    repeating-linear-gradient(
+      90deg,
+      #c99b75 0px, #c99b75 22px,
+      #d3a67d 22px, #d3a67d 44px,
+      #dfae82 44px, #dfae82 66px,
+      #b88b67 66px, #b88b67 88px
+    );
   border: 1px solid rgba(0,0,0,0.35);
-  box-shadow: inset 0 0 60px rgba(0,0,0,0.35);
+  box-shadow: inset 0 0 60px rgba(0,0,0,0.25);
   border-radius: var(--radius);
   padding: 24px;
   max-width: 900px;

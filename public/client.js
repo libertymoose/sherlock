@@ -314,6 +314,8 @@ socket.on("act:show", (act) => {
   // transition goes through here, so this is the one place that's always
   // guaranteed to run, regardless of how the transition happened.
   document.getElementById("cutscene-fade-overlay").classList.remove("visible");
+  const strayReadyBtn = document.getElementById("staged-scene-ready-btn");
+  if (strayReadyBtn) strayReadyBtn.remove();
 
   const actFrame = document.getElementById("act-frame");
   const exploreFrame = document.getElementById("explore-frame");
@@ -325,6 +327,15 @@ socket.on("act:show", (act) => {
     exploreFrame.classList.remove("hidden");
     Overworld.stop();
     enterExplore(act);
+    return;
+  }
+
+  if (act.type === "staged_scene") {
+    actFrame.classList.add("hidden");
+    boardFrame.classList.add("hidden");
+    exploreFrame.classList.remove("hidden");
+    Overworld.stop();
+    enterStagedScene(act);
     return;
   }
 
@@ -723,6 +734,79 @@ async function enterExplore(act) {
   Overworld.start();
 }
 
+// A scripted in-game beat (Voss + two guards walking in on the party to
+// end "Means and Opportunity, Interrupted"): loads a map like a normal
+// explore act, but freezes the local player at a fixed mark instead of
+// giving them movement, plays a scripted walk-in for the named actors,
+// then hands off to a VN dialogue sequence once everyone's arrived.
+async function enterStagedScene(act) {
+  document.getElementById("btn-interact").classList.add("hidden");
+  document.getElementById("btn-explore-force-advance").classList.add("hidden");
+  updateZoneLabel("");
+
+  const zoneId = act.zone || "estate";
+  socket.emit("player:changeZone", { zone: zoneId, x: 0, y: 0 });
+
+  const myIndex = Math.max(0, currentPlayers.findIndex((p) => p.id === socket.id));
+  const marks = act.playerMarks || [];
+  const myMark = marks.length ? marks[myIndex % marks.length] : null;
+
+  const canvas = document.getElementById("explore-canvas");
+  await Overworld.init({
+    startZone: zoneId,
+    canvas,
+    socket,
+    mapUrl: act.mapUrl,
+    myGender: state.myGender,
+    myColor: state.myColor,
+    myName: (currentPlayers.find((p) => p.id === socket.id) || {}).name || "",
+    spawnIndex: myIndex,
+    collectedIds: [],
+  });
+
+  Overworld.resize();
+  Overworld.setRoster(currentPlayers || [], socket.id);
+  Overworld.start();
+
+  Overworld.beginStagedScene({
+    myMark,
+    actors: act.actors || [],
+    onArrived: () => {
+      playScriptedDialogue(act.dialogue || [], () => finishStagedScene(act));
+    },
+  });
+
+  // TILE is 16px in overworld.js's internal grid - matched here so other
+  // clients see us standing at the right mark too, same as any ordinary
+  // player:move broadcast.
+  if (myMark) {
+    socket.emit("player:move", { x: myMark[0] * 16 + 8, y: myMark[1] * 16 + 8, dir: "up", moving: false });
+  }
+}
+
+function finishStagedScene(act) {
+  if (act.fadeOut) {
+    const overlay = document.getElementById("cutscene-fade-overlay");
+    overlay.classList.add("visible");
+    setTimeout(() => showStagedSceneReadyButton(), 900);
+  } else {
+    showStagedSceneReadyButton();
+  }
+}
+
+function showStagedSceneReadyButton() {
+  const btn = document.createElement("button");
+  btn.id = "staged-scene-ready-btn";
+  btn.className = "btn btn-primary cutscene-continue-btn";
+  btn.textContent = "I'm Ready. Continue";
+  btn.onclick = () => {
+    btn.disabled = true;
+    btn.textContent = "Waiting for the rest of the table...";
+    socket.emit("act:acknowledgeReveal");
+  };
+  document.body.appendChild(btn);
+}
+
 window.addEventListener("resize", () => {
   if (!document.getElementById("explore-frame").classList.contains("hidden")) {
     Overworld.resize();
@@ -859,11 +943,73 @@ function setupPagination(containerId, lines, className) {
 }
 
 document.getElementById("vn-continue-indicator").addEventListener("click", () => {
+  if (inScriptedDialogue) {
+    advanceScriptedDialogue();
+    return;
+  }
   if (vnPageIndex < vnPages.length - 1) {
     vnPageIndex += 1;
     showVnPage(vnPageIndex);
   }
 });
+
+// --- Scripted multi-speaker dialogue (staged scenes) ---
+// Reuses the same VN panel as ordinary NPC dialogue, but each page can
+// have its own speaker name and portrait (Thorne, narration, Voss...)
+// instead of one fixed speaker for the whole conversation. Text overflow
+// still paginates internally per line via setupPagination/showVnPage;
+// this only decides when to move to the *next scripted line* once a
+// line's own internal pages are exhausted.
+let inScriptedDialogue = false;
+let scriptedDialoguePages = [];
+let scriptedDialogueIndex = 0;
+let scriptedDialogueOnComplete = null;
+
+function playScriptedDialogue(pages, onComplete) {
+  if (!pages || !pages.length) {
+    if (onComplete) onComplete();
+    return;
+  }
+  inScriptedDialogue = true;
+  scriptedDialoguePages = pages;
+  scriptedDialogueIndex = 0;
+  scriptedDialogueOnComplete = onComplete;
+
+  document.getElementById("vn-dialogue-set").classList.remove("hidden");
+  document.getElementById("vn-document-set").classList.add("hidden");
+  document.getElementById("vn-panel").classList.remove("hidden");
+  document.getElementById("btn-interact").classList.add("hidden");
+  document.getElementById("btn-close-vn").classList.add("hidden"); // mandatory beat, no early dismiss
+  showScriptedDialoguePage(0);
+}
+
+function showScriptedDialoguePage(i) {
+  const page = scriptedDialoguePages[i];
+  document.getElementById("dialogue-title").textContent = page.speaker || "";
+  setVnPortrait({ portrait: page.portrait || null });
+  setupPagination("dialogue-lines", [page.text || ""], "dialogue-line");
+  document.getElementById("vn-continue-indicator").classList.remove("hidden");
+}
+
+function advanceScriptedDialogue() {
+  if (vnPageIndex < vnPages.length - 1) {
+    vnPageIndex += 1;
+    showVnPage(vnPageIndex);
+    document.getElementById("vn-continue-indicator").classList.remove("hidden");
+    return;
+  }
+  scriptedDialogueIndex += 1;
+  if (scriptedDialogueIndex >= scriptedDialoguePages.length) {
+    inScriptedDialogue = false;
+    document.getElementById("vn-panel").classList.add("hidden");
+    document.getElementById("btn-close-vn").classList.remove("hidden");
+    const cb = scriptedDialogueOnComplete;
+    scriptedDialogueOnComplete = null;
+    if (cb) cb();
+    return;
+  }
+  showScriptedDialoguePage(scriptedDialogueIndex);
+}
 
 function openDialogueModal(title, lines, obj) {
   document.getElementById("vn-dialogue-set").classList.remove("hidden");

@@ -374,7 +374,7 @@
       {
         "key": "ashgate",
         "name": "Lady Isobel Ashgate",
-        "sprite": "/assets/npcs/portraits/ashgate_portrait.png"
+        "sprite": "/assets/npcs/portraits/ashgate_fancy.png"
       },
       {
         "key": "reyes",
@@ -384,7 +384,7 @@
       {
         "key": "maid",
         "name": "The Lady's Maid",
-        "sprite": "/assets/npcs/portraits/citizen6_portrait.png"
+        "sprite": "/assets/npcs/portraits/citizen6.png"
       }
     ],
     "correctSet": [

@@ -180,5 +180,19 @@
       "cols": 6,
       "rows": 4
     }
+  },
+  "guard": {
+    "idle": {
+      "src": "/assets/npcs/looks/guard_idle.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/guard_walk.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    }
   }
 }

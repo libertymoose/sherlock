@@ -128,6 +128,18 @@ function buildActPayloadForPlayer(room, socketId) {
     return { ...base, pages: act.pages || [], fadeOut: !!act.fadeOut, singlePage: !!act.singlePage };
   }
 
+  if (act.type === "staged_scene") {
+    return {
+      ...base,
+      mapUrl: act.mapUrl,
+      zone: act.zone,
+      playerMarks: act.playerMarks || [],
+      actors: act.actors || [],
+      dialogue: act.dialogue || [],
+      fadeOut: !!act.fadeOut,
+    };
+  }
+
   if (act.type === "final") {
     return { ...base, body: act.body, finalWord: act.finalWord };
   }
@@ -214,7 +226,7 @@ function emitProgress(code) {
   if (!room) return;
   const act = STORY.acts[room.actIndex];
   if (!act) return;
-  const totalPlayers = Object.keys(room.players).length;
+  const totalPlayers = connectedPlayerCount(room);
 
   if (act.type === "puzzle_individual") {
     const solvedCount = Object.keys(room.actState.solvedBy || {}).length;
@@ -224,7 +236,7 @@ function emitProgress(code) {
       total: totalPlayers,
       threshold: act.completionThreshold || 1.0,
     });
-  } else if (act.type === "reveal" || act.type === "cutscene") {
+  } else if (act.type === "reveal" || act.type === "cutscene" || act.type === "staged_scene") {
     const ackCount = Object.keys(room.actState.ackBy || {}).length;
     io.to(code).emit("act:progress", {
       kind: "reveal",
@@ -261,6 +273,89 @@ function normalize(str) {
 function getInventory(room, socketId) {
   if (!room.inventories[socketId]) room.inventories[socketId] = [];
   return room.inventories[socketId];
+}
+
+// Every group-progress gate (cutscene/reveal acks, puzzle thresholds, the
+// Evidence Room ready vote, suspect board submission) needs a headcount of
+// the party. room.players never drops an entry on disconnect - only marks
+// connected:false, so a reconnect can restore it - so counting every key
+// there means one dropped connection that never comes back permanently
+// blocks every single one of these gates for everyone else, forever. This
+// counts only players actually here right now.
+function connectedPlayerCount(room) {
+  return Object.values(room.players).filter((p) => p.connected !== false).length;
+}
+
+// Shared between the actual "Submit to Captain Thorne" click and a
+// disconnect that happens to complete a unanimous vote (see
+// recheckGroupThreshold below) - same evaluation either way.
+function evaluateBoardSubmit(room, code) {
+  const correctSet = (INTERACTIONS.suspectBoard && INTERACTIONS.suspectBoard.correctSet) || [];
+  const zone = room.actState.boardZone;
+
+  let message;
+  let correct = false;
+
+  if (zone.length < correctSet.length) {
+    message = "\"I think we're missing someone. Look again.\"";
+  } else if (zone.length > correctSet.length) {
+    message = "\"That's too many. Narrow it down, not everyone with a grudge is a killer.\"";
+  } else {
+    const zoneSet = new Set(zone);
+    const isExact = correctSet.every((k) => zoneSet.has(k));
+    if (isExact) {
+      correct = true;
+    } else {
+      message = "\"Something's off here. Reconsider what you've actually got evidence for.\"";
+    }
+  }
+
+  if (correct) {
+    room.actState.solvedClues["suspect_board"] = true;
+    io.to(code).emit("board:result", { correct: true });
+    setTimeout(() => advanceAct(code), 2500);
+  } else {
+    room.actState.ackBy = {};
+    io.to(code).emit("board:result", { correct: false, message });
+  }
+}
+
+// A dropped connection changes the denominator every group-progress gate
+// checks against (see connectedPlayerCount). If the remaining connected
+// players had already all clicked through and the one holdout was the
+// player who just disconnected, nobody else has anything left to click -
+// their buttons are already disabled and waiting - so without this,
+// the party stays stuck until that specific player comes back, even
+// though everyone actually present already agreed. Called after any
+// disconnect or explicit leave to catch that case immediately.
+function recheckGroupThreshold(room, code) {
+  const act = STORY.acts[room.actIndex];
+  if (!act || !room.actState) return;
+  const totalPlayers = connectedPlayerCount(room);
+  if (totalPlayers <= 0) return;
+
+  if (act.type === "reveal" || act.type === "cutscene" || act.type === "staged_scene") {
+    const ackCount = Object.keys(room.actState.ackBy || {}).length;
+    if (ackCount >= totalPlayers) advanceAct(code);
+  } else if (act.type === "puzzle_individual") {
+    const solvedCount = Object.keys(room.actState.solvedBy || {}).length;
+    const threshold = act.completionThreshold || 1.0;
+    if (solvedCount > 0 && solvedCount / totalPlayers >= threshold) {
+      setTimeout(() => advanceAct(code), 1500);
+    }
+  } else if (act.type === "explore" && act.completionMode === "evidence") {
+    const ackCount = Object.keys(room.actState.ackBy || {}).length;
+    if (ackCount > 0 && room.evidence.length >= act.completionCount && ackCount >= totalPlayers) {
+      io.to(code).emit("evidenceRoom:readyProgress", { ready: ackCount, total: totalPlayers });
+      advanceAct(code);
+    }
+  } else if (act.type === "evidence_room") {
+    const ackCount = Object.keys(room.actState.ackBy || {}).length;
+    if (ackCount > 0 && ackCount >= totalPlayers) {
+      io.to(code).emit("board:submitProgress", { ready: ackCount, total: totalPlayers });
+      evaluateBoardSubmit(room, code);
+    }
+  }
 }
 
 // A page refresh (or any dropped connection) gets a brand new socket.id from
@@ -480,10 +575,10 @@ io.on("connection", (socket) => {
     const room = rooms[code];
     if (!room) return;
     const act = STORY.acts[room.actIndex];
-    if (!act || (act.type !== "reveal" && act.type !== "cutscene")) return;
+    if (!act || (act.type !== "reveal" && act.type !== "cutscene" && act.type !== "staged_scene")) return;
     room.actState.ackBy[socket.id] = true;
     emitProgress(code);
-    const totalPlayers = Object.keys(room.players).length;
+    const totalPlayers = connectedPlayerCount(room);
     if (Object.keys(room.actState.ackBy).length >= totalPlayers) {
       advanceAct(code);
     }
@@ -523,7 +618,7 @@ io.on("connection", (socket) => {
       room.actState.solvedBy[socket.id] = true;
       emitProgress(code);
 
-      const totalPlayers = Object.keys(room.players).length;
+      const totalPlayers = connectedPlayerCount(room);
       const solvedCount = Object.keys(room.actState.solvedBy).length;
       const threshold = act.completionThreshold || 1.0;
       if (solvedCount / totalPlayers >= threshold) {
@@ -734,7 +829,7 @@ io.on("connection", (socket) => {
     if (room.evidence.length < act.completionCount) return;
 
     room.actState.ackBy[socket.id] = true;
-    const totalPlayers = Object.keys(room.players).length;
+    const totalPlayers = connectedPlayerCount(room);
     const ackCount = Object.keys(room.actState.ackBy).length;
     io.to(code).emit("evidenceRoom:readyProgress", { ready: ackCount, total: totalPlayers });
     if (ackCount >= totalPlayers) {
@@ -767,7 +862,7 @@ io.on("connection", (socket) => {
     // needs a fresh, unanimous look at whatever the board is now.
     if (changed && Object.keys(room.actState.ackBy).length) {
       room.actState.ackBy = {};
-      io.to(code).emit("board:submitProgress", { ready: 0, total: Object.keys(room.players).length });
+      io.to(code).emit("board:submitProgress", { ready: 0, total: connectedPlayerCount(room) });
     }
 
     io.to(code).emit("board:state", { zone: room.actState.boardZone });
@@ -787,39 +882,12 @@ io.on("connection", (socket) => {
     if (!act || act.type !== "evidence_room") return;
 
     room.actState.ackBy[socket.id] = true;
-    const totalPlayers = Object.keys(room.players).length;
+    const totalPlayers = connectedPlayerCount(room);
     const ackCount = Object.keys(room.actState.ackBy).length;
     io.to(code).emit("board:submitProgress", { ready: ackCount, total: totalPlayers });
     if (ackCount < totalPlayers) return;
 
-    const correctSet = (INTERACTIONS.suspectBoard && INTERACTIONS.suspectBoard.correctSet) || [];
-    const zone = room.actState.boardZone;
-
-    let message;
-    let correct = false;
-
-    if (zone.length < correctSet.length) {
-      message = "\"I think we're missing someone. Look again.\"";
-    } else if (zone.length > correctSet.length) {
-      message = "\"That's too many. Narrow it down, not everyone with a grudge is a killer.\"";
-    } else {
-      const zoneSet = new Set(zone);
-      const isExact = correctSet.every((k) => zoneSet.has(k));
-      if (isExact) {
-        correct = true;
-      } else {
-        message = "\"Something's off here. Reconsider what you've actually got evidence for.\"";
-      }
-    }
-
-    if (correct) {
-      room.actState.solvedClues["suspect_board"] = true;
-      io.to(code).emit("board:result", { correct: true });
-      setTimeout(() => advanceAct(code), 2500);
-    } else {
-      room.actState.ackBy = {};
-      io.to(code).emit("board:result", { correct: false, message });
-    }
+    evaluateBoardSubmit(room, code);
   });
 
   // A deliberate "not you" / "start a different game" click, distinct from
@@ -849,6 +917,7 @@ io.on("connection", (socket) => {
     socket.leave(`${code}:${zone}`);
     socket.data.roomCode = null;
     broadcastRoomState(code);
+    recheckGroupThreshold(room, code);
   });
 
   socket.on("disconnect", () => {
@@ -861,6 +930,7 @@ io.on("connection", (socket) => {
       const zone = room.players[socket.id].zone || "estate";
       socket.to(`${code}:${zone}`).emit("zone:playerLeft", { id: socket.id });
       broadcastRoomState(code);
+      recheckGroupThreshold(room, code);
     }
 
     // If they were mid-hold on a pressure plate when they dropped, let go

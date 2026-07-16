@@ -33,33 +33,69 @@
       "intro": "Everything you've found is laid out across the desk. Review it all, then work out together who actually belongs on the Suspect Board.\n\nYou can go back and forth between the two as much as you need, submit to Captain Thorne once the table agrees."
     },
     {
-      "type": "cutscene",
+      "type": "staged_scene",
       "chapter": 1,
       "title": "Means and Opportunity, Interrupted",
-      "fadeOut": true,
-      "singlePage": true,
-      "pages": [
+      "mapUrl": "/assets/maps/manor_upper.json",
+      "zone": "manor_upper_scene",
+      "playerMarks": [[14,9],[15,10],[14,10],[15,11],[14,11],[14,12]],
+      "actors": [
+        {
+          "id": "voss_entry",
+          "look": "fighter4",
+          "name": "Commodore Voss",
+          "portrait": "/assets/npcs/portraits/Fighter4_Portrait.png",
+          "from": [7,12],
+          "to": [16,12],
+          "facing": "up"
+        },
+        {
+          "id": "guard_a",
+          "look": "guard",
+          "name": "City Watch Guard",
+          "portrait": null,
+          "from": [7,13],
+          "to": [12,12],
+          "facing": "up"
+        },
+        {
+          "id": "guard_b",
+          "look": "guard",
+          "name": "City Watch Guard",
+          "portrait": null,
+          "from": [8,12],
+          "to": [11,12],
+          "facing": "up"
+        }
+      ],
+      "dialogue": [
         {
           "speaker": "Captain Thorne",
+          "portrait": null,
           "text": "Good work. Now we find out which one of them actually had the means, and the opportunity."
         },
         {
           "speaker": "",
+          "portrait": null,
           "text": "You go through it all one more time, right there at the desk, this time asking how, not why."
         },
         {
           "speaker": "Commodore Voss",
+          "portrait": "/assets/npcs/portraits/Fighter4_Portrait.png",
           "text": "Captain! They were the only ones anywhere near the study all night. And I found this among their things."
         },
         {
           "speaker": "",
+          "portrait": null,
           "text": "He holds it up. A blade, dark at the edge. Thorne's face goes still."
         },
         {
           "speaker": "Captain Thorne",
+          "portrait": null,
           "text": "I gave you a chance. Take them down to the cells."
         }
-      ]
+      ],
+      "fadeOut": true
     },
     {
       "type": "explore",

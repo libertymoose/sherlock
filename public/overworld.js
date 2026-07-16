@@ -506,7 +506,52 @@ window.Overworld = (function () {
     return closest;
   }
 
+  // A staged scene (script actors like Voss + guards walking in for a
+  // cutscene beat) takes over movement entirely: the local player is
+  // frozen in place and normal WASD input is ignored while it plays, see
+  // beginStagedScene()/updateStagedScene() below.
+  let stagedScene = null;
+
+  function updateStagedScene(dt) {
+    if (!stagedScene) return;
+    let allArrived = true;
+    stagedScene.actors.forEach((a) => {
+      if (a.arrived) return;
+      a.delayRemaining -= dt * 1000;
+      if (a.delayRemaining > 0) {
+        allArrived = false;
+        return;
+      }
+      a.elapsed += dt * 1000;
+      const t = Math.min(1, a.elapsed / a.duration);
+      a.x = a.fromX + (a.toX - a.fromX) * t;
+      a.y = a.fromY + (a.toY - a.fromY) * t;
+      a.animTimer += dt;
+      if (a.animTimer > 1 / WALK_FPS) {
+        a.animTimer = 0;
+        a.frame++;
+      }
+      if (t >= 1) {
+        a.arrived = true;
+        a.dir = a.restDir || a.dir;
+      } else {
+        allArrived = false;
+      }
+    });
+    if (allArrived && !stagedScene.arrivedFired) {
+      stagedScene.arrivedFired = true;
+      if (stagedScene.onArrived) stagedScene.onArrived();
+    }
+  }
+
   function update(dt) {
+    if (stagedScene) {
+      updateStagedScene(dt);
+      me.moving = false;
+      animClock += dt * 1000;
+      return;
+    }
+
     let dx = 0;
     let dy = 0;
     if (keys["arrowup"] || keys["w"]) dy -= 1;
@@ -953,6 +998,24 @@ window.Overworld = (function () {
       });
     });
 
+    if (stagedScene) {
+      stagedScene.actors.forEach((a) => {
+        drawList.push({
+          y: a.y,
+          draw: () => {
+            const look = NPC_MANIFEST[a.look];
+            if (!look) return;
+            const moving = a.delayRemaining <= 0 && !a.arrived;
+            const frameSet = moving ? look.walk : look.idle;
+            const img = getImg(frameSet.src);
+            const dirRow = NPC_DIR_ROW[a.dir] ?? 0;
+            const pos = drawFrame(img, frameSet, dirRow, moving ? a.frame : 0, a.x, a.y, camX, camY, WORLD_CHAR_SIZE);
+            if (pos) drawNameLabel(a.name, pos.x, pos.y);
+          },
+        });
+      });
+    }
+
     drawList.sort((a, b) => a.y - b.y);
     // Each entry isolated on purpose: without this, one item throwing (a
     // broken NPC sprite, most plausibly) aborts the whole forEach immediately,
@@ -1078,6 +1141,56 @@ window.Overworld = (function () {
       return mapData;
     },
 
+    // Takes over the scene for a scripted beat (Voss + guards walking in
+    // for "Means and Opportunity, Interrupted"): freezes the local player
+    // at a fixed mark instead of letting them walk around, and animates
+    // each entry in `actors` walking from its `from` tile to its `to` tile
+    // over `duration` ms (staggered by `delayMs` so they don't all arrive
+    // in lockstep). Calls onArrived() once every actor has stopped moving.
+    // Positions are set locally only; the caller is responsible for
+    // broadcasting the local player's mark via the normal player:move
+    // event so other clients see them standing in the right spot too.
+    beginStagedScene({ myMark, actors, onArrived }) {
+      if (myMark) {
+        me.x = myMark[0] * TILE + TILE / 2;
+        me.y = myMark[1] * TILE + TILE / 2;
+        me.dir = "up";
+        me.moving = false;
+      }
+
+      stagedScene = {
+        arrivedFired: false,
+        onArrived,
+        actors: (actors || []).map((a, i) => {
+          const fromX = a.from[0] * TILE + TILE / 2;
+          const fromY = a.from[1] * TILE + TILE / 2;
+          const toX = a.to[0] * TILE + TILE / 2;
+          const toY = a.to[1] * TILE + TILE / 2;
+          const ddx = toX - fromX;
+          const ddy = toY - fromY;
+          let dir = "down";
+          if (Math.abs(ddx) > Math.abs(ddy)) dir = ddx > 0 ? "right" : "left";
+          else if (ddy !== 0) dir = ddy > 0 ? "down" : "up";
+          return {
+            id: a.id,
+            look: a.look || "citizen1",
+            name: a.name || "",
+            fromX, fromY, toX, toY,
+            x: fromX,
+            y: fromY,
+            dir,
+            restDir: a.facing || "down",
+            frame: 0,
+            animTimer: 0,
+            elapsed: 0,
+            duration: a.durationMs || 1600,
+            delayRemaining: (a.delayMs != null ? a.delayMs : i * 350) + 500,
+            arrived: false,
+          };
+        }),
+      };
+    },
+
     setRoster(players, myId) {
       players.forEach((p) => {
         if (p.id === myId) return;
@@ -1158,6 +1271,7 @@ window.Overworld = (function () {
 
     stop() {
       running = false;
+      stagedScene = null;
       if (rafId) cancelAnimationFrame(rafId);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
