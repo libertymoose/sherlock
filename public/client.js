@@ -316,6 +316,10 @@ socket.on("act:show", (act) => {
   document.getElementById("cutscene-fade-overlay").classList.remove("visible");
   const strayReadyBtn = document.getElementById("staged-scene-ready-btn");
   if (strayReadyBtn) strayReadyBtn.remove();
+  const strayVideoBtn = document.getElementById("staged-scene-video-btn");
+  if (strayVideoBtn) strayVideoBtn.remove();
+  const strayVideo = document.getElementById("staged-scene-video");
+  if (strayVideo) strayVideo.remove();
 
   const actFrame = document.getElementById("act-frame");
   const exploreFrame = document.getElementById("explore-frame");
@@ -769,21 +773,76 @@ async function enterStagedScene(act) {
   Overworld.setRoster(currentPlayers || [], socket.id);
   Overworld.start();
 
-  Overworld.beginStagedScene({
-    myMark,
-    actors: act.actors || [],
-    onArrived: () => {
-      playScriptedDialogue(act.dialogue || [], () => finishStagedScene(act));
-    },
-  });
-
   // TILE is 16px in overworld.js's internal grid - matched here so other
   // clients see us standing at the right mark too, same as any ordinary
   // player:move broadcast.
   if (myMark) {
     socket.emit("player:move", { x: myMark[0] * 16 + 8, y: myMark[1] * 16 + 8, dir: "up", moving: false });
   }
+
+  if (act.video) {
+    showStagedSceneVideoPrompt(act);
+  } else {
+    Overworld.beginStagedScene({
+      myMark,
+      actors: act.actors || [],
+      onArrived: () => {
+        playScriptedDialogue(act.dialogue || [], () => finishStagedScene(act));
+      },
+    });
+  }
 }
+
+// A real recorded video standing in for the scripted sprite walk-in.
+// Everyone gets teleported to their mark first (above), same as before,
+// then whoever clicks Play triggers it for the whole table at once via the
+// server (stagedScene:playVideo / stagedScene:videoStarted), so nobody
+// watches it out of sync with everyone else.
+function showStagedSceneVideoPrompt(act) {
+  const btn = document.createElement("button");
+  btn.id = "staged-scene-video-btn";
+  btn.className = "btn btn-primary cutscene-continue-btn";
+  btn.textContent = "Play Cutscene";
+  btn.onclick = () => {
+    btn.disabled = true;
+    btn.textContent = "Starting...";
+    socket.emit("stagedScene:playVideo");
+  };
+  document.body.appendChild(btn);
+}
+
+function playStagedSceneVideo(act) {
+  const stray = document.getElementById("staged-scene-video-btn");
+  if (stray) stray.remove();
+
+  const video = document.createElement("video");
+  video.id = "staged-scene-video";
+  video.src = act.video;
+  video.autoplay = true;
+  video.playsInline = true;
+  video.controls = false;
+  video.className = "staged-scene-video";
+
+  const finish = () => {
+    video.remove();
+    playScriptedDialogue(act.dialogue || [], () => finishStagedScene(act));
+  };
+  video.addEventListener("ended", finish);
+  video.addEventListener("error", finish); // don't strand the party if the file 404s
+  document.body.appendChild(video);
+  video.play().catch(() => {
+    // Autoplay blocked (rare with a prior user gesture from the Play
+    // button click, but browsers vary) - show a manual play control instead
+    // of silently doing nothing.
+    video.controls = true;
+  });
+}
+
+socket.on("stagedScene:videoStarted", () => {
+  if (currentAct && currentAct.type === "staged_scene" && currentAct.video) {
+    playStagedSceneVideo(currentAct);
+  }
+});
 
 function finishStagedScene(act) {
   if (act.fadeOut) {

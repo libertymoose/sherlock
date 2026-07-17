@@ -153,6 +153,7 @@ function buildActPayloadForPlayer(room, socketId) {
       ...base,
       mapUrl: act.mapUrl,
       zone: act.zone,
+      video: act.video || null,
       playerMarks: act.playerMarks || [],
       actors: act.actors || [],
       dialogue: act.dialogue || [],
@@ -655,6 +656,19 @@ io.on("connection", (socket) => {
     room.actState = { solvedBy: {}, ackBy: {} };
     broadcastRoomState(code);
     io.to(code).emit("game:reset");
+  });
+
+  // Elle records the walk-in as a real video rather than a scripted sprite
+  // animation. Whoever clicks Play first triggers it for the whole room at
+  // once (guarded so a second click can't restart it for everyone else
+  // mid-watch).
+  socket.on("stagedScene:playVideo", () => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !room.actState) return;
+    if (room.actState.videoStarted) return;
+    room.actState.videoStarted = true;
+    io.to(code).emit("stagedScene:videoStarted");
   });
 
   socket.on("act:acknowledgeReveal", () => {

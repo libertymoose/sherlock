@@ -6287,7 +6287,7 @@
     },
     {
       "id": "ev_ashby_cupboard",
-      "name": "A Locked Cupboard",
+      "name": "A Cupboard",
       "x": 15,
       "y": 16,
       "interaction": {

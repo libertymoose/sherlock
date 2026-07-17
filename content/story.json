@@ -38,43 +38,44 @@
       "title": "Means and Opportunity, Interrupted",
       "mapUrl": "/assets/maps/manor_upper.json",
       "zone": "manor_upper",
-      "playerMarks": [[11,7],[12,7],[11,8],[12,8],[15,8],[16,8]],
+      "video": null,
+      "playerMarks": [[11,12],[12,12],[13,12],[16,12],[17,12],[18,12]],
       "actors": [
         {
           "id": "captain_thorne",
           "look": "guildmaster",
           "name": "Captain Thorne",
           "portrait": null,
-          "from": [17,8],
-          "to": [17,8],
-          "facing": "left"
+          "from": [15,8],
+          "to": [15,8],
+          "facing": "down"
         },
         {
           "id": "voss_entry",
           "look": "fighter4",
           "name": "Commodore Voss",
           "portrait": "/assets/npcs/portraits/Fighter4_Portrait.png",
-          "from": [19,9],
-          "to": [18,7],
-          "facing": "left"
+          "from": [15,15],
+          "to": [15,13],
+          "facing": "up"
         },
         {
           "id": "guard_a",
           "look": "guard",
           "name": "City Watch Guard",
           "portrait": null,
-          "from": [19,9],
-          "to": [19,7],
-          "facing": "left"
+          "from": [13,15],
+          "to": [13,13],
+          "facing": "up"
         },
         {
           "id": "guard_b",
           "look": "guard",
           "name": "City Watch Guard",
           "portrait": null,
-          "from": [19,9],
-          "to": [19,8],
-          "facing": "left"
+          "from": [17,15],
+          "to": [17,13],
+          "facing": "up"
         }
       ],
       "dialogue": [
