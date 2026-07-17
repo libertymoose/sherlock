@@ -473,14 +473,21 @@ window.Overworld = (function () {
     if (mapData.collision[ty][tx] === 1) return true;
 
     // Barriers are tile rects that are only passable while their linked
-    // animation zone is fully open, used for things like the jail windows:
-    // solid until a pressure plate elsewhere opens them, solid again the
-    // moment that zone starts closing.
+    // animation zone is open (or opening), used for things like the jail
+    // windows: solid until a pressure plate elsewhere opens them, solid
+    // again the moment that zone starts closing. Deliberately checking
+    // "opening" as walkable too, not just "open": the phase only actually
+    // advances to "open" as a side effect of that zone's door tile being
+    // drawn on someone's screen (see currentGidFor). If the tile that
+    // would trigger that happens to be off every connected player's
+    // camera at that moment, it never advances and this would otherwise
+    // block forever even though the plate is genuinely being held.
     if (mapData.barriers) {
       for (const b of mapData.barriers) {
         if (tx >= b.x0 && tx < b.x1 && ty >= b.y0 && ty < b.y1) {
           const state = zoneStates[b.animZoneId];
-          if (!state || state.phase !== "open") return true;
+          const openIntent = state && (state.phase === "open" || state.phase === "opening");
+          if (!openIntent) return true;
         }
       }
     }

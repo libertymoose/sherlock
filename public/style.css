@@ -508,6 +508,21 @@ input[type="text"]:focus {
   z-index: 550;
 }
 
+.staged-scene-next-act-label {
+  position: fixed;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  z-index: 600;
+  color: var(--candle-bright);
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
 .fragment-card {
   background: var(--ink-surface-2);
   border-left: 3px solid var(--candle);

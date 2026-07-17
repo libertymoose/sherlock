@@ -316,6 +316,8 @@ socket.on("act:show", (act) => {
   document.getElementById("cutscene-fade-overlay").classList.remove("visible");
   const strayReadyBtn = document.getElementById("staged-scene-ready-btn");
   if (strayReadyBtn) strayReadyBtn.remove();
+  const strayLabel = document.getElementById("staged-scene-next-act-label");
+  if (strayLabel) strayLabel.remove();
   const strayVideoBtn = document.getElementById("staged-scene-video-btn");
   if (strayVideoBtn) strayVideoBtn.remove();
   const strayVideo = document.getElementById("staged-scene-video");
@@ -848,13 +850,20 @@ function finishStagedScene(act) {
   if (act.fadeOut) {
     const overlay = document.getElementById("cutscene-fade-overlay");
     overlay.classList.add("visible");
-    setTimeout(() => showStagedSceneReadyButton(), 900);
+    setTimeout(() => showStagedSceneReadyButton(act.nextActLabel), 900);
   } else {
-    showStagedSceneReadyButton();
+    showStagedSceneReadyButton(act.nextActLabel);
   }
 }
 
-function showStagedSceneReadyButton() {
+function showStagedSceneReadyButton(nextActLabel) {
+  if (nextActLabel) {
+    const title = document.createElement("div");
+    title.id = "staged-scene-next-act-label";
+    title.className = "staged-scene-next-act-label";
+    title.textContent = nextActLabel;
+    document.body.appendChild(title);
+  }
   const btn = document.createElement("button");
   btn.id = "staged-scene-ready-btn";
   btn.className = "btn btn-primary cutscene-continue-btn";
