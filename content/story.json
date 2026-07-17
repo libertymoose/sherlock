@@ -24,7 +24,7 @@
       "intro": "Walk the grounds and talk to everyone: guests, suspects, staff. Most people here have nothing to hide. A few do. Pick up whatever you find and bring it back to the Evidence Table, every piece matters. Once you've got it all, Captain Thorne wants everyone up in the study.",
       "completionMode": "evidence",
       "completionCount": 7,
-      "onEvidenceCompleteMessage": "Captain Thorne finds you. \"Right, that's everything. I'm commandeering poor Alaric's office, he won't be needing it any time soon, and it gives us somewhere to go through what we've got properly. Head upstairs when you're ready to go through the evidence.\""
+      "onEvidenceCompleteMessage": "Captain Thorne finds you. \"Good, you've found everything there is to find out here. I'm commandeering poor Alaric's office, he won't be needing it any time soon, and it gives us somewhere to go through what we've got properly. Head upstairs when you're ready to go through the evidence.\""
     },
     {
       "type": "evidence_room",
@@ -37,35 +37,44 @@
       "chapter": 1,
       "title": "Means and Opportunity, Interrupted",
       "mapUrl": "/assets/maps/manor_upper.json",
-      "zone": "manor_upper_scene",
-      "playerMarks": [[14,9],[15,10],[14,10],[15,11],[14,11],[14,12]],
+      "zone": "manor_upper",
+      "playerMarks": [[11,7],[12,7],[11,8],[12,8],[15,8],[16,8]],
       "actors": [
+        {
+          "id": "captain_thorne",
+          "look": "guildmaster",
+          "name": "Captain Thorne",
+          "portrait": null,
+          "from": [17,8],
+          "to": [17,8],
+          "facing": "left"
+        },
         {
           "id": "voss_entry",
           "look": "fighter4",
           "name": "Commodore Voss",
           "portrait": "/assets/npcs/portraits/Fighter4_Portrait.png",
-          "from": [7,12],
-          "to": [16,12],
-          "facing": "up"
+          "from": [19,9],
+          "to": [18,7],
+          "facing": "left"
         },
         {
           "id": "guard_a",
           "look": "guard",
           "name": "City Watch Guard",
           "portrait": null,
-          "from": [7,13],
-          "to": [12,12],
-          "facing": "up"
+          "from": [19,9],
+          "to": [19,7],
+          "facing": "left"
         },
         {
           "id": "guard_b",
           "look": "guard",
           "name": "City Watch Guard",
           "portrait": null,
-          "from": [8,12],
-          "to": [11,12],
-          "facing": "up"
+          "from": [19,9],
+          "to": [19,8],
+          "facing": "left"
         }
       ],
       "dialogue": [

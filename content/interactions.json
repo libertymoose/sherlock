@@ -341,7 +341,14 @@
     "type": "document",
     "title": "The Hidden Diary",
     "intro": "Buried beneath a loose stone: a diary, half in plain hand, half in a simple lover's code.",
-    "closing": "One entry reads: 'He waits for me where the old boathouse used to stand, past the willow, where no one from the house ever walks after dark.' Whoever she's meeting, she's gone to real trouble to avoid naming him.",
+    "list": [
+      "\"He held my hand under the table at supper and I nearly dropped the whole tray. I don't think anyone saw. I hope no one saw.\"",
+      "\"I know how it looks, a maid and a Watchman. I don't care anymore. Let them look.\"",
+      "\"He says he could lose his post over this, if the wrong person noticed. I told him I didn't care about that either. That part's a lie. I care very much.\"",
+      "(decoded) \"He waits for me where the old boathouse used to stand, past the willow, where no one from the house ever walks after dark. Same as every night the bells fall quiet, R. always knows when it's safe.\"",
+      "\"If anyone ever finds this diary I will simply die. Burying it deeper tonight.\""
+    ],
+    "closing": "Whoever she's meeting, she's gone to real trouble to avoid naming him outright, except for one slip. 'The bells fall quiet' and the initial 'R.' both point somewhere specific, if you know where else to look.",
     "itemId": "diary_maid"
   },
   "evidence_table": {

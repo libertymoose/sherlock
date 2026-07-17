@@ -11,6 +11,43 @@ window.Overworld = (function () {
   // Ground rendering now comes from mapData.tilesets + mapData.layers (a real
   // Tiled export), resolved once at load time in loadMap(). See resolveLayers().
 
+  // Tiled stores horizontal/vertical/diagonal flip as the top 3 bits of the
+  // 32-bit gid. A gid with any of these set will always be way outside every
+  // tileset's firstgid/lastgid range, so without stripping them first, any
+  // flipped tile silently fails every tileset lookup and never renders at
+  // all (not just unflipped - genuinely invisible). Using plain arithmetic
+  // rather than JS's `&` bitwise operator here deliberately: bitwise ops
+  // coerce to 32-bit *signed* ints, and FLIP_H_BIT alone (2147483648)
+  // already exceeds INT32_MAX, so `gid & mask` silently produces the wrong
+  // answer for exactly the gids this needs to handle correctly.
+  const FLIP_H_BIT = 0x80000000;
+  const FLIP_V_BIT = 0x40000000;
+  const FLIP_D_BIT = 0x20000000;
+  function stripFlip(rawGid) {
+    let g = rawGid;
+    let h = false, v = false;
+    if (g >= FLIP_H_BIT) { h = true; g -= FLIP_H_BIT; }
+    if (g >= FLIP_V_BIT) { v = true; g -= FLIP_V_BIT; }
+    if (g >= FLIP_D_BIT) { g -= FLIP_D_BIT; } // diagonal flip not used by any current map, gid still needs stripping
+    return { gid: g, hFlip: h, vFlip: v };
+  }
+
+  // Draws one tile-sized source region, optionally mirrored. Every call site
+  // that draws a resolved map tile goes through this so flipped and
+  // unflipped tiles are handled identically rather than duplicating the
+  // save/scale/restore dance at each draw call.
+  function drawTile(destCtx, img, sx, sy, srcSize, dx, dy, drawSize, hFlip, vFlip) {
+    if (!hFlip && !vFlip) {
+      destCtx.drawImage(img, sx, sy, srcSize, srcSize, dx, dy, drawSize, drawSize);
+      return;
+    }
+    destCtx.save();
+    destCtx.translate(dx + drawSize / 2, dy + drawSize / 2);
+    destCtx.scale(hFlip ? -1 : 1, vFlip ? -1 : 1);
+    destCtx.drawImage(img, sx, sy, srcSize, srcSize, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
+    destCtx.restore();
+  }
+
   let canvas, ctx;
   let socket = null;
   let mapData = null;
@@ -314,7 +351,7 @@ window.Overworld = (function () {
       const bctx = canvas.getContext("2d");
       bctx.imageSmoothingEnabled = false;
       currentBatch.forEach((c) => {
-        bctx.drawImage(c.img, c.sx, c.sy, TILE, TILE, c.x * TILE, c.y * TILE, TILE, TILE);
+        drawTile(bctx, c.img, c.sx, c.sy, TILE, c.x * TILE, c.y * TILE, TILE, c.hFlip, c.vFlip);
       });
       floorSegments.push({ type: "static", canvas });
       currentBatch = [];
@@ -356,35 +393,37 @@ window.Overworld = (function () {
       if (layer.dense) {
         const w = mapData.width;
         for (let i = 0; i < layer.data.length; i++) {
-          const gid = layer.data[i];
-          if (!gid) continue;
+          const rawGid = layer.data[i];
+          if (!rawGid) continue;
+          const { gid, hFlip, vFlip } = stripFlip(rawGid);
           const x = i % w, y = Math.floor(i / w);
           if (layer.kind === "floor" && isAnimatedLayer(gid)) {
-            layerAnimatedCells.push({ x, y, gid, layer, index: i });
+            layerAnimatedCells.push({ x, y, gid, hFlip, vFlip, layer, index: i });
             continue;
           }
           const r = resolveGid(gid);
           if (!r) continue;
           if (layer.kind === "floor") {
-            currentBatch.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy });
+            currentBatch.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy, hFlip, vFlip });
             continue;
           }
           const sortRow = bottomOfRun ? bottomOfRun[i] : y;
-          cells.push({ x, y, sortRow, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, layer, index: i, animated: !!isAnimatedLayer(gid) });
+          cells.push({ x, y, sortRow, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, hFlip, vFlip, layer, index: i, animated: !!isAnimatedLayer(gid) });
         }
       } else {
-        layer.cells.forEach(([x, y, gid], idx) => {
+        layer.cells.forEach(([x, y, rawGid], idx) => {
+          const { gid, hFlip, vFlip } = stripFlip(rawGid);
           if (layer.kind === "floor" && isAnimatedLayer(gid)) {
-            layerAnimatedCells.push({ x, y, gid, layer, index: idx });
+            layerAnimatedCells.push({ x, y, gid, hFlip, vFlip, layer, index: idx });
             return;
           }
           const r = resolveGid(gid);
           if (!r) return;
           if (layer.kind === "floor") {
-            currentBatch.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy });
+            currentBatch.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy, hFlip, vFlip });
             return;
           }
-          cells.push({ x, y, sortRow: y, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, layer, index: idx, animated: !!isAnimatedLayer(gid) });
+          cells.push({ x, y, sortRow: y, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, hFlip, vFlip, layer, index: idx, animated: !!isAnimatedLayer(gid) });
         });
       }
 
@@ -683,6 +722,7 @@ window.Overworld = (function () {
       if (plate && callbacks.onPlateEnter) {
         callbacks.onPlateEnter({
           id: plate.id,
+          cellId: plate.cellId,
           targetDoorZoneId: plate.targetDoorZoneId,
           selfDoorZoneId: plate.selfDoorZoneId,
         });
@@ -914,7 +954,7 @@ window.Overworld = (function () {
           if (!r) continue;
           const dx = Math.round(cell.x * scaledTile - camX);
           const dy = Math.round(cell.y * scaledTile - camY);
-          ctx.drawImage(getImg(r.src), r.sx, r.sy, TILE, TILE, dx, dy, scaledTile, scaledTile);
+          drawTile(ctx, getImg(r.src), r.sx, r.sy, TILE, dx, dy, scaledTile, cell.hFlip, cell.vFlip);
         }
       }
     }
@@ -937,13 +977,13 @@ window.Overworld = (function () {
               const curGid = currentGidFor(cell.gid, cell.layer, cell.index);
               const r = resolveGid(curGid);
               if (!r) return;
-              ctx.drawImage(getImg(r.src), r.sx, r.sy, TILE, TILE, dx, dy, scaledTile, scaledTile);
+              drawTile(ctx, getImg(r.src), r.sx, r.sy, TILE, dx, dy, scaledTile, cell.hFlip, cell.vFlip);
             },
           });
         } else {
           drawList.push({
             y: cell.sortRow * TILE + TILE,
-            draw: () => ctx.drawImage(cell.img, cell.sx, cell.sy, TILE, TILE, dx, dy, scaledTile, scaledTile),
+            draw: () => drawTile(ctx, cell.img, cell.sx, cell.sy, TILE, dx, dy, scaledTile, cell.hFlip, cell.vFlip),
           });
         }
       }
@@ -1168,7 +1208,7 @@ window.Overworld = (function () {
           const toY = a.to[1] * TILE + TILE / 2;
           const ddx = toX - fromX;
           const ddy = toY - fromY;
-          let dir = "down";
+          let dir = a.facing || "down";
           if (Math.abs(ddx) > Math.abs(ddy)) dir = ddx > 0 ? "right" : "left";
           else if (ddy !== 0) dir = ddy > 0 ? "down" : "up";
           return {

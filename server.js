@@ -26,6 +26,26 @@ const ITEMS = JSON.parse(
   fs.readFileSync(path.join(__dirname, "content", "items.json"), "utf8")
 );
 
+// Most map data (tile layers, art) only ever matters to the client. Plate/door
+// chaining is the one exception - the server needs to know each pressure
+// plate's cellId and the full spawnPoints list to work out which cells are
+// actually occupied for a given party size (see computeDungeonChain below).
+// Loaded from disk on first use per mapUrl and cached, not reloaded per room.
+const mapDataCache = {};
+function loadMapData(mapUrl) {
+  if (!mapUrl) return null;
+  if (mapDataCache[mapUrl]) return mapDataCache[mapUrl];
+  try {
+    const filePath = path.join(__dirname, "public", mapUrl.replace(/^\//, ""));
+    const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    mapDataCache[mapUrl] = data;
+    return data;
+  } catch (e) {
+    console.error("Failed to load map data for", mapUrl, e.message);
+    return null;
+  }
+}
+
 const app = express();
 // Railway's edge CDN caches static assets by default whenever the origin
 // sends no Cache-Control header at all, independent of anyone's browser
@@ -186,6 +206,12 @@ function buildActPayloadForPlayer(room, socketId) {
       // particular client connected) needs to be listed explicitly or it'll
       // visually reappear the moment this player loads or re-loads a zone.
       collectedPickups: Object.keys(room.collectedPickups || {}),
+      // Authoritative here rather than left for the client to derive from
+      // its own copy of the player list, specifically so it always agrees
+      // with computeDungeonChain's idea of who's in which spawn/cell -
+      // those two disagreeing would mean a player's visual spawn point and
+      // the server's plate/door chain point at different cells.
+      spawnIndex: connectedJoinOrder(room).indexOf(socketId),
     };
   }
 
@@ -213,6 +239,13 @@ function sendActToRoom(code) {
     solvedClues: {},
     boardZone: [],
   };
+  room.dungeonChain = null;
+  room.zonePlates = {};
+
+  if (act && act.type === "explore" && act.mapUrl) {
+    const mapData = loadMapData(act.mapUrl);
+    room.dungeonChain = computeDungeonChain(room, mapData);
+  }
 
   for (const socketId of Object.keys(room.players)) {
     const payload = buildActPayloadForPlayer(room, socketId);
@@ -284,6 +317,60 @@ function getInventory(room, socketId) {
 // counts only players actually here right now.
 function connectedPlayerCount(room) {
   return Object.values(room.players).filter((p) => p.connected !== false).length;
+}
+
+// The stable ordering used for anything that assigns players to fixed slots
+// (spawn points, puzzle fragments): join order, filtered down to whoever's
+// actually still connected, so a disconnected ghost doesn't hold a slot
+// nobody can use.
+function connectedJoinOrder(room) {
+  return (room.joinOrder || []).filter(
+    (id) => room.players[id] && room.players[id].connected !== false
+  );
+}
+
+// The jail cells (and any future map like it) can have more spawn points
+// than the party has players - each cell may hold several spawns, and with
+// a small party some cells end up with nobody in them at all. The plate in
+// an empty cell will never be pressed, so the map's *authored* plate ->
+// door chain (each cell's plate opens the next cell's door) can't be used
+// as-is, or the party gets stuck waiting on a door that depends on an
+// empty room. This recomputes the chain to skip empty cells entirely,
+// wiring each occupied cell's plate directly to the *next occupied* cell's
+// door, wrapping around. Returns { [cellId]: doorZoneId }, or null if this
+// map doesn't have the plate/spawnPoints shape this applies to.
+function computeDungeonChain(room, mapData) {
+  if (!mapData || !mapData.pressurePlates || !mapData.spawnPoints) return null;
+  const order = connectedJoinOrder(room);
+  const spawnPoints = mapData.spawnPoints;
+  if (!spawnPoints.length) return null;
+
+  const occupiedCellIds = new Set();
+  order.forEach((id, i) => {
+    const sp = spawnPoints[i % spawnPoints.length];
+    if (sp && sp.cellId) occupiedCellIds.add(sp.cellId);
+  });
+
+  // Cell order comes from the plates array itself (already authored in
+  // physical left-to-right order during map conversion), filtered to only
+  // the ones actually occupied.
+  const cellOrder = mapData.pressurePlates
+    .map((p) => p.cellId)
+    .filter((id) => occupiedCellIds.has(id));
+
+  if (!cellOrder.length) return null;
+
+  const doorForCell = {};
+  mapData.pressurePlates.forEach((p) => {
+    if (p.cellId) doorForCell[p.cellId] = p.selfDoorZoneId;
+  });
+
+  const chain = {};
+  cellOrder.forEach((cellId, i) => {
+    const nextCellId = cellOrder[(i + 1) % cellOrder.length];
+    chain[cellId] = doorForCell[nextCellId];
+  });
+  return chain;
 }
 
 // Shared between the actual "Submit to Captain Thorne" click and a
@@ -646,18 +733,27 @@ io.on("connection", (socket) => {
   // door open, step off and it shuts immediately. Solo (only one player
   // actually in this zone, e.g. testing alone), there's no one to hold it
   // for you, so it pulses your own door open on a short timer instead.
-  socket.on("plate:enter", ({ zone, plateId, targetDoorZoneId, selfDoorZoneId }) => {
+  socket.on("plate:enter", ({ zone, plateId, cellId, targetDoorZoneId, selfDoorZoneId }) => {
     const code = socket.data.roomCode;
     const room = rooms[code];
     if (!room || !plateId) return;
     const z = zone || "estate";
+
+    // The map authors a default "next cell over" target for every plate,
+    // but that assumes every cell has someone in it. room.dungeonChain
+    // (computed fresh whenever this act started, see sendActToRoom) already
+    // knows which cells are actually occupied for this party size, so it
+    // takes priority whenever it has an answer - falling back to whatever
+    // the client sent only if the chain wasn't computed for some reason.
+    const realTargetDoorZoneId =
+      (room.dungeonChain && cellId && room.dungeonChain[cellId]) || targetDoorZoneId;
 
     const playersHere = Object.values(room.players).filter(
       (p) => p.connected && (p.zone || "estate") === z
     ).length;
 
     if (playersHere <= 1) {
-      const doorId = selfDoorZoneId || targetDoorZoneId;
+      const doorId = selfDoorZoneId || realTargetDoorZoneId;
       if (!doorId) return;
       io.to(`${code}:${z}`).emit("door:state", { doorZoneId: doorId, open: true });
       setTimeout(() => {
@@ -666,11 +762,11 @@ io.on("connection", (socket) => {
       return;
     }
 
-    if (!targetDoorZoneId) return;
+    if (!realTargetDoorZoneId) return;
     if (!room.zonePlates[z]) room.zonePlates[z] = {};
     let plate = room.zonePlates[z][plateId];
     if (!plate) {
-      plate = { holders: new Set(), targetDoorZoneId, selfDoorZoneId };
+      plate = { holders: new Set(), targetDoorZoneId: realTargetDoorZoneId, selfDoorZoneId };
       room.zonePlates[z][plateId] = plate;
     }
     const wasEmpty = plate.holders.size === 0;
@@ -765,6 +861,18 @@ io.on("connection", (socket) => {
 
     io.to(code).emit("map:objectRemoved", { objectId });
     socket.emit("inventory:state", buildInventoryState(room, socket.id));
+
+    // Fires the moment the last piece is actually found out in the field -
+    // whichever player's pocket it's sitting in, whether or not it's been
+    // walked back to the table yet - rather than waiting on someone to
+    // separately place the last exhibit down. Once, ever, per act.
+    if (act.completionMode === "evidence" && act.completionCount) {
+      const totalFound = Object.keys(room.collectedPickups).length;
+      if (totalFound >= act.completionCount && !room.actState.evidenceThorneShown) {
+        room.actState.evidenceThorneShown = true;
+        io.to(code).emit("thorne:message", { text: act.onEvidenceCompleteMessage || "" });
+      }
+    }
   });
 
   socket.on("inventory:requestState", () => {
@@ -801,19 +909,6 @@ io.on("connection", (socket) => {
     socket.emit("inventory:state", buildInventoryState(room, socket.id));
     io.to(code).emit("evidence:state", buildEvidenceState(room));
     emitProgress(code);
-
-    // Evidence-gated acts (the Estate stage) used to auto-advance once every
-    // exhibit was on the table. Now that finding everything just means
-    // Thorne wants the party upstairs, not an automatic scene change, this
-    // fires her line once (never again, even if this handler somehow runs
-    // again) and leaves the actual advance to the ready-vote at the desk.
-    const act = STORY.acts[room.actIndex];
-    if (act && act.type === "explore" && act.completionMode === "evidence" && act.completionCount) {
-      if (room.evidence.length >= act.completionCount && !room.actState.evidenceThorneShown) {
-        room.actState.evidenceThorneShown = true;
-        io.to(code).emit("thorne:message", { text: act.onEvidenceCompleteMessage || "" });
-      }
-    }
   });
 
   // The "ready to review" vote at the Evidence Room desk. Only makes sense

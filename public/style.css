@@ -488,8 +488,14 @@ input[type="text"]:focus {
   position: fixed;
   left: 50%;
   top: 62%;
+  width: auto;
+  min-width: 260px;
+  max-width: min(90vw, 420px);
   transform: translate(-50%, -50%);
   z-index: 600;
+}
+.cutscene-continue-btn:hover {
+  transform: translate(-50%, calc(-50% - 1px));
 }
 
 .fragment-card {

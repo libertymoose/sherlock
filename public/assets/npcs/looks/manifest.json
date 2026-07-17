@@ -194,5 +194,19 @@
       "cols": 12,
       "rows": 4
     }
+  },
+  "guildmaster": {
+    "idle": {
+      "src": "/assets/npcs/looks/guildmaster_idle.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/guildmaster_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
   }
 }

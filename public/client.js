@@ -698,7 +698,7 @@ async function enterExplore(act) {
     myGender: state.myGender,
     myColor: state.myColor,
     myName: (currentPlayers.find((p) => p.id === socket.id) || {}).name || "",
-    spawnIndex: currentPlayers.findIndex((p) => p.id === socket.id),
+    spawnIndex: typeof act.spawnIndex === "number" ? act.spawnIndex : currentPlayers.findIndex((p) => p.id === socket.id),
     collectedIds: act.collectedPickups || [],
     onNearbyChange: (obj) => {
       isNearInteractable = !!obj;
@@ -716,6 +716,7 @@ async function enterExplore(act) {
       socket.emit("plate:enter", {
         zone: Overworld.getZone(),
         plateId: plate.id,
+        cellId: plate.cellId,
         targetDoorZoneId: plate.targetDoorZoneId,
         selfDoorZoneId: plate.selfDoorZoneId,
       });
