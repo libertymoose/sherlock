@@ -163,6 +163,7 @@ window.Overworld = (function () {
     mapData.objects.forEach((o) => { if (o.sprite) srcs.add(o.sprite); });
     if (mapData.objects.some((o) => o.type === "scrap")) srcs.add("/assets/props/paper_scrap.png");
     if (mapData.objects.some((o) => o.type === "table")) srcs.add("/assets/props/evidence_table.png");
+    (mapData.images || []).forEach((img) => srcs.add(img.src));
     await Promise.all([...srcs].map(loadImage));
 
     resolveLayers();
@@ -1018,6 +1019,26 @@ window.Overworld = (function () {
       } else {
         drawList.push({ y: o.y * TILE + TILE, draw: () => drawObjectMarker(o, camX, camY) });
       }
+    });
+
+    (mapData.images || []).forEach((img) => {
+      const img_ = getImg(img.src);
+      if (!img_) return;
+      const worldW = img.width || img_.naturalWidth;
+      const worldH = img.height || img_.naturalHeight;
+      const dx = img.x * RENDER_SCALE - camX;
+      const dy = img.y * RENDER_SCALE - camY;
+      const dw = worldW * RENDER_SCALE;
+      const dh = worldH * RENDER_SCALE;
+      drawList.push({
+        y: img.y + worldH,
+        draw: () => {
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(img_, dx, dy, dw, dh);
+          ctx.restore();
+        },
+      });
     });
 
     drawList.push({

@@ -9935,7 +9935,9 @@
       "y": 13,
       "interaction": {
         "kind": "zone_exit",
-        "targetZone": "dungeon_area_2"
+        "targetZone": "dungeon_area_2",
+        "targetX": 1,
+        "targetY": 5
       }
     }
   ],
@@ -10018,6 +10020,15 @@
       "x": 44,
       "y": 4,
       "cellId": "cell5"
+    }
+  ],
+  "images": [
+    {
+      "src": "/assets/mapsrc/dungeon/graffiti/north_isnt_north_scrawl.png",
+      "x": 603.0833333333334,
+      "y": 141.08333333333334,
+      "width": 102,
+      "height": 23
     }
   ]
 }

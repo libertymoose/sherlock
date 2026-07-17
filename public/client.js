@@ -891,6 +891,7 @@ const ZONE_MAPS = {
   dock_interior: "/assets/maps/dock_interior.json",
   manor_ground: "/assets/maps/manor_ground.json",
   manor_upper: "/assets/maps/manor_upper.json",
+  dungeon_area_2: "/assets/maps/dungeon_area_2.json",
 };
 
 function updateZoneLabel(zoneId) {
