@@ -401,5 +401,35 @@
       "marrow",
       "ashgate"
     ]
+  },
+  "notebook_page_1": {
+    "type": "document",
+    "title": "A Loose Page",
+    "intro": "[PLACEHOLDER: content not written yet - this is a stand-in so interacting shows something instead of nothing]",
+    "closing": "[PLACEHOLDER: real notebook page content still needed]"
+  },
+  "notebook_page_2": {
+    "type": "document",
+    "title": "A Loose Page",
+    "intro": "[PLACEHOLDER: content not written yet - this is a stand-in so interacting shows something instead of nothing]",
+    "closing": "[PLACEHOLDER: real notebook page content still needed]"
+  },
+  "notebook_page_3": {
+    "type": "document",
+    "title": "A Loose Page",
+    "intro": "[PLACEHOLDER: content not written yet - this is a stand-in so interacting shows something instead of nothing]",
+    "closing": "[PLACEHOLDER: real notebook page content still needed]"
+  },
+  "area2_chest_1": {
+    "type": "document",
+    "title": "A Chest",
+    "intro": "[PLACEHOLDER: content not written yet - this is a stand-in so interacting shows something instead of nothing]",
+    "closing": "[PLACEHOLDER: real chest content still needed]"
+  },
+  "area2_chest_2": {
+    "type": "document",
+    "title": "A Chest",
+    "intro": "[PLACEHOLDER: content not written yet - this is a stand-in so interacting shows something instead of nothing]",
+    "closing": "[PLACEHOLDER: real chest content still needed]"
   }
 }

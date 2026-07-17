@@ -240,6 +240,17 @@ socket.on("room:update", (data) => {
   currentPlayers = data.players;
   const isMeHost = data.hostId === socket.id;
 
+  // On a normal join, character creation is what sets these. On a
+  // reconnect/refresh resume, that screen is skipped entirely, so without
+  // this the local client would render itself with the default
+  // gender/color forever while everyone else's client (which renders us
+  // from this same roster data) correctly shows our real one.
+  const me = data.players.find((p) => p.id === socket.id);
+  if (me) {
+    state.myGender = me.gender || state.myGender;
+    state.myColor = me.color || state.myColor;
+  }
+
   document.getElementById("room-code-display").textContent = data.code;
 
   if (typeof Overworld !== "undefined" && Overworld.setRoster) {
@@ -850,19 +861,21 @@ function finishStagedScene(act) {
   if (act.fadeOut) {
     const overlay = document.getElementById("cutscene-fade-overlay");
     overlay.classList.add("visible");
-    setTimeout(() => showStagedSceneReadyButton(act.nextActLabel), 900);
+    setTimeout(() => showStagedSceneReadyButton(act.nextActEyebrow, act.nextActTitle), 900);
   } else {
-    showStagedSceneReadyButton(act.nextActLabel);
+    showStagedSceneReadyButton(act.nextActEyebrow, act.nextActTitle);
   }
 }
 
-function showStagedSceneReadyButton(nextActLabel) {
-  if (nextActLabel) {
-    const title = document.createElement("div");
-    title.id = "staged-scene-next-act-label";
-    title.className = "staged-scene-next-act-label";
-    title.textContent = nextActLabel;
-    document.body.appendChild(title);
+function showStagedSceneReadyButton(nextActEyebrow, nextActTitle) {
+  if (nextActEyebrow || nextActTitle) {
+    const header = document.createElement("div");
+    header.id = "staged-scene-next-act-label";
+    header.className = "staged-scene-next-act-header";
+    header.innerHTML =
+      (nextActEyebrow ? `<p class="eyebrow">${nextActEyebrow}</p>` : "") +
+      (nextActTitle ? `<h2 class="act-title">${nextActTitle}</h2>` : "");
+    document.body.appendChild(header);
   }
   const btn = document.createElement("button");
   btn.id = "staged-scene-ready-btn";

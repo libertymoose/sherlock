@@ -29,7 +29,7 @@
     {
       "type": "evidence_room",
       "chapter": 1,
-      "title": "The Evidence Room",
+      "title": "The Evidence",
       "intro": "Everything you've found is laid out across the desk. Review it all, then work out together who actually belongs on the Suspect Board.\n\nYou can go back and forth between the two as much as you need, submit to Captain Thorne once the table agrees."
     },
     {
@@ -39,7 +39,8 @@
       "mapUrl": "/assets/maps/manor_upper.json",
       "zone": "manor_upper",
       "video": null,
-      "nextActLabel": "Act II: The Dungeons",
+      "nextActEyebrow": "Act II",
+      "nextActTitle": "The Dungeons",
       "playerMarks": [[11,12],[12,12],[13,12],[16,12],[17,12],[18,12]],
       "actors": [
         {

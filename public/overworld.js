@@ -74,6 +74,7 @@ window.Overworld = (function () {
   const IDLE_FPS = 6;
   const WALK_FPS = 9;
   const AMBLE_FPS = 4; // slower leg-cycle for the gentle NPC wander, not a full walk pace
+  const NPC_WANDER_SPEED = 3; // px/sec - deliberately slow, gentle ambient amble, not a real walk pace
 
   let running = false;
   let rafId = null;
@@ -466,7 +467,7 @@ window.Overworld = (function () {
     });
   }
 
-  function isBlockedTile(px, py) {
+  function isBlockedTile(px, py, ignoreBarrierAt) {
     const tx = Math.floor(px / TILE);
     const ty = Math.floor(py / TILE);
     if (tx < 0 || ty < 0 || tx >= mapData.width || ty >= mapData.height) return true;
@@ -485,6 +486,19 @@ window.Overworld = (function () {
     if (mapData.barriers) {
       for (const b of mapData.barriers) {
         if (tx >= b.x0 && tx < b.x1 && ty >= b.y0 && ty < b.y1) {
+          // A door slamming shut mid-crossing shouldn't be able to trap a
+          // player with zero legal moves (every corner of their hitbox
+          // landing on a now-solid tile). If they're already standing
+          // inside this specific barrier's rect, it doesn't newly block
+          // them - only tiles reached from genuinely outside the barrier
+          // are gated. They can still finish the crossing either way.
+          if (
+            ignoreBarrierAt &&
+            ignoreBarrierAt[0] >= b.x0 * TILE && ignoreBarrierAt[0] < b.x1 * TILE &&
+            ignoreBarrierAt[1] >= b.y0 * TILE && ignoreBarrierAt[1] < b.y1 * TILE
+          ) {
+            continue;
+          }
           const state = zoneStates[b.animZoneId];
           const openIntent = state && (state.phase === "open" || state.phase === "opening");
           if (!openIntent) return true;
@@ -502,7 +516,7 @@ window.Overworld = (function () {
       [x - half, y + half],
       [x + half, y + half],
     ];
-    return pts.every(([px, py]) => !isBlockedTile(px, py));
+    return pts.every(([px, py]) => !isBlockedTile(px, py, [me.x, me.y]));
   }
 
   let zoneChangeInProgress = false;
@@ -647,11 +661,26 @@ window.Overworld = (function () {
   // Building animations (doors opening etc) sit frozen at rest by default.
   // Walking into the matching zone plays the animation forward once and
   // holds it open; walking back out plays it backward once, closing it.
+  // Barrier-linked zones (door_cellN etc) are remote-controlled only - a
+  // plate elsewhere decides when they open, via setRemoteDoorPhase. They
+  // must NOT also be treated as ordinary proximity-triggered doors here:
+  // that would mean simply walking near a "closed" cell door could flip it
+  // open with no plate involved, and walking away from one that's
+  // genuinely being held open by someone else's plate could slam it shut
+  // out from under them, since this check only knows about the local
+  // player's own position, not who's actually holding a plate.
+  function barrierControlledZoneIds() {
+    if (!mapData || !mapData.barriers) return new Set();
+    return new Set(mapData.barriers.map((b) => b.animZoneId).filter(Boolean));
+  }
+
   function checkAnimationZones() {
     if (!mapData || !mapData.animationZones) return;
+    const remoteControlled = barrierControlledZoneIds();
     const tx = me.x / TILE, ty = me.y / TILE;
     const currentlyInside = new Set();
     for (const z of mapData.animationZones) {
+      if (remoteControlled.has(z.id)) continue;
       if (tx >= z.x0 && tx < z.x1 && ty >= z.y0 && ty < z.y1) {
         currentlyInside.add(z.id);
       }

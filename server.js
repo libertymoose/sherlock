@@ -158,7 +158,8 @@ function buildActPayloadForPlayer(room, socketId) {
       actors: act.actors || [],
       dialogue: act.dialogue || [],
       fadeOut: !!act.fadeOut,
-      nextActLabel: act.nextActLabel || null,
+      nextActEyebrow: act.nextActEyebrow || null,
+      nextActTitle: act.nextActTitle || null,
     };
   }
 
