@@ -208,5 +208,19 @@
       "cols": 6,
       "rows": 4
     }
+  },
+  "fighter5": {
+    "idle": {
+      "src": "/assets/npcs/looks/fighter5_idle.png",
+      "cell": 32,
+      "cols": 12,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/fighter5_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
   }
 }

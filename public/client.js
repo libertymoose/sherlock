@@ -954,7 +954,13 @@ async function handleObjectInteract(obj) {
     const mapUrl = ZONE_MAPS[targetZone];
     if (!mapUrl) return;
     document.getElementById("btn-interact").classList.add("hidden");
-    await Overworld.changeZone(targetZone, mapUrl, obj.interaction.targetX, obj.interaction.targetY);
+    try {
+      await Overworld.changeZone(targetZone, mapUrl, obj.interaction.targetX, obj.interaction.targetY);
+    } catch (err) {
+      console.error("Zone change to", targetZone, "failed:", err);
+      document.getElementById("btn-interact").classList.remove("hidden");
+      return;
+    }
     socket.emit("player:changeZone", {
       zone: targetZone,
       x: obj.interaction.targetX,
@@ -1210,6 +1216,11 @@ let myInventory = [];
 
 function openInventoryModal() {
   socket.emit("inventory:requestState");
+  const desc = document.getElementById("inventory-description");
+  desc.textContent =
+    currentAct && currentAct.prefillInventoryFromEvidence
+      ? "This is the evidence you were carrying the night they arrested you - all of it, whether you found it yourself or not."
+      : "Take items to the evidence table to investigate.";
   document.getElementById("modal-inventory").classList.remove("hidden");
 }
 
@@ -1230,20 +1241,21 @@ function renderInventoryGrid() {
   grid.innerHTML = "";
   empty.classList.toggle("hidden", myInventory.length > 0);
   myInventory.forEach((item) => {
-    grid.appendChild(buildItemCard(item, { label: item.name }));
+    const label = item.letter ? `Exhibit ${item.letter}: ${item.name}` : item.name;
+    grid.appendChild(buildItemCard(item, { label }));
   });
 }
 
 // Icons for each evidence item, falling back to a plain star for anything
 // without a good thematic match in the icon packs.
 const EVIDENCE_ICONS = {
-  ledger_ashby: "/assets/ui/icons/star.png",
-  satchel_voss: "/assets/ui/icons/star.png",
+  ledger_ashby: "/assets/ui/icons/evidence/ledger.png",
+  satchel_voss: "/assets/ui/icons/evidence/satchel.png",
   manifests_kestrel: "/assets/ui/icons/evidence/bundle.png",
-  blueprint_marrow: "/assets/ui/icons/star.png",
+  blueprint_marrow: "/assets/ui/icons/evidence/blueprint.png",
   letter_ashgate: "/assets/ui/icons/evidence/letter.png",
   rota_reyes: "/assets/ui/icons/evidence/scroll.png",
-  diary_maid: "/assets/ui/icons/star.png",
+  diary_maid: "/assets/ui/icons/evidence/diary.png",
 };
 
 function buildItemCard(item, opts) {
@@ -1469,7 +1481,7 @@ function drawFixedPortrait(canvas, src) {
     // reliably have a flat background and shouldn't be touched.
     let source = img;
     if (img.naturalWidth > 64 && img.naturalHeight > 64) {
-      source = chromaKeyWhiteBackground(img);
+      source = chromaKeyBackground(img);
     }
 
     // Cover-fit anchored at the bottom: fills the whole frame the way a
@@ -1490,7 +1502,7 @@ function drawFixedPortrait(canvas, src) {
   img.src = src;
 }
 
-function chromaKeyWhiteBackground(img) {
+function chromaKeyBackground(img) {
   const off = document.createElement("canvas");
   off.width = img.naturalWidth;
   off.height = img.naturalHeight;
@@ -1505,7 +1517,16 @@ function chromaKeyWhiteBackground(img) {
   }
   const data = imgData.data;
   const w = off.width, h = off.height;
-  const isNearWhite = (i) => data[i] > 235 && data[i + 1] > 235 && data[i + 2] > 235;
+
+  // Sample the actual corner colour instead of assuming white - portraits
+  // in this project have used both a flat white background and a flat tan
+  // one, and hardcoding white silently left the tan ones fully opaque.
+  const bgR = data[0], bgG = data[1], bgB = data[2];
+  const TOLERANCE = 20;
+  const isBackground = (i) =>
+    Math.abs(data[i] - bgR) <= TOLERANCE &&
+    Math.abs(data[i + 1] - bgG) <= TOLERANCE &&
+    Math.abs(data[i + 2] - bgB) <= TOLERANCE;
 
   const visited = new Uint8Array(w * h);
   const stack = [];
@@ -1522,7 +1543,7 @@ function chromaKeyWhiteBackground(img) {
     const idx = y * w + x;
     if (visited[idx]) continue;
     const i = idx * 4;
-    if (!isNearWhite(i)) continue;
+    if (!isBackground(i)) continue;
     visited[idx] = 1;
     data[i + 3] = 0;
     stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);

@@ -215,6 +215,7 @@ function buildActPayloadForPlayer(room, socketId) {
       // those two disagreeing would mean a player's visual spawn point and
       // the server's plate/door chain point at different cells.
       spawnIndex: connectedJoinOrder(room).indexOf(socketId),
+      prefillInventoryFromEvidence: !!act.prefillInventoryFromEvidence,
     };
   }
 
@@ -250,9 +251,27 @@ function sendActToRoom(code) {
     room.dungeonChain = computeDungeonChain(room, mapData);
   }
 
+  // "You still have everything you were carrying when they arrested you" -
+  // every player gets their own copy of the full evidence set the moment
+  // this act starts, not just whoever happened to be holding what before.
+  if (act && act.prefillInventoryFromEvidence) {
+    for (const socketId of Object.keys(room.players)) {
+      room.inventories[socketId] = room.evidence.map((ex) => ({
+        itemId: ex.itemId,
+        name: ex.name,
+        description: ex.description,
+        art: ex.art,
+        letter: ex.letter,
+      }));
+    }
+  }
+
   for (const socketId of Object.keys(room.players)) {
     const payload = buildActPayloadForPlayer(room, socketId);
     io.to(socketId).emit("act:show", payload);
+    if (act && act.prefillInventoryFromEvidence) {
+      io.to(socketId).emit("inventory:state", buildInventoryState(room, socketId));
+    }
   }
   emitProgress(code);
 }
@@ -493,6 +512,7 @@ function buildInventoryState(room, socketId) {
   return getInventory(room, socketId).map((it) => ({
     itemId: it.itemId,
     name: it.name,
+    letter: it.letter || null,
   }));
 }
 

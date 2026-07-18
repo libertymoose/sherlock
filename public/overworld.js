@@ -37,6 +37,11 @@ window.Overworld = (function () {
   // unflipped tiles are handled identically rather than duplicating the
   // save/scale/restore dance at each draw call.
   function drawTile(destCtx, img, sx, sy, srcSize, dx, dy, drawSize, hFlip, vFlip) {
+    // A missing or broken image (failed to load, 0x0 natural size) throws
+    // in some browsers when passed to drawImage rather than just drawing
+    // nothing - guarding here means one bad tile reference can't take out
+    // an entire baked floor segment or sorted layer along with it.
+    if (!img || !img.naturalWidth) return;
     if (!hFlip && !vFlip) {
       destCtx.drawImage(img, sx, sy, srcSize, srcSize, dx, dy, drawSize, drawSize);
       return;
@@ -360,87 +365,101 @@ window.Overworld = (function () {
     };
 
     mapData.layers.forEach((layer) => {
-      const cells = [];
-      const isAnimatedLayer = (gid) => mapData.animations && mapData.animations[gid];
-      const layerAnimatedCells = [];
+      try {
+        const isAnimatedLayer = (gid) => mapData.animations && mapData.animations[gid];
+        const layerAnimatedCells = [];
+        const cells = [];
 
-      // For "sorted" layers, tall objects (trees, bridge rails etc) are
-      // often several rows of stacked tiles in the same layer. Sorting each
-      // row purely by its own y let a player standing right behind a tree's
-      // trunk draw in FRONT of the canopy rows above it, since those rows
-      // individually had a smaller y than the player. Instead, every tile in
-      // a contiguous vertical run within one column shares the run's bottom
-      // row as its sort key, so the whole tree/rail segment sorts as one
-      // object relative to the player, the way it visually reads.
-      let bottomOfRun = null;
-      if (layer.kind !== "floor" && layer.dense) {
-        const w = mapData.width, h = mapData.height;
-        bottomOfRun = new Int16Array(w * h).fill(-1);
-        for (let x = 0; x < w; x++) {
-          let y = h - 1;
-          while (y >= 0) {
-            if (layer.data[y * w + x]) {
-              let bottom = y;
-              while (y >= 0 && layer.data[y * w + x]) {
-                bottomOfRun[y * w + x] = bottom;
+        // For "sorted" layers, tall objects (trees, bridge rails etc) are
+        // often several rows of stacked tiles in the same layer. Sorting each
+        // row purely by its own y let a player standing right behind a tree's
+        // trunk draw in FRONT of the canopy rows above it, since those rows
+        // individually had a smaller y than the player. Instead, every tile
+        // in a contiguous vertical run within one column shares the run's
+        // bottom row as its sort key, so the whole tree/rail segment sorts
+        // as one object relative to the player, the way it visually reads.
+        let bottomOfRun = null;
+        if (layer.kind !== "floor" && layer.dense) {
+          const w = mapData.width, h = mapData.height;
+          bottomOfRun = new Int16Array(w * h).fill(-1);
+          for (let x = 0; x < w; x++) {
+            let y = h - 1;
+            while (y >= 0) {
+              if (layer.data[y * w + x]) {
+                let bottom = y;
+                while (y >= 0 && layer.data[y * w + x]) {
+                  bottomOfRun[y * w + x] = bottom;
+                  y--;
+                }
+              } else {
                 y--;
               }
-            } else {
-              y--;
             }
           }
         }
-      }
 
-      if (layer.dense) {
-        const w = mapData.width;
-        for (let i = 0; i < layer.data.length; i++) {
-          const rawGid = layer.data[i];
-          if (!rawGid) continue;
-          const { gid, hFlip, vFlip } = stripFlip(rawGid);
-          const x = i % w, y = Math.floor(i / w);
-          if (layer.kind === "floor" && isAnimatedLayer(gid)) {
-            layerAnimatedCells.push({ x, y, gid, hFlip, vFlip, layer, index: i });
-            continue;
+        if (layer.dense) {
+          const w = mapData.width;
+          for (let i = 0; i < layer.data.length; i++) {
+            const rawGid = layer.data[i];
+            if (!rawGid) continue;
+            const { gid, hFlip, vFlip } = stripFlip(rawGid);
+            const x = i % w, y = Math.floor(i / w);
+            if (layer.kind === "floor" && isAnimatedLayer(gid)) {
+              layerAnimatedCells.push({ x, y, gid, hFlip, vFlip, layer, index: i });
+              continue;
+            }
+            const r = resolveGid(gid);
+            if (!r) continue;
+            if (layer.kind === "floor") {
+              currentBatch.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy, hFlip, vFlip });
+              continue;
+            }
+            const sortRow = bottomOfRun ? bottomOfRun[i] : y;
+            cells.push({ x, y, sortRow, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, hFlip, vFlip, layer, index: i, animated: !!isAnimatedLayer(gid) });
           }
-          const r = resolveGid(gid);
-          if (!r) continue;
-          if (layer.kind === "floor") {
-            currentBatch.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy, hFlip, vFlip });
-            continue;
-          }
-          const sortRow = bottomOfRun ? bottomOfRun[i] : y;
-          cells.push({ x, y, sortRow, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, hFlip, vFlip, layer, index: i, animated: !!isAnimatedLayer(gid) });
+        } else {
+          layer.cells.forEach(([x, y, rawGid], idx) => {
+            const { gid, hFlip, vFlip } = stripFlip(rawGid);
+            if (layer.kind === "floor" && isAnimatedLayer(gid)) {
+              layerAnimatedCells.push({ x, y, gid, hFlip, vFlip, layer, index: idx });
+              return;
+            }
+            const r = resolveGid(gid);
+            if (!r) return;
+            if (layer.kind === "floor") {
+              currentBatch.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy, hFlip, vFlip });
+              return;
+            }
+            cells.push({ x, y, sortRow: y, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, hFlip, vFlip, layer, index: idx, animated: !!isAnimatedLayer(gid) });
+          });
         }
-      } else {
-        layer.cells.forEach(([x, y, rawGid], idx) => {
-          const { gid, hFlip, vFlip } = stripFlip(rawGid);
-          if (layer.kind === "floor" && isAnimatedLayer(gid)) {
-            layerAnimatedCells.push({ x, y, gid, hFlip, vFlip, layer, index: idx });
-            return;
-          }
-          const r = resolveGid(gid);
-          if (!r) return;
-          if (layer.kind === "floor") {
-            currentBatch.push({ x, y, img: getImg(r.src), sx: r.sx, sy: r.sy, hFlip, vFlip });
-            return;
-          }
-          cells.push({ x, y, sortRow: y, img: getImg(r.src), sx: r.sx, sy: r.sy, gid, hFlip, vFlip, layer, index: idx, animated: !!isAnimatedLayer(gid) });
-        });
-      }
 
-      if (layer.kind === "floor") {
-        // This layer's static cells are already queued in currentBatch above.
-        // If it also has animated cells, that's a z-order boundary: bake
-        // everything queued so far (including this layer's own static
-        // tiles), emit this layer's animated cells as their own segment,
-        // then start a fresh batch for whatever floor layer comes next.
-        if (layerAnimatedCells.length) {
-          flushBatch();
-          floorSegments.push({ type: "animated", cells: layerAnimatedCells });
+        if (layer.kind === "floor") {
+          // This layer's static cells are already queued in currentBatch
+          // above. If it also has animated cells, that's a z-order
+          // boundary: bake everything queued so far (including this
+          // layer's own static tiles), emit this layer's animated cells as
+          // their own segment, then start a fresh batch for whatever floor
+          // layer comes next.
+          if (layerAnimatedCells.length) {
+            flushBatch();
+            floorSegments.push({ type: "animated", cells: layerAnimatedCells });
+          }
+        } else {
+          resolvedLayers.push({ name: layer.name, cells });
         }
-      } else {
-        resolvedLayers.push({ name: layer.name, cells });
+      } catch (err) {
+        // A single layer failing to resolve (unexpected data shape, bad
+        // tileset reference, whatever) used to blank the ENTIRE map: this
+        // whole forEach body used to run unguarded, so one bad layer threw
+        // partway through and every layer after it in iteration order
+        // silently never got added to resolvedLayers/floorSegments either -
+        // the canvas would show only its base fill color forever, with
+        // nothing in the console-less UI to suggest why. Isolating each
+        // layer means the rest of the map still renders even if one layer
+        // is broken, the same principle already applied to NPC updates.
+        console.error(`Layer resolve error for "${layer.name}" (continuing with other layers):`, err);
       }
     });
 
@@ -1067,7 +1086,14 @@ window.Overworld = (function () {
       const dw = worldW * RENDER_SCALE;
       const dh = worldH * RENDER_SCALE;
       drawList.push({
-        y: img.y + worldH,
+        // +32 (two tiles): a wall-mounted decal like this sits right at a
+        // wall row, but the wall it's mounted on sorts by the bottom of its
+        // whole vertical tile run, not just the one row - which can easily
+        // be taller than this image, silently drawing the wall over it. A
+        // flat decal on a wall should always read as in front of that
+        // wall's surface, so this pushes it comfortably past a typical
+        // 1-3 tile wall run rather than trying to match it exactly.
+        y: img.y + worldH + 32,
         draw: () => {
           ctx.save();
           ctx.imageSmoothingEnabled = false;
@@ -1344,15 +1370,21 @@ window.Overworld = (function () {
       zoneChangeInProgress = true;
       others = {}; // repopulated by the zone:roster reply from the server
       nearbyObject = null;
-      await loadMap(mapUrl);
-      me.x = tileX * TILE + TILE / 2;
-      me.y = tileY * TILE + TILE / 2;
-      currentZone = zoneId;
-      // Give the next animation frame a chance to recompute nearbyObject
-      // for the new position before interact can fire again, otherwise a
-      // key repeat landing right on arrival can immediately trigger
-      // whatever exit happens to be closest to the spawn point.
-      setTimeout(() => { zoneChangeInProgress = false; }, 400);
+      try {
+        await loadMap(mapUrl);
+        me.x = tileX * TILE + TILE / 2;
+        me.y = tileY * TILE + TILE / 2;
+        currentZone = zoneId;
+      } catch (err) {
+        console.error(`changeZone(${zoneId}) failed:`, err);
+        throw err;
+      } finally {
+        // Whatever happened above, this always has to clear - otherwise a
+        // failed zone load doesn't just leave a blank map, it leaves the
+        // player unable to press interact ever again for the rest of the
+        // session, since triggerInteract() checks this flag first.
+        setTimeout(() => { zoneChangeInProgress = false; }, 400);
+      }
       return mapData;
     },
 

@@ -41,15 +41,46 @@
       "video": null,
       "nextActEyebrow": "Act II",
       "nextActTitle": "The Dungeons",
-      "playerMarks": [[11,12],[12,12],[13,12],[16,12],[17,12],[18,12]],
+      "playerMarks": [
+        [
+          11,
+          12
+        ],
+        [
+          12,
+          12
+        ],
+        [
+          13,
+          12
+        ],
+        [
+          16,
+          12
+        ],
+        [
+          17,
+          12
+        ],
+        [
+          18,
+          12
+        ]
+      ],
       "actors": [
         {
           "id": "captain_thorne",
-          "look": "guildmaster",
+          "look": "fighter5",
           "name": "Captain Thorne",
-          "portrait": null,
-          "from": [15,8],
-          "to": [15,8],
+          "portrait": "/assets/npcs/portraits/Thorne_Portrait.png",
+          "from": [
+            15,
+            8
+          ],
+          "to": [
+            15,
+            8
+          ],
           "facing": "down"
         },
         {
@@ -57,33 +88,21 @@
           "look": "fighter4",
           "name": "Commodore Voss",
           "portrait": "/assets/npcs/portraits/Fighter4_Portrait.png",
-          "from": [15,15],
-          "to": [15,13],
-          "facing": "up"
-        },
-        {
-          "id": "guard_a",
-          "look": "guard",
-          "name": "City Watch Guard",
-          "portrait": null,
-          "from": [13,15],
-          "to": [13,13],
-          "facing": "up"
-        },
-        {
-          "id": "guard_b",
-          "look": "guard",
-          "name": "City Watch Guard",
-          "portrait": null,
-          "from": [17,15],
-          "to": [17,13],
+          "from": [
+            15,
+            15
+          ],
+          "to": [
+            15,
+            13
+          ],
           "facing": "up"
         }
       ],
       "dialogue": [
         {
           "speaker": "Captain Thorne",
-          "portrait": null,
+          "portrait": "/assets/npcs/portraits/Thorne_Portrait.png",
           "text": "Good work. Now we find out which one of them actually had the means, and the opportunity."
         },
         {
@@ -94,16 +113,26 @@
         {
           "speaker": "Commodore Voss",
           "portrait": "/assets/npcs/portraits/Fighter4_Portrait.png",
-          "text": "Captain! They were the only ones anywhere near the study all night. And I found this among their things."
+          "text": "Means and opportunity, Captain? They had the run of the whole estate tonight, free to wander wherever they pleased. Plenty of quiet corners to hide something you didn't want found."
+        },
+        {
+          "speaker": "",
+          "portrait": "/assets/props/planted_blade_portrait.png",
+          "text": "He sets a satchel on the desk and draws out a blade, dark at the edge."
+        },
+        {
+          "speaker": "Commodore Voss",
+          "portrait": "/assets/npcs/portraits/Fighter4_Portrait.png",
+          "text": "Found not an hour ago. That's no rust on it, and Lord Duskmere's own manservant swears there's a mark on him to match. I'd call that convincing, wouldn't you?"
         },
         {
           "speaker": "",
           "portrait": null,
-          "text": "He holds it up. A blade, dark at the edge. Thorne's face goes still."
+          "text": "Thorne's face goes still."
         },
         {
           "speaker": "Captain Thorne",
-          "portrait": null,
+          "portrait": "/assets/npcs/portraits/Thorne_Portrait.png",
           "text": "I gave you a chance. Take them down to the cells."
         }
       ],
@@ -113,6 +142,7 @@
       "type": "explore",
       "chapter": 2,
       "title": "The Dungeons",
+      "prefillInventoryFromEvidence": true,
       "zone": "jail_cells",
       "mapUrl": "/assets/maps/jail_cells.json",
       "intro": "You come to in separate holding cells, no way to reach each other directly. Get back together with your party, and get out of the dungeons."
