@@ -683,6 +683,7 @@ initCharacterCreator();
 // --- Explore mode (overworld) ---
 let interactionsCache = null;
 let isNearInteractable = false;
+let candleLitState = {}; // candleId -> true, mirrors the current zone's server state
 
 async function getInteractions() {
   if (interactionsCache) return interactionsCache;
@@ -724,6 +725,10 @@ async function enterExplore(act) {
       btn.classList.toggle("hidden", !obj || panelOpen);
       if (obj && obj.interaction && obj.interaction.kind === "zone_exit") {
         btn.textContent = obj.interaction.targetZone === "estate" ? "Exit" : "Enter";
+      } else if (obj && obj.interaction && obj.interaction.kind === "candle") {
+        btn.textContent = candleLitState[obj.interaction.candleId] ? "Extinguish" : "Light";
+      } else if (obj && obj.interaction && obj.interaction.kind === "lever") {
+        btn.textContent = "Reset";
       } else {
         btn.textContent = "Examine";
       }
@@ -914,6 +919,7 @@ const ZONE_MAPS = {
   manor_ground: "/assets/maps/manor_ground.json",
   manor_upper: "/assets/maps/manor_upper.json",
   dungeon_area_2: "/assets/maps/dungeon_area_2.json",
+  dungeon_area_3: "/assets/maps/dungeon_area_3.json",
 };
 
 function updateZoneLabel(zoneId) {
@@ -949,6 +955,10 @@ async function handleObjectInteract(obj) {
     } else {
       openTableModal();
     }
+  } else if (kind === "candle") {
+    socket.emit("candle:toggle", { zone: Overworld.getZone(), candleId: obj.interaction.candleId });
+  } else if (kind === "lever") {
+    socket.emit("candle:reset", { zone: Overworld.getZone() });
   } else if (kind === "zone_exit") {
     const targetZone = obj.interaction.targetZone;
     const mapUrl = ZONE_MAPS[targetZone];
@@ -1209,6 +1219,11 @@ socket.on("map:objectRemoved", (data) => {
 // state machine.
 socket.on("door:state", (data) => {
   Overworld.setRemoteDoorPhase(data.doorZoneId, data.open);
+});
+
+socket.on("candle:state", (data) => {
+  candleLitState = data.lit || {};
+  Overworld.setCandleState(candleLitState);
 });
 
 // --- Player inventory (private, held items not yet on the Evidence Table) ---

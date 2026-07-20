@@ -245,6 +245,7 @@ function sendActToRoom(code) {
   };
   room.dungeonChain = null;
   room.zonePlates = {};
+  room.zoneCandles = {};
 
   if (act && act.type === "explore" && act.mapUrl) {
     const mapData = loadMapData(act.mapUrl);
@@ -558,6 +559,11 @@ io.on("connection", (socket) => {
       collectedPickups: {},
       // zone -> plateId -> { holders: Set<socketId>, targetDoorZoneId, selfDoorZoneId }
       zonePlates: {},
+      // zone -> { lit: { candleId: true }, order: [candleId, ...] } - the
+      // candle puzzle (Area 3). order tracks the actual lighting sequence so
+      // wrong-order attempts can be told apart from the right one once all
+      // four happen to be lit at once.
+      zoneCandles: {},
     };
     const room = rooms[code];
     const token = genToken();
@@ -825,6 +831,58 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Candle puzzle (Area 3, and any future reuse elsewhere keyed the same
+  // way): interacting with a candle just flips it lit/unlit. No punishment
+  // for a wrong guess - candles stay exactly as they are, the party can
+  // fix one candle at a time or use the lever to wipe the board and start
+  // over. The correct sequence lives in interactions.json, not here, same
+  // as the Suspect Board's correctSet - map data stays purely structural.
+  socket.on("candle:toggle", ({ zone, candleId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !candleId) return;
+    const z = zone || "estate";
+    const puzzle = (INTERACTIONS.candlePuzzles || {})[z];
+    if (!puzzle) return;
+
+    if (!room.zoneCandles[z]) room.zoneCandles[z] = { lit: {}, order: [] };
+    const state = room.zoneCandles[z];
+
+    if (state.lit[candleId]) {
+      delete state.lit[candleId];
+      state.order = state.order.filter((id) => id !== candleId);
+    } else {
+      state.lit[candleId] = true;
+      state.order.push(candleId);
+    }
+
+    io.to(`${code}:${z}`).emit("candle:state", { lit: state.lit });
+
+    const sequence = puzzle.sequence || [];
+    const allLit = sequence.length > 0 && sequence.every((id) => state.lit[id]);
+    if (allLit) {
+      const correct =
+        state.order.length === sequence.length &&
+        state.order.every((id, i) => id === sequence[i]);
+      if (correct) {
+        io.to(`${code}:${z}`).emit("door:state", { doorZoneId: puzzle.exitAnimZoneId, open: true });
+      }
+      // Wrong order: nothing happens. Candles stay lit exactly as they
+      // are - the party can toggle individual ones or pull the lever.
+    }
+  });
+
+  socket.on("candle:reset", ({ zone }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room) return;
+    const z = zone || "estate";
+    const puzzle = (INTERACTIONS.candlePuzzles || {})[z];
+    if (!puzzle) return;
+    room.zoneCandles[z] = { lit: {}, order: [] };
+    io.to(`${code}:${z}`).emit("candle:state", { lit: {} });
+  });
+
   // Players can walk into buildings independently, they don't need to be
   // pulled in together. Each zone is its own Socket.io sub-room so movement
   // and roster updates only reach players actually standing in that zone.
@@ -862,6 +920,9 @@ io.on("connection", (socket) => {
         x: p.pos ? p.pos.x : x, y: p.pos ? p.pos.y : y,
       }));
     socket.emit("zone:roster", { zone, players: othersHere });
+
+    const candleState = room.zoneCandles[zone];
+    socket.emit("candle:state", { lit: (candleState && candleState.lit) || {} });
   });
 
   socket.on("explore:requestDialogue", ({ dialogueId }) => {

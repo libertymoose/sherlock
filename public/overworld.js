@@ -5,6 +5,7 @@
 window.Overworld = (function () {
   const TILE = 16;
   const RENDER_SCALE = 3; // how big each 16px tile appears on screen
+  const EMPTY_ANIM_LAYER = {}; // no gatedCells -> candle flame animation just loops ambiently, never gated to a door zone
   const MOVE_SPEED = 78; // px/sec in world space (bumped up for the larger map)
   const INTERACT_RADIUS = 22; // px
 
@@ -140,6 +141,7 @@ window.Overworld = (function () {
 
   let animClock = 0; // ms, accumulated each frame, drives animated tile frames
   let zoneStates = {}; // zoneId -> { phase: 'closed'|'opening'|'open'|'closing', since: animClock at last transition }
+  let candleLit = {}; // candleId -> true, driven entirely by server candle:state events
   let insideAnimZones = new Set(); // which zones the player is inside right now, for edge detection
   let insideInteriorZone = null; // which INTERIORS rect (if any) the player is currently standing in, for edge-triggering
   let insidePlateId = null; // which pressure plate (if any) the player is currently standing on, for edge-triggering
@@ -160,6 +162,7 @@ window.Overworld = (function () {
     mapData = await res.json();
     mapData.objects = mapData.objects.filter((o) => !collectedIds.has(o.id));
     zoneStates = {};
+    candleLit = {};
     insideAnimZones = new Set();
     insideInteriorZone = null;
     insidePlateId = null;
@@ -1067,6 +1070,30 @@ window.Overworld = (function () {
           y: o.y * TILE + TILE,
           draw: () => drawStaticSprite("/assets/props/evidence_table.png", centerX, topY, 32),
         });
+      } else if (o.type === "candle") {
+        // Lit/unlit is pure server state (candleLit), never guessed locally -
+        // two players toggling the same candle would otherwise flicker out
+        // of sync. Unlit is a single 16px icon; lit swaps in the taller
+        // 2x3-tile animated flame-on-a-stand art, nudged by litOffsetPx to
+        // line up with the pedestal beneath it (matches the small sub-pixel
+        // offset Elle authored on the LIT TORCHES layer in Tiled).
+        const lit = !!(o.interaction && candleLit[o.interaction.candleId]);
+        const cells = lit ? o.litCells : o.unlitCells;
+        const offX = lit && o.litOffsetPx ? o.litOffsetPx.x : 0;
+        const offY = lit && o.litOffsetPx ? o.litOffsetPx.y : 0;
+        drawList.push({
+          y: o.y * TILE + TILE,
+          draw: () => {
+            (cells || []).forEach((c) => {
+              const curGid = currentGidFor(c.gid, EMPTY_ANIM_LAYER, 0);
+              const r = resolveGid(curGid);
+              if (!r) return;
+              const dx = Math.round((o.x + c.dx) * scaledTile - camX + offX * RENDER_SCALE);
+              const dy = Math.round((o.y + c.dy) * scaledTile - camY + offY * RENDER_SCALE);
+              drawTile(ctx, getImg(r.src), r.sx, r.sy, TILE, dx, dy, scaledTile, false, false);
+            });
+          },
+        });
       } else if (o.interaction && o.interaction.kind === "evidence_document") {
         // These already have a custom ground icon (the EVIDENCE TILES layer),
         // the generic purple interact-dot on top of that read as redundant
@@ -1364,6 +1391,13 @@ window.Overworld = (function () {
       s.phase = wantPhase;
       s.since = animClock;
       zoneStates[zoneId] = s;
+    },
+
+    // Candle lit/unlit state, pushed from the server on every toggle (and
+    // once on zone entry so a rejoining or late player sees the current
+    // board, not an assumed-blank one).
+    setCandleState(lit) {
+      candleLit = lit || {};
     },
 
     async changeZone(zoneId, mapUrl, tileX, tileY) {

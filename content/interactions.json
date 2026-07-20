@@ -356,6 +356,12 @@
     "title": "The Evidence Table",
     "description": "Bring every piece of evidence you're carrying and add it to the table."
   },
+  "candlePuzzles": {
+    "dungeon_area_3": {
+      "sequence": ["north", "west", "south", "east"],
+      "exitAnimZoneId": "door_area3_exit"
+    }
+  },
   "suspectBoard": {
     "pool": [
       {
