@@ -527,6 +527,30 @@ function buildEvidenceState(room) {
   }));
 }
 
+// The Evidence Table normally only shows what the party actually collected
+// (that's a real progress gate during the Estate act). But by "The
+// Evidence" review act, the whole dossier should be visible regardless -
+// whether every piece was actually found, or the host force-advanced past
+// a gap. This is the fixed 7-item case file, not live pickup state.
+const CANONICAL_EVIDENCE_ORDER = [
+  "ledger_ashby",
+  "satchel_voss",
+  "manifests_kestrel",
+  "blueprint_marrow",
+  "letter_ashgate",
+  "rota_reyes",
+  "diary_maid",
+];
+function buildFullEvidenceState() {
+  return CANONICAL_EVIDENCE_ORDER.filter((id) => ITEMS[id]).map((id, i) => ({
+    itemId: id,
+    letter: letterForIndex(i),
+    name: ITEMS[id].name,
+    description: ITEMS[id].description,
+    art: ITEMS[id].art,
+  }));
+}
+
 function letterForIndex(i) {
   // A, B, C ... Z, then AA, AB... good enough for a case file that will
   // never realistically hit 26 exhibits in one sitting.
@@ -867,9 +891,18 @@ io.on("connection", (socket) => {
       if (correct) {
         state.solved = true;
         io.to(`${code}:${z}`).emit("door:state", { doorZoneId: puzzle.exitAnimZoneId, open: true });
+        io.to(`${code}:${z}`).emit("explore:dialogue", {
+          title: "",
+          lines: ["You light all the torches... And hear a 'clunk' from the other side of the room."],
+        });
+      } else {
+        io.to(`${code}:${z}`).emit("explore:dialogue", {
+          title: "",
+          lines: ["You light all the torches... But nothing happens."],
+        });
       }
-      // Wrong order: nothing happens. Candles stay lit exactly as they
-      // are - the party can toggle individual ones or pull the lever.
+      // Wrong order: candles stay lit exactly as they are - the party can
+      // toggle individual ones or pull the lever.
     }
   });
 
@@ -997,7 +1030,9 @@ io.on("connection", (socket) => {
     const code = socket.data.roomCode;
     const room = rooms[code];
     if (!room) return;
-    socket.emit("evidence:state", buildEvidenceState(room));
+    const act = STORY.acts[room.actIndex];
+    const state = act && act.type === "evidence_room" ? buildFullEvidenceState() : buildEvidenceState(room);
+    socket.emit("evidence:state", state);
   });
 
   socket.on("evidence:add", ({ itemId }) => {
