@@ -77,7 +77,7 @@ window.Overworld = (function () {
   // on-screen height stays consistent with everything else.
   const PLAYER_DRAW_SIZE = 50;
   const WORLD_CHAR_SIZE = 22; // NPC on-map footprint
-  const IDLE_FPS = 6;
+  const IDLE_FPS = 3;
   const WALK_FPS = 9;
   const AMBLE_FPS = 4; // slower leg-cycle for the gentle NPC wander, not a full walk pace
   const NPC_WANDER_SPEED = 3; // px/sec - deliberately slow, gentle ambient amble, not a real walk pace
