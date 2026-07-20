@@ -982,8 +982,14 @@ window.Overworld = (function () {
     // Clamp the camera to the map bounds so the void beyond the edge is never
     // visible, that void reading as "walking off the map" even when collision
     // was correctly stopping the player right at the boundary.
-    let camX = me.x * RENDER_SCALE - w / 2;
-    let camY = me.y * RENDER_SCALE - h / 2;
+    let camX, camY;
+    if (stagedScene && stagedScene.cameraCenter) {
+      camX = stagedScene.cameraCenter.x * RENDER_SCALE - w / 2;
+      camY = stagedScene.cameraCenter.y * RENDER_SCALE - h / 2;
+    } else {
+      camX = me.x * RENDER_SCALE - w / 2;
+      camY = me.y * RENDER_SCALE - h / 2;
+    }
     camX = Math.max(0, Math.min(worldW - w, camX));
     camY = Math.max(0, Math.min(worldH - h, camY));
     if (worldW < w) camX = (worldW - w) / 2;
@@ -1300,7 +1306,7 @@ window.Overworld = (function () {
     // Positions are set locally only; the caller is responsible for
     // broadcasting the local player's mark via the normal player:move
     // event so other clients see them standing in the right spot too.
-    beginStagedScene({ myMark, actors, onArrived }) {
+    beginStagedScene({ myMark, actors, onArrived, cameraCenter }) {
       if (myMark) {
         me.x = myMark[0] * TILE + TILE / 2;
         me.y = myMark[1] * TILE + TILE / 2;
@@ -1311,6 +1317,13 @@ window.Overworld = (function () {
       stagedScene = {
         arrivedFired: false,
         onArrived,
+        // Cutscenes are composed, not followed - the camera has to show the
+        // whole tableau (actors, desk, doorway) regardless of where any one
+        // player's mark happens to sit, rather than the normal follow-camera
+        // centering on whichever tile the local player is standing on.
+        cameraCenter: cameraCenter
+          ? { x: cameraCenter[0] * TILE + TILE / 2, y: cameraCenter[1] * TILE + TILE / 2 }
+          : null,
         actors: (actors || []).map((a, i) => {
           const fromX = a.from[0] * TILE + TILE / 2;
           const fromY = a.from[1] * TILE + TILE / 2;

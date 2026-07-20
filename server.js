@@ -865,6 +865,7 @@ io.on("connection", (socket) => {
         state.order.length === sequence.length &&
         state.order.every((id, i) => id === sequence[i]);
       if (correct) {
+        state.solved = true;
         io.to(`${code}:${z}`).emit("door:state", { doorZoneId: puzzle.exitAnimZoneId, open: true });
       }
       // Wrong order: nothing happens. Candles stay lit exactly as they
@@ -879,7 +880,8 @@ io.on("connection", (socket) => {
     const z = zone || "estate";
     const puzzle = (INTERACTIONS.candlePuzzles || {})[z];
     if (!puzzle) return;
-    room.zoneCandles[z] = { lit: {}, order: [] };
+    const wasSolved = !!(room.zoneCandles[z] && room.zoneCandles[z].solved);
+    room.zoneCandles[z] = { lit: {}, order: [], solved: wasSolved };
     io.to(`${code}:${z}`).emit("candle:state", { lit: {} });
   });
 
@@ -923,6 +925,18 @@ io.on("connection", (socket) => {
 
     const candleState = room.zoneCandles[zone];
     socket.emit("candle:state", { lit: (candleState && candleState.lit) || {} });
+
+    // If this puzzle's door was already opened before this player got here
+    // (a straggler catching up, or a reconnect), their fresh client-side
+    // zoneStates defaults the exit barrier back to closed. Nothing they can
+    // relight would ever fix that, so the already-solved state has to be
+    // pushed explicitly rather than only broadcast at the moment of solving.
+    if (candleState && candleState.solved) {
+      const puzzle = (INTERACTIONS.candlePuzzles || {})[zone];
+      if (puzzle) {
+        socket.emit("door:state", { doorZoneId: puzzle.exitAnimZoneId, open: true });
+      }
+    }
   });
 
   socket.on("explore:requestDialogue", ({ dialogueId }) => {

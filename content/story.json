@@ -136,7 +136,11 @@
           "text": "I gave you a chance. Take them down to the cells."
         }
       ],
-      "fadeOut": true
+      "fadeOut": true,
+      "cameraCenter": [
+        15,
+        10.5
+      ]
     },
     {
       "type": "explore",

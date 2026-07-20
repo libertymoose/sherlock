@@ -684,6 +684,22 @@ initCharacterCreator();
 let interactionsCache = null;
 let isNearInteractable = false;
 let candleLitState = {}; // candleId -> true, mirrors the current zone's server state
+let currentNearbyObj = null; // last object passed to onNearbyChange, so candle:state can refresh its label without waiting for proximity to change
+
+function refreshInteractButtonLabel() {
+  const btn = document.getElementById("btn-interact");
+  if (!btn || btn.classList.contains("hidden")) return;
+  const obj = currentNearbyObj;
+  if (obj && obj.interaction && obj.interaction.kind === "zone_exit") {
+    btn.textContent = obj.interaction.targetZone === "estate" ? "Exit" : "Enter";
+  } else if (obj && obj.interaction && obj.interaction.kind === "candle") {
+    btn.textContent = candleLitState[obj.interaction.candleId] ? "Extinguish" : "Light";
+  } else if (obj && obj.interaction && obj.interaction.kind === "lever") {
+    btn.textContent = "Reset";
+  } else {
+    btn.textContent = "Examine";
+  }
+}
 
 async function getInteractions() {
   if (interactionsCache) return interactionsCache;
@@ -720,18 +736,11 @@ async function enterExplore(act) {
     collectedIds: act.collectedPickups || [],
     onNearbyChange: (obj) => {
       isNearInteractable = !!obj;
+      currentNearbyObj = obj;
       const panelOpen = !document.getElementById("vn-panel").classList.contains("hidden");
       const btn = document.getElementById("btn-interact");
       btn.classList.toggle("hidden", !obj || panelOpen);
-      if (obj && obj.interaction && obj.interaction.kind === "zone_exit") {
-        btn.textContent = obj.interaction.targetZone === "estate" ? "Exit" : "Enter";
-      } else if (obj && obj.interaction && obj.interaction.kind === "candle") {
-        btn.textContent = candleLitState[obj.interaction.candleId] ? "Extinguish" : "Light";
-      } else if (obj && obj.interaction && obj.interaction.kind === "lever") {
-        btn.textContent = "Reset";
-      } else {
-        btn.textContent = "Examine";
-      }
+      refreshInteractButtonLabel();
     },
     onInteract: (obj) => handleObjectInteract(obj),
     onPlateEnter: (plate) => {
@@ -804,6 +813,7 @@ async function enterStagedScene(act) {
     Overworld.beginStagedScene({
       myMark,
       actors: act.actors || [],
+      cameraCenter: act.cameraCenter || null,
       onArrived: () => {
         playScriptedDialogue(act.dialogue || [], () => finishStagedScene(act));
       },
@@ -1224,6 +1234,7 @@ socket.on("door:state", (data) => {
 socket.on("candle:state", (data) => {
   candleLitState = data.lit || {};
   Overworld.setCandleState(candleLitState);
+  refreshInteractButtonLabel();
 });
 
 // --- Player inventory (private, held items not yet on the Evidence Table) ---
