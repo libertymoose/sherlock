@@ -1184,6 +1184,12 @@ input[type="text"]:focus {
   image-rendering: pixelated;
 }
 
+.pixel-panel-popup .sync-banner {
+  background: rgba(62,31,29,0.16);
+  border-color: rgba(80,169,120,0.55);
+  color: #1f6b45;
+}
+
 .pixel-panel-popup .btn-secondary {
   border-color: #6b4a2f;
   color: #3a2a1c;

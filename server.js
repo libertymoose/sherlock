@@ -906,6 +906,17 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Petting an animal is purely cosmetic - broadcast to the zone so
+  // everyone sees the heart pop up, but there's nothing to persist or
+  // resync, unlike the candle puzzle's door state.
+  socket.on("pet:animal", ({ zone, x, y }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || typeof x !== "number" || typeof y !== "number") return;
+    const z = zone || "estate";
+    io.to(`${code}:${z}`).emit("pet:animal", { x, y });
+  });
+
   socket.on("candle:reset", ({ zone }) => {
     const code = socket.data.roomCode;
     const room = rooms[code];

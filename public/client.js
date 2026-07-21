@@ -696,6 +696,8 @@ function refreshInteractButtonLabel() {
     btn.textContent = candleLitState[obj.interaction.candleId] ? "Extinguish" : "Light";
   } else if (obj && obj.interaction && obj.interaction.kind === "lever") {
     btn.textContent = "Reset";
+  } else if (obj && obj.interaction && obj.interaction.kind === "pet") {
+    btn.textContent = "Pet";
   } else {
     btn.textContent = "Examine";
   }
@@ -969,6 +971,8 @@ async function handleObjectInteract(obj) {
     socket.emit("candle:toggle", { zone: Overworld.getZone(), candleId: obj.interaction.candleId });
   } else if (kind === "lever") {
     socket.emit("candle:reset", { zone: Overworld.getZone() });
+  } else if (kind === "pet") {
+    socket.emit("pet:animal", { zone: Overworld.getZone(), animalId: obj.interaction.animalId, x: obj.x, y: obj.y });
   } else if (kind === "zone_exit") {
     const targetZone = obj.interaction.targetZone;
     const mapUrl = ZONE_MAPS[targetZone];
@@ -1237,6 +1241,10 @@ socket.on("candle:state", (data) => {
   refreshInteractButtonLabel();
 });
 
+socket.on("pet:animal", (data) => {
+  Overworld.showPetHeart(data.x, data.y);
+});
+
 // --- Player inventory (private, held items not yet on the Evidence Table) ---
 let myInventory = [];
 
@@ -1390,8 +1398,7 @@ function renderTableGrid() {
   tableExhibits.forEach((ex) => {
     grid.appendChild(
       buildItemCard(ex, {
-        label: `Exhibit ${ex.letter}`,
-        exhibitLetter: ex.letter,
+        label: `Exhibit ${ex.letter}: ${ex.name}`,
         onClick: () => openInvestigateModal(ex),
       })
     );

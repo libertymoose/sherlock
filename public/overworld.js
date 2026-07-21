@@ -142,6 +142,8 @@ window.Overworld = (function () {
   let animClock = 0; // ms, accumulated each frame, drives animated tile frames
   let zoneStates = {}; // zoneId -> { phase: 'closed'|'opening'|'open'|'closing', since: animClock at last transition }
   let candleLit = {}; // candleId -> true, driven entirely by server candle:state events
+  let petHearts = []; // ephemeral {x, y, elapsed} in world px, purely cosmetic, never synced beyond the initial broadcast
+  const PET_HEART_DURATION = 1200; // ms
   let insideAnimZones = new Set(); // which zones the player is inside right now, for edge detection
   let insideInteriorZone = null; // which INTERIORS rect (if any) the player is currently standing in, for edge-triggering
   let insidePlateId = null; // which pressure plate (if any) the player is currently standing on, for edge-triggering
@@ -163,6 +165,7 @@ window.Overworld = (function () {
     mapData.objects = mapData.objects.filter((o) => !collectedIds.has(o.id));
     zoneStates = {};
     candleLit = {};
+    petHearts = [];
     insideAnimZones = new Set();
     insideInteriorZone = null;
     insidePlateId = null;
@@ -602,7 +605,12 @@ window.Overworld = (function () {
       if (a.arrived) return;
       a.delayRemaining -= dt * 1000;
       if (a.delayRemaining > 0) {
-        allArrived = false;
+        if (a.instant) allArrived = false;
+        return;
+      }
+      if (a.instant) {
+        a.arrived = true;
+        a.dir = a.restDir || a.dir;
         return;
       }
       a.elapsed += dt * 1000;
@@ -617,9 +625,11 @@ window.Overworld = (function () {
       if (t >= 1) {
         a.arrived = true;
         a.dir = a.restDir || a.dir;
-      } else {
-        allArrived = false;
       }
+      // A walking-in actor never blocks allArrived/dialogue start - they're
+      // meant to enter *during* the scene (e.g. Voss walking in partway
+      // through Thorne's opening line), not be waited on before anyone
+      // speaks. Only actors already standing in place (instant) gate it.
     });
     if (allArrived && !stagedScene.arrivedFired) {
       stagedScene.arrivedFired = true;
@@ -628,6 +638,11 @@ window.Overworld = (function () {
   }
 
   function update(dt) {
+    if (petHearts.length) {
+      petHearts.forEach((h) => (h.elapsed += dt * 1000));
+      petHearts = petHearts.filter((h) => h.elapsed < PET_HEART_DURATION);
+    }
+
     if (stagedScene) {
       updateStagedScene(dt);
       me.moving = false;
@@ -1157,7 +1172,7 @@ window.Overworld = (function () {
     if (stagedScene) {
       stagedScene.actors.forEach((a) => {
         drawList.push({
-          y: a.y,
+          y: a.y + (a.sortBoost || 0),
           draw: () => {
             const look = NPC_MANIFEST[a.look];
             if (!look) return;
@@ -1185,6 +1200,22 @@ window.Overworld = (function () {
         console.error("Draw error for one item (continuing):", err);
       }
     });
+
+    if (petHearts.length) {
+      petHearts.forEach((h) => {
+        const t = h.elapsed / PET_HEART_DURATION;
+        const riseUp = t * 24 * RENDER_SCALE;
+        const hx = h.x * RENDER_SCALE - camX;
+        const hy = h.y * RENDER_SCALE - camY - 30 * RENDER_SCALE - riseUp;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - t);
+        ctx.font = `bold ${18 * (1 + t * 0.3)}px 'Inter', 'Segoe UI', sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#ff4d6d";
+        ctx.fillText("\u2665", hx, hy);
+        ctx.restore();
+      });
+    }
 
     // Interaction prompt
     if (nearbyObject) {
@@ -1349,6 +1380,19 @@ window.Overworld = (function () {
             duration: a.durationMs || 1600,
             delayRemaining: (a.delayMs != null ? a.delayMs : i * 350) + 500,
             arrived: false,
+            // from === to (no real distance to cover): without this, the
+            // actor still ran the full walk-cycle animation for the whole
+            // duration before ever reaching the time-based "arrived" check,
+            // which reads as visibly shuffling in place instead of standing
+            // still the moment their entrance delay ends.
+            instant: ddx === 0 && ddy === 0,
+            // Nudges this actor's draw-sort key without moving them. Needed
+            // when they stand at the same row as furniture that's part of a
+            // taller connected run (a bookshelf, say) - that whole run sorts
+            // using its own bottom row, which can outrank an actor standing
+            // at a row that's visually in front of/beside it, covering them
+            // almost entirely. Tune per-scene in story.json, not guessed here.
+            sortBoost: a.sortBoost || 0,
           };
         }),
       };
@@ -1411,6 +1455,14 @@ window.Overworld = (function () {
     // board, not an assumed-blank one).
     setCandleState(lit) {
       candleLit = lit || {};
+    },
+
+    // x,y are tile coordinates, matching how map objects are positioned
+    // elsewhere - converted to world px here so callers don't need to know
+    // TILE's value.
+    showPetHeart(x, y) {
+      if (typeof x !== "number" || typeof y !== "number") return;
+      petHearts.push({ x: x * TILE + TILE / 2, y: y * TILE + TILE / 2, elapsed: 0 });
     },
 
     async changeZone(zoneId, mapUrl, tileX, tileY) {

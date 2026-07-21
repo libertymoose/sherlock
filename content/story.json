@@ -81,7 +81,8 @@
             15,
             8
           ],
-          "facing": "down"
+          "facing": "down",
+          "sortBoost": 24
         },
         {
           "id": "voss_entry",
@@ -96,7 +97,8 @@
             15,
             13
           ],
-          "facing": "up"
+          "facing": "up",
+          "delayMs": 3000
         }
       ],
       "dialogue": [
