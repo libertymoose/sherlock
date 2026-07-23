@@ -246,6 +246,7 @@ function sendActToRoom(code) {
   room.dungeonChain = null;
   room.zonePlates = {};
   room.zoneCandles = {};
+  room.zoneDoors = {};
 
   if (act && act.type === "explore" && act.mapUrl) {
     const mapData = loadMapData(act.mapUrl);
@@ -588,6 +589,10 @@ io.on("connection", (socket) => {
       // wrong-order attempts can be told apart from the right one once all
       // four happen to be lit at once.
       zoneCandles: {},
+      // zone -> { doorId: true } - item-gated doors (e.g. Area 4's Lower
+      // Stores door), opened once and persisted per zone, same resync
+      // pattern as zoneCandles' solved flag.
+      zoneDoors: {},
     };
     const room = rooms[code];
     const token = genToken();
@@ -929,6 +934,38 @@ io.on("connection", (socket) => {
     io.to(`${code}:${z}`).emit("candle:state", { lit: {} });
   });
 
+  // Item-gated doors (Area 4's Lower Stores door and any future reuse):
+  // interacting checks the player's own inventory for the required item,
+  // same "map data stays purely structural" split as the candle puzzle -
+  // the required item id lives in interactions.json's lockedDoors, not
+  // on the map object itself.
+  socket.on("door:unlock", ({ zone, doorId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !doorId) return;
+    const z = zone || "estate";
+    const lock = (INTERACTIONS.lockedDoors || {})[doorId];
+    if (!lock) return;
+
+    if (!room.zoneDoors[z]) room.zoneDoors[z] = {};
+    if (room.zoneDoors[z][doorId]) return; // already open
+
+    const has = getInventory(room, socket.id).some((it) => it.itemId === lock.requiresItem);
+    if (has) {
+      room.zoneDoors[z][doorId] = true;
+      io.to(`${code}:${z}`).emit("door:state", { doorZoneId: lock.exitAnimZoneId, open: true });
+      io.to(`${code}:${z}`).emit("explore:dialogue", {
+        title: "",
+        lines: [lock.successText || "The key turns. The door swings open."],
+      });
+    } else {
+      socket.emit("explore:dialogue", {
+        title: "",
+        lines: [lock.lockedText || "It's locked. You'll need to find a key."],
+      });
+    }
+  });
+
   // Players can walk into buildings independently, they don't need to be
   // pulled in together. Each zone is its own Socket.io sub-room so movement
   // and roster updates only reach players actually standing in that zone.
@@ -979,6 +1016,14 @@ io.on("connection", (socket) => {
       const puzzle = (INTERACTIONS.candlePuzzles || {})[zone];
       if (puzzle) {
         socket.emit("door:state", { doorZoneId: puzzle.exitAnimZoneId, open: true });
+      }
+    }
+
+    const openedDoors = room.zoneDoors[zone];
+    if (openedDoors) {
+      for (const doorId of Object.keys(openedDoors)) {
+        const lock = (INTERACTIONS.lockedDoors || {})[doorId];
+        if (lock) socket.emit("door:state", { doorZoneId: lock.exitAnimZoneId, open: true });
       }
     }
   });
