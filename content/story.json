@@ -188,6 +188,87 @@
       "body": "Lady Isobel Ashgate doesn't bother denying it once you lay it all out, motive, means, the poison itself. [PLACEHOLDER: Ashgate's actual confrontation dialogue and argument, not written yet.] The guards take her away, and as they lead her past the garden, she rounds on Old Silas Corwin, still watching from the shadows. 'Ask him,' she spits, 'what he was really doing for Alaric all these years.' Corwin doesn't answer. Thorne and Corwin see you off with a brief thanks, the case closed, at least as far as the City Watch is concerned. Take your findings back to Discord to see if it really is.",
       "finalWord": "NIGHTSHADE",
       "chapter": 2
+    },
+    {
+      "type": "staged_scene",
+      "chapter": 3,
+      "title": "Out of the Sewers",
+      "mapUrl": "/assets/maps/outside_sewer.json",
+      "zone": "outside_sewer",
+      "video": null,
+      "nextActEyebrow": "Act III",
+      "nextActTitle": "The Old Guild Hall",
+      "playerMarks": [
+        [
+          7,
+          8
+        ],
+        [
+          7,
+          10
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          9,
+          10
+        ],
+        [
+          10,
+          8
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          9,
+          8
+        ],
+        [
+          8,
+          9
+        ],
+        [
+          8,
+          7
+        ],
+        [
+          9,
+          7
+        ]
+      ],
+      "actors": [
+        {
+          "id": "hook_corwin",
+          "look": "fighter3",
+          "name": "Silas \"Hook\" Corwin",
+          "portrait": "/assets/npcs/portraits/Fighter3_Portrait.png",
+          "from": [
+            -1,
+            7
+          ],
+          "to": [
+            3,
+            7
+          ],
+          "facing": "right"
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker": "Silas \"Hook\" Corwin",
+          "portrait": "/assets/npcs/portraits/Fighter3_Portrait.png",
+          "text": "You made it. Hope you got all my clues down there.\nLet's get you to the old Guild Hall and cleaned up, because you stink."
+        }
+      ],
+      "fadeOut": true,
+      "cameraCenter": [
+        9,
+        8
+      ]
     }
   ]
 }

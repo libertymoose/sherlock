@@ -698,6 +698,8 @@ function refreshInteractButtonLabel() {
     btn.textContent = "Reset";
   } else if (obj && obj.interaction && obj.interaction.kind === "pet") {
     btn.textContent = "Pet";
+  } else if (obj && obj.interaction && obj.interaction.kind === "locked_door") {
+    btn.textContent = "Unlock";
   } else {
     btn.textContent = "Examine";
   }
@@ -932,6 +934,10 @@ const ZONE_MAPS = {
   manor_upper: "/assets/maps/manor_upper.json",
   dungeon_area_2: "/assets/maps/dungeon_area_2.json",
   dungeon_area_3: "/assets/maps/dungeon_area_3.json",
+  dungeon_area_4: "/assets/maps/dungeon_area_4.json",
+  dungeon_area_6: "/assets/maps/dungeon_area_6.json",
+  dungeon_finale: "/assets/maps/dungeon_finale.json",
+  outside_sewer: "/assets/maps/outside_sewer.json",
 };
 
 function updateZoneLabel(zoneId) {
@@ -973,6 +979,8 @@ async function handleObjectInteract(obj) {
     socket.emit("candle:reset", { zone: Overworld.getZone() });
   } else if (kind === "pet") {
     socket.emit("pet:animal", { zone: Overworld.getZone(), animalId: obj.interaction.animalId, x: obj.x, y: obj.y });
+  } else if (kind === "locked_door") {
+    socket.emit("door:unlock", { zone: Overworld.getZone(), doorId: obj.interaction.doorId });
   } else if (kind === "zone_exit") {
     const targetZone = obj.interaction.targetZone;
     const mapUrl = ZONE_MAPS[targetZone];
