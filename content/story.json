@@ -91,11 +91,11 @@
           "portrait": "/assets/npcs/portraits/Fighter4_Portrait.png",
           "from": [
             15,
-            15
+            12
           ],
           "to": [
             15,
-            13
+            10
           ],
           "facing": "up",
           "delayMs": 3000
@@ -141,7 +141,7 @@
       "fadeOut": true,
       "cameraCenter": [
         15,
-        9
+        7
       ]
     },
     {

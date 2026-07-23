@@ -1275,8 +1275,12 @@ function renderInventoryGrid() {
   grid.innerHTML = "";
   empty.classList.toggle("hidden", myInventory.length > 0);
   myInventory.forEach((item) => {
-    const label = item.letter ? `Exhibit ${item.letter}: ${item.name}` : item.name;
-    grid.appendChild(buildItemCard(item, { label }));
+    grid.appendChild(
+      buildItemCard(item, {
+        title: item.letter ? `EXHIBIT ${item.letter}` : item.name,
+        subtitle: item.letter ? item.name : null,
+      })
+    );
   });
 }
 
@@ -1302,16 +1306,16 @@ function buildItemCard(item, opts) {
   img.alt = "";
   img.className = "item-card-icon-img";
   icon.appendChild(img);
-  const label = document.createElement("div");
-  label.className = "item-card-label";
-  label.textContent = opts.label || item.name;
+  const title = document.createElement("div");
+  title.className = "item-card-label";
+  title.textContent = opts.title || item.name;
   card.appendChild(icon);
-  card.appendChild(label);
-  if (opts.exhibitLetter) {
-    const ex = document.createElement("div");
-    ex.className = "item-card-exhibit";
-    ex.textContent = `Exhibit ${opts.exhibitLetter}`;
-    card.appendChild(ex);
+  card.appendChild(title);
+  if (opts.subtitle) {
+    const sub = document.createElement("div");
+    sub.className = "item-card-subtitle";
+    sub.textContent = opts.subtitle;
+    card.appendChild(sub);
   }
   if (opts.onClick) card.addEventListener("click", opts.onClick);
   return card;
@@ -1398,7 +1402,8 @@ function renderTableGrid() {
   tableExhibits.forEach((ex) => {
     grid.appendChild(
       buildItemCard(ex, {
-        label: `Exhibit ${ex.letter}: ${ex.name}`,
+        title: `EXHIBIT ${ex.letter}`,
+        subtitle: ex.name,
         onClick: () => openInvestigateModal(ex),
       })
     );
@@ -1414,7 +1419,7 @@ function renderTableAddGrid() {
   myInventory.forEach((item) => {
     grid.appendChild(
       buildItemCard(item, {
-        label: `+ ${item.name}`,
+        title: `+ ${item.name}`,
         onClick: () => socket.emit("evidence:add", { itemId: item.itemId }),
       })
     );

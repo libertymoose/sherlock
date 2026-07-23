@@ -1115,10 +1115,15 @@ window.Overworld = (function () {
             });
           },
         });
-      } else if (o.interaction && o.interaction.kind === "evidence_document") {
-        // These already have a custom ground icon (the EVIDENCE TILES layer),
-        // the generic purple interact-dot on top of that read as redundant
-        // clutter, so evidence objects get no marker of their own.
+      } else if (o.interaction && o.interaction.kind === "evidence_document" && !o.showMarker) {
+        // These normally sit on custom ground art (a painted icon, or real
+        // furniture like a cupboard or desk already part of the room), so
+        // the generic marker on top would be redundant clutter. Objects
+        // that don't have that - like a chest sitting on plain floor with
+        // nothing else marking it - opt back in via showMarker.
+      } else if (o.interaction && o.interaction.kind === "pet") {
+        // Animals already read as interactive by being, well, animals -
+        // a marker floating over a pig looks like a bug, not an invitation.
       } else {
         drawList.push({ y: o.y * TILE + TILE, draw: () => drawObjectMarker(o, camX, camY) });
       }
@@ -1145,6 +1150,12 @@ window.Overworld = (function () {
         draw: () => {
           ctx.save();
           ctx.imageSmoothingEnabled = false;
+          // Graffiti reads as scrawled onto the stone, not pasted on top of
+          // it, so it should darken with the wall texture underneath rather
+          // than sit as a flat opaque decal. Scoped to graffiti specifically
+          // (by path) since this images array is a generic, reusable system,
+          // not exclusively for graffiti.
+          if (img.src.includes("/graffiti/")) ctx.globalCompositeOperation = "multiply";
           ctx.drawImage(img_, dx, dy, dw, dh);
           ctx.restore();
         },
@@ -1249,7 +1260,7 @@ window.Overworld = (function () {
     ctx.save();
     ctx.beginPath();
     ctx.arc(dx, dy - 6, 5, 0, Math.PI * 2);
-    ctx.fillStyle = solved ? "#1ebc73" : o.type === "npc" ? "#cd683d" : "#905ea9";
+    ctx.fillStyle = solved ? "#1ebc73" : "#2dd4bf";
     ctx.fill();
     ctx.strokeStyle = "#2e222f";
     ctx.lineWidth = 1.5;
