@@ -943,6 +943,7 @@ const ZONE_MAPS = {
   dungeon_area_4_ossuary: "/assets/maps/dungeon_area_4_ossuary.json",
   dungeon_area_4_treasury: "/assets/maps/dungeon_area_4_treasury.json",
   dungeon_area_4_lower_stores: "/assets/maps/dungeon_area_4_lower_stores.json",
+  dungeon_area_5: "/assets/maps/dungeon_area_5.json",
   dungeon_area_6: "/assets/maps/dungeon_area_6.json",
   dungeon_finale: "/assets/maps/dungeon_finale.json",
   outside_sewer: "/assets/maps/outside_sewer.json",
