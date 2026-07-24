@@ -416,32 +416,32 @@
  "notebook_page_1": {
   "type": "document",
   "title": "A Loose Page",
-  "intro": "[PLACEHOLDER: content not written yet - this is a stand-in so interacting shows something instead of nothing]",
-  "closing": "[PLACEHOLDER: real notebook page content still needed]"
+  "intro": "A torn scrap, covered in a code someone clearly thought was clever:\n\n\ud83c\udf69\ud83c\udf4a \ud83c\udf5c\ud83c\udf4a\ud83c\udf45 \ud83e\udd5a\ud83c\udf4e\ud83c\udf45 \ud83c\udf45\ud83c\udf2d\ud83e\udd5a \ud83c\udf53\ud83c\udf45\ud83e\udd5a\ud83c\udf49\n\nWhoever wrote it never explains the code. Might be nothing.",
+  "closing": "You fold it back up. If it means anything, it isn't obvious."
  },
  "notebook_page_2": {
   "type": "document",
   "title": "A Loose Page",
-  "intro": "[PLACEHOLDER: content not written yet - this is a stand-in so interacting shows something instead of nothing]",
-  "closing": "[PLACEHOLDER: real notebook page content still needed]"
+  "intro": "Cramped handwriting, every letter shifted a few places from where it should be:\n\nWKH NHB LV QRW KHUH\n\nNo note on how to read it, or why someone bothered.",
+  "closing": "A shifted alphabet, maybe. Or someone's idea of a joke."
  },
  "notebook_page_3": {
   "type": "document",
   "title": "A Loose Page",
-  "intro": "[PLACEHOLDER: content not written yet - this is a stand-in so interacting shows something instead of nothing]",
-  "closing": "[PLACEHOLDER: real notebook page content still needed]"
+  "intro": "A single line, underlined twice like it mattered to someone:\n\nDILMT ILLN\n\nIt reads like nonsense until you flip the alphabet in your head -- and even then, it doesn't seem to lead anywhere useful.",
+  "closing": "Someone wanted this to look important. That's not the same thing."
  },
  "area2_chest_1": {
   "type": "document",
   "title": "A Chest",
-  "intro": "[PLACEHOLDER: content not written yet - this is a stand-in so interacting shows something instead of nothing]",
-  "closing": "[PLACEHOLDER: real chest content still needed]"
+  "intro": "Tucked under the false lid, a strip of paper with a string of numbers:\n\n6-1-11-5   7-15-12-4\n\nNo key, no explanation -- just the numbers, and whatever they're worth.",
+  "closing": "Numbers for letters, probably. Doesn't change what's actually in the chest: nothing."
  },
  "area2_chest_2": {
   "type": "document",
   "title": "A Chest",
-  "intro": "[PLACEHOLDER: content not written yet - this is a stand-in so interacting shows something instead of nothing]",
-  "closing": "[PLACEHOLDER: real chest content still needed]"
+  "intro": "The same odd little pictograms from the torn page, scratched into the wood of the lid:\n\n\ud83c\udf5c\ud83c\udf4a \ud83c\udf47\ud83c\udf4a\ud83c\udf4b\ud83c\udf69 \ud83c\udf2d\ud83e\udd5a\ud83c\udf59\ud83e\udd5a\n\nSomeone marked several things this way. Whatever it says, it wasn't important enough to lock up properly.",
+  "closing": "Same code as the page upstairs. Still no idea what it says."
  },
  "lockedDoors": {
   "door_area4_lower_stores": {
@@ -449,6 +449,21 @@
    "exitAnimZoneId": "door_area4_lower_stores",
    "successText": "The key turns. The Lower Stores door swings open.",
    "lockedText": "Locked. The Quartermaster's note said something about not hiding valuables with valuables -- maybe the key is hidden somewhere unassuming."
+  }
+ },
+ "searches": {
+  "area4_hidden_key": {
+   "itemId": "area4_chest_key",
+   "firstText": "You dig through the crate -- straw packing, an old rope, nothing else. Worth a second look, maybe.",
+   "foundText": "Wedged into a gap under the straw, out of sight unless you already knew to check: a small brass key."
+  }
+ },
+ "lockedContainers": {
+  "area4_chest": {
+   "requiresItem": "area4_chest_key",
+   "grantsItem": "lower_stores_key",
+   "lockedText": "Locked. Small keyhole -- whatever opens it, it isn't going to be forced.",
+   "foundText": "The little brass key turns. Inside, half-buried in straw: a heavier iron key."
   }
  }
 }

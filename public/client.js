@@ -700,6 +700,10 @@ function refreshInteractButtonLabel() {
     btn.textContent = "Pet";
   } else if (obj && obj.interaction && obj.interaction.kind === "locked_door") {
     btn.textContent = "Unlock";
+  } else if (obj && obj.interaction && obj.interaction.kind === "search_twice") {
+    btn.textContent = "Search";
+  } else if (obj && obj.interaction && obj.interaction.kind === "locked_container") {
+    btn.textContent = "Open";
   } else {
     btn.textContent = "Examine";
   }
@@ -935,6 +939,10 @@ const ZONE_MAPS = {
   dungeon_area_2: "/assets/maps/dungeon_area_2.json",
   dungeon_area_3: "/assets/maps/dungeon_area_3.json",
   dungeon_area_4: "/assets/maps/dungeon_area_4.json",
+  dungeon_area_4_kennels: "/assets/maps/dungeon_area_4_kennels.json",
+  dungeon_area_4_ossuary: "/assets/maps/dungeon_area_4_ossuary.json",
+  dungeon_area_4_treasury: "/assets/maps/dungeon_area_4_treasury.json",
+  dungeon_area_4_lower_stores: "/assets/maps/dungeon_area_4_lower_stores.json",
   dungeon_area_6: "/assets/maps/dungeon_area_6.json",
   dungeon_finale: "/assets/maps/dungeon_finale.json",
   outside_sewer: "/assets/maps/outside_sewer.json",
@@ -981,6 +989,10 @@ async function handleObjectInteract(obj) {
     socket.emit("pet:animal", { zone: Overworld.getZone(), animalId: obj.interaction.animalId, x: obj.x, y: obj.y });
   } else if (kind === "locked_door") {
     socket.emit("door:unlock", { zone: Overworld.getZone(), doorId: obj.interaction.doorId });
+  } else if (kind === "search_twice") {
+    socket.emit("search:interact", { zone: Overworld.getZone(), objectId: obj.id, searchId: obj.interaction.searchId });
+  } else if (kind === "locked_container") {
+    socket.emit("container:unlock", { zone: Overworld.getZone(), objectId: obj.id, containerId: obj.interaction.containerId });
   } else if (kind === "zone_exit") {
     const targetZone = obj.interaction.targetZone;
     const mapUrl = ZONE_MAPS[targetZone];

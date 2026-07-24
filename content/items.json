@@ -37,6 +37,11 @@
  "lower_stores_key": {
   "name": "Lower Stores Key",
   "description": "A small iron key, found hidden in the false bottom of an otherwise empty crate.",
-  "art": null
+  "art": "/assets/icons/item_lower_stores_key.png"
+ },
+ "area4_chest_key": {
+  "name": "Quartermaster's Chest Key",
+  "description": "A small brass key, easy to miss, worked loose from where it had been wedged out of sight.",
+  "art": "/assets/icons/item_chest_key.png"
  }
 }

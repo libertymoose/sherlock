@@ -247,6 +247,7 @@ function sendActToRoom(code) {
   room.zonePlates = {};
   room.zoneCandles = {};
   room.zoneDoors = {};
+  room.zoneSearches = {};
 
   if (act && act.type === "explore" && act.mapUrl) {
     const mapData = loadMapData(act.mapUrl);
@@ -593,6 +594,11 @@ io.on("connection", (socket) => {
       // Stores door), opened once and persisted per zone, same resync
       // pattern as zoneCandles' solved flag.
       zoneDoors: {},
+      // zone -> { searchId: count } - two-stage search spots (Area 4's
+      // hidden chest key): first interact shows a decoy line, second
+      // interact (by anyone, shared party-wide like everything else here)
+      // reveals the item and removes the object.
+      zoneSearches: {},
     };
     const room = rooms[code];
     const token = genToken();
@@ -964,6 +970,66 @@ io.on("connection", (socket) => {
         lines: [lock.lockedText || "It's locked. You'll need to find a key."],
       });
     }
+  });
+
+  // Two-stage search spots: first interact is a decoy line, second interact
+  // (from anyone in the party, not necessarily the same player) hands over
+  // the item and removes the object from the map, same one-time guard as
+  // inventory:pickup.
+  socket.on("search:interact", ({ zone, objectId, searchId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !objectId || !searchId) return;
+    const z = zone || "estate";
+    const search = (INTERACTIONS.searches || {})[searchId];
+    if (!search) return;
+    if (room.collectedPickups[objectId]) return; // already found, ignore stray clicks
+
+    if (!room.zoneSearches[z]) room.zoneSearches[z] = {};
+    const count = (room.zoneSearches[z][searchId] || 0) + 1;
+    room.zoneSearches[z][searchId] = count;
+
+    if (count >= 2) {
+      const def = ITEMS[search.itemId];
+      if (!def) return;
+      room.collectedPickups[objectId] = true;
+      getInventory(room, socket.id).push({
+        itemId: search.itemId, name: def.name, description: def.description, art: def.art,
+      });
+      io.to(code).emit("map:objectRemoved", { objectId });
+      socket.emit("inventory:state", buildInventoryState(room, socket.id));
+      socket.emit("explore:dialogue", { title: "", lines: [search.foundText || "You found something."] });
+    } else {
+      socket.emit("explore:dialogue", { title: "", lines: [search.firstText || "Nothing here yet."] });
+    }
+  });
+
+  // Locked containers (Area 4's chest): same requires-an-item check as
+  // door:unlock, but grants an item into the opener's inventory instead of
+  // toggling a door, and only ever needs opening once per zone.
+  socket.on("container:unlock", ({ zone, objectId, containerId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !objectId || !containerId) return;
+    const z = zone || "estate";
+    const lock = (INTERACTIONS.lockedContainers || {})[containerId];
+    if (!lock) return;
+    if (room.collectedPickups[objectId]) return; // already opened
+
+    const has = getInventory(room, socket.id).some((it) => it.itemId === lock.requiresItem);
+    if (!has) {
+      socket.emit("explore:dialogue", { title: "", lines: [lock.lockedText || "It's locked."] });
+      return;
+    }
+    const def = ITEMS[lock.grantsItem];
+    if (!def) return;
+    room.collectedPickups[objectId] = true;
+    getInventory(room, socket.id).push({
+      itemId: lock.grantsItem, name: def.name, description: def.description, art: def.art,
+    });
+    io.to(code).emit("map:objectRemoved", { objectId });
+    socket.emit("inventory:state", buildInventoryState(room, socket.id));
+    socket.emit("explore:dialogue", { title: "", lines: [lock.foundText || "It opens."] });
   });
 
   // Players can walk into buildings independently, they don't need to be
