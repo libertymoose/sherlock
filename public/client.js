@@ -691,7 +691,15 @@ function refreshInteractButtonLabel() {
   if (!btn || btn.classList.contains("hidden")) return;
   const obj = currentNearbyObj;
   if (obj && obj.interaction && obj.interaction.kind === "zone_exit") {
-    btn.textContent = obj.interaction.targetZone === "estate" ? "Exit" : "Enter";
+    // Within the dungeon arc, every progress exit reads the same simple
+    // "Continue" regardless of source/target room, per house request -
+    // this is distinct from the estate's contextual Enter/Exit/Examine
+    // convention, which stays as-is outside the dungeon.
+    if (DUNGEON_ZONES.has(Overworld.getZone())) {
+      btn.textContent = "Continue";
+    } else {
+      btn.textContent = obj.interaction.targetZone === "estate" ? "Exit" : "Enter";
+    }
   } else if (obj && obj.interaction && obj.interaction.kind === "candle") {
     btn.textContent = candleLitState[obj.interaction.candleId] ? "Extinguish" : "Light";
   } else if (obj && obj.interaction && obj.interaction.kind === "lever") {
@@ -948,6 +956,24 @@ const ZONE_MAPS = {
   dungeon_finale: "/assets/maps/dungeon_finale.json",
   outside_sewer: "/assets/maps/outside_sewer.json",
 };
+
+// Zones that make up the post-jail dungeon arc, used to switch the zone_exit
+// interact button to the simpler "Continue" label instead of the estate's
+// contextual Enter/Exit/Examine convention.
+const DUNGEON_ZONES = new Set([
+  "jail_cells",
+  "dungeon_area_2",
+  "dungeon_area_3",
+  "dungeon_area_4",
+  "dungeon_area_4_kennels",
+  "dungeon_area_4_ossuary",
+  "dungeon_area_4_treasury",
+  "dungeon_area_4_lower_stores",
+  "dungeon_area_5",
+  "dungeon_area_6",
+  "dungeon_finale",
+  "outside_sewer",
+]);
 
 function updateZoneLabel(zoneId) {
   const label = {
@@ -1300,6 +1326,11 @@ function renderInventoryGrid() {
       buildItemCard(item, {
         title: item.letter ? `EXHIBIT ${item.letter}` : item.name,
         subtitle: item.letter ? item.name : null,
+        // Lets a picked-up document (dungeon loose pages, chest notes, etc)
+        // be reread at any time from the plain Inventory panel, not just
+        // once in the field - previously these cards had no onClick at
+        // all, so nothing happened when you tapped one.
+        onClick: () => openInvestigateModal({ letter: item.letter, name: item.name, itemId: item.itemId, art: item.art }),
       })
     );
   });
@@ -1464,7 +1495,9 @@ async function findDocumentForItem(itemId) {
 }
 
 async function openInvestigateModal(exhibit) {
-  document.getElementById("investigate-title").textContent = `Exhibit ${exhibit.letter}: ${exhibit.name}`;
+  document.getElementById("investigate-title").textContent = exhibit.letter
+    ? `Exhibit ${exhibit.letter}: ${exhibit.name}`
+    : exhibit.name;
   const art = document.getElementById("investigate-art");
   if (exhibit.art) {
     art.src = exhibit.art;

@@ -135,6 +135,27 @@ function orderedPlayerIds(room) {
   return room.joinOrder.filter((id) => room.players[id]);
 }
 
+// Mirrors client.js's ZONE_MAPS for the dungeon arc specifically. Needed so
+// a reconnecting player can be sent back to the actual room they were
+// standing in (jail, a specific dungeon area, a Stores sub-room) instead of
+// always restarting the whole "explore" act at its default mapUrl/zone -
+// previously a refresh mid-dungeon always bounced a player back to
+// jail_cells, regardless of how far in they'd gotten.
+const DUNGEON_ZONE_MAPS = {
+  jail_cells: "/assets/maps/jail_cells.json",
+  dungeon_area_2: "/assets/maps/dungeon_area_2.json",
+  dungeon_area_3: "/assets/maps/dungeon_area_3.json",
+  dungeon_area_4: "/assets/maps/dungeon_area_4.json",
+  dungeon_area_4_kennels: "/assets/maps/dungeon_area_4_kennels.json",
+  dungeon_area_4_ossuary: "/assets/maps/dungeon_area_4_ossuary.json",
+  dungeon_area_4_treasury: "/assets/maps/dungeon_area_4_treasury.json",
+  dungeon_area_4_lower_stores: "/assets/maps/dungeon_area_4_lower_stores.json",
+  dungeon_area_5: "/assets/maps/dungeon_area_5.json",
+  dungeon_area_6: "/assets/maps/dungeon_area_6.json",
+  dungeon_finale: "/assets/maps/dungeon_finale.json",
+  outside_sewer: "/assets/maps/outside_sewer.json",
+};
+
 function buildActPayloadForPlayer(room, socketId) {
   const act = STORY.acts[room.actIndex];
   if (!act) return null;
@@ -197,10 +218,20 @@ function buildActPayloadForPlayer(room, socketId) {
   }
 
   if (act.type === "explore") {
+    // Default to the act's configured entry point, but if this player was
+    // already deeper in the dungeon chain when they disconnected/refreshed,
+    // send them back to that actual room instead of restarting at the top.
+    let mapUrl = act.mapUrl;
+    let zone = act.zone || "estate";
+    const lastZone = room.players[socketId] && room.players[socketId].zone;
+    if (lastZone && DUNGEON_ZONE_MAPS[lastZone] && DUNGEON_ZONE_MAPS[act.zone]) {
+      mapUrl = DUNGEON_ZONE_MAPS[lastZone];
+      zone = lastZone;
+    }
     return {
       ...base,
-      mapUrl: act.mapUrl,
-      zone: act.zone || "estate",
+      mapUrl,
+      zone,
       intro: act.intro || null,
       solvedClues: Object.keys(room.actState.solvedClues || {}),
       requiredCount: act.completionCount,
@@ -326,6 +357,30 @@ function advanceAct(code) {
 
 function normalize(str) {
   return String(str || "").trim().toLowerCase();
+}
+
+// Area 4's Kennels/Ossuary/Treasury doors read as closed until someone's
+// actually inside, open while occupied - same open/close state machine as
+// the Lower Stores door (setRemoteDoorPhase via door:state), just driven by
+// room occupancy instead of a lock. No door tile art exists for these three
+// yet (per Elle), so this has no visual effect until gatedCells/tile art is
+// added in a future Tiled pass, but the mechanism is real and correct now -
+// it'll "just work" the moment that art lands. Broadcast to dungeon_area_4
+// specifically, since that's the only zone anyone would actually see the
+// door from.
+const OCCUPANCY_DOORS = {
+  dungeon_area_4_kennels: "door_area4_kennels",
+  dungeon_area_4_ossuary: "door_area4_ossuary",
+  dungeon_area_4_treasury: "door_area4_treasury",
+};
+
+function updateOccupancyDoor(room, code, zone) {
+  const doorZoneId = OCCUPANCY_DOORS[zone];
+  if (!doorZoneId) return;
+  const occupied = Object.values(room.players).some(
+    (p) => p.connected && (p.zone || "estate") === zone
+  );
+  io.to(`${code}:dungeon_area_4`).emit("door:state", { doorZoneId, open: occupied });
 }
 
 function getInventory(room, socketId) {
@@ -1049,10 +1104,12 @@ io.on("connection", (socket) => {
 
     socket.leave(`${code}:${oldZone}`);
     socket.to(`${code}:${oldZone}`).emit("zone:playerLeft", { id: socket.id });
+    updateOccupancyDoor(room, code, oldZone);
 
     player.zone = zone;
     player.pos = { x, y, dir: "down", moving: false };
     socket.join(`${code}:${zone}`);
+    updateOccupancyDoor(room, code, zone);
 
     socket.to(`${code}:${zone}`).emit("zone:playerEntered", {
       id: socket.id,
@@ -1281,6 +1338,7 @@ io.on("connection", (socket) => {
     socket.data.roomCode = null;
     broadcastRoomState(code);
     recheckGroupThreshold(room, code);
+    updateOccupancyDoor(room, code, zone);
   });
 
   socket.on("disconnect", () => {
@@ -1294,6 +1352,7 @@ io.on("connection", (socket) => {
       socket.to(`${code}:${zone}`).emit("zone:playerLeft", { id: socket.id });
       broadcastRoomState(code);
       recheckGroupThreshold(room, code);
+      updateOccupancyDoor(room, code, zone);
     }
 
     // If they were mid-hold on a pressure plate when they dropped, let go

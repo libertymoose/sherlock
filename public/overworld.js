@@ -1124,6 +1124,9 @@ window.Overworld = (function () {
       } else if (o.interaction && o.interaction.kind === "pet") {
         // Animals already read as interactive by being, well, animals -
         // a marker floating over a pig looks like a bug, not an invitation.
+      } else if (o.interaction && o.interaction.kind === "lever" && !o.showMarker) {
+        // A lever is already obviously a lever - the generic marker on top
+        // reads as a bug, not an invitation. Opt back in via showMarker.
       } else {
         drawList.push({ y: o.y * TILE + TILE, draw: () => drawObjectMarker(o, camX, camY) });
       }
