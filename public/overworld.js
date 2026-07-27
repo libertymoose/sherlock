@@ -79,6 +79,15 @@ window.Overworld = (function () {
   const WORLD_CHAR_SIZE = 22; // NPC on-map footprint
   const IDLE_FPS = 3;
   const WALK_FPS = 9;
+  // Idle used to just cycle all frames at a flat IDLE_FPS, which reads as
+  // "the whole animation is slow." What was actually wanted: a longer pause
+  // specifically on frame 0 (the neutral standing pose), with the rest of
+  // the idle cycle (the small breathing/shift frames) back to a snappier
+  // pace. Index 0 is the hold; the rest share a faster duration.
+  const IDLE_FRAME_DURATIONS = [0.9, 0.18, 0.18, 0.18];
+  function idleFrameDuration(frame) {
+    return IDLE_FRAME_DURATIONS[frame % IDLE_FRAME_DURATIONS.length];
+  }
   const AMBLE_FPS = 4; // slower leg-cycle for the gentle NPC wander, not a full walk pace
   const NPC_WANDER_SPEED = 3; // px/sec - deliberately slow, gentle ambient amble, not a real walk pace
 
@@ -679,8 +688,8 @@ window.Overworld = (function () {
     // Animate continuously in both states; drawFrame() takes frameIndex % cols
     // per sheet, so this doesn't need to know each sheet's exact frame count.
     animTimer += dt;
-    const fps = moving ? WALK_FPS : IDLE_FPS;
-    if (animTimer > 1 / fps) {
+    const holdSec = moving ? 1 / WALK_FPS : idleFrameDuration(animFrame);
+    if (animTimer > holdSec) {
       animTimer = 0;
       animFrame++;
     }
@@ -829,8 +838,8 @@ window.Overworld = (function () {
 
   function updateOneNpc(o, st, dt) {
       st.animTimer += dt;
-      const fps = st.phase === "walking" ? AMBLE_FPS : IDLE_FPS;
-      if (st.animTimer > 1 / fps) {
+      const holdSec = st.phase === "walking" ? 1 / AMBLE_FPS : idleFrameDuration(st.frame);
+      if (st.animTimer > holdSec) {
         st.animTimer = 0;
         st.frame++;
       }
@@ -1124,6 +1133,15 @@ window.Overworld = (function () {
       } else if (o.interaction && o.interaction.kind === "pet") {
         // Animals already read as interactive by being, well, animals -
         // a marker floating over a pig looks like a bug, not an invitation.
+      } else if (
+        o.interaction &&
+        ["note", "locked_container", "search_twice", "locked_door"].includes(o.interaction.kind) &&
+        !o.showMarker
+      ) {
+        // Search-and-click content (crates, chests, urns, notes) reads
+        // better without a dot flagging every single one - walk up and
+        // press interact like anything else in the room. Opt back in via
+        // showMarker for anything that genuinely needs the extra flag.
       } else if (o.interaction && o.interaction.kind === "lever" && !o.showMarker) {
         // A lever is already obviously a lever - the generic marker on top
         // reads as a bug, not an invitation. Opt back in via showMarker.
