@@ -33,5 +33,10 @@
     "src": "/assets/wildlife/anim/fox.png",
     "cell": 64,
     "cols": 2
+  },
+  "mouse": {
+    "src": "/assets/wildlife/anim/mouse_idle.png",
+    "cell": 32,
+    "cols": 6
   }
 }

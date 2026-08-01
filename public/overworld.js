@@ -77,6 +77,8 @@ window.Overworld = (function () {
   // on-screen height stays consistent with everything else.
   const PLAYER_DRAW_SIZE = 50;
   const WORLD_CHAR_SIZE = 22; // NPC on-map footprint
+  const CRITTER_DRAW_SIZE = 12; // small ambient sprites (dungeon mice), noticeably smaller than a player/NPC
+  const CRITTER_FRAME_MS = 220; // shared clock, all critters of the same look stay in sync - fine for an ambient idle loop
   const IDLE_FPS = 3;
   const WALK_FPS = 9;
   // Idle used to just cycle all frames at a flat IDLE_FPS, which reads as
@@ -1122,6 +1124,20 @@ window.Overworld = (function () {
               const dy = Math.round((o.y + c.dy) * scaledTile - camY + offY * RENDER_SCALE);
               drawTile(ctx, getImg(r.src), r.sx, r.sy, TILE, dx, dy, scaledTile, false, false);
             });
+          },
+        });
+      } else if (o.type === "mouse") {
+        // Purely ambient decor, no interaction - a marker floating over a
+        // mouse would read as a bug, same reasoning as the "pet" case below.
+        drawList.push({
+          y: o.y * TILE + TILE,
+          draw: () => {
+            const frameSet = WILDLIFE_MANIFEST[o.look || "mouse"];
+            if (!frameSet) return;
+            const img = getImg(frameSet.src);
+            const frameCount = frameSet.cols || 1;
+            const frame = Math.floor(animClock / CRITTER_FRAME_MS) % frameCount;
+            drawFrame(img, frameSet, 0, frame, o.x * TILE + TILE / 2, o.y * TILE + TILE / 2, camX, camY, CRITTER_DRAW_SIZE);
           },
         });
       } else if (o.interaction && o.interaction.kind === "evidence_document" && !o.showMarker) {
