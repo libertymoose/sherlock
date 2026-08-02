@@ -11,7 +11,6 @@
   --success: #1ebc73;
   --border-line: #484a77;
   --focus-ring: #5fff94;
-  --btn-text: #1a1408;
   --candle-rgb: 80,169,120;
   --parchment-rgb: 255,255,255;
   --radius: 3px;
@@ -27,7 +26,7 @@
 /* Out-of-game palette (Nyx), lobby and landing screens only */
 #screen-landing, #screen-lobby {
   --ink: #34202f;
-  --ink-surface: #e5d6a1;
+  --ink-surface: #e7e1e5;
   --ink-surface-2: #603654;
   --parchment: #c3f7d0;
   --parchment-dim: #522747;
@@ -37,7 +36,6 @@
   --success: #50a978;
   --border-line: #603654;
   --focus-ring: #50a978;
-  --btn-text: #34202f;
   --candle-rgb: 80,169,120;
   --parchment-rgb: 195,247,208;
 }
@@ -96,15 +94,6 @@ html, body {
   font-size: 28px;
   color: var(--candle);
   box-shadow: 0 0 24px rgba(var(--candle-rgb),0.25);
-}
-
-.game-title {
-  font-family: 'Inter', -apple-system, sans-serif;
-  font-weight: 600;
-  font-size: clamp(32px, 6vw, 52px);
-  text-align: center;
-  margin: 0 0 6px;
-  letter-spacing: 0.02em;
 }
 
 .subtitle {
@@ -209,13 +198,6 @@ html, body {
   height: 213px;
 }
 
-.mini-avatar {
-  image-rendering: pixelated;
-  width: 24px;
-  height: 32px;
-  flex-shrink: 0;
-}
-
 .player-color-dot {
   width: 22px;
   height: 22px;
@@ -255,11 +237,6 @@ html, body {
 #screen-landing button,
 #screen-landing .btn {
   font-family: 'Inter', sans-serif;
-}
-
-#screen-landing .game-title {
-  font-family: 'Inter', sans-serif;
-  font-weight: 700;
 }
 
 .card {
@@ -619,6 +596,16 @@ input[type="text"]:focus {
 
 .board-frame .sync-banner {
   background: rgba(0,0,0,0.55);
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.board-frame .btn {
+  max-width: 420px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .board-frame .btn-secondary {
@@ -631,6 +618,8 @@ input[type="text"]:focus {
   background: rgba(0,0,0,0.45);
   border-radius: var(--radius);
   padding: 8px 14px;
+  max-width: 480px;
+  margin: 0 auto;
 }
 
 .board-header-box {
@@ -739,6 +728,14 @@ input[type="text"]:focus {
 
 .explore-hud-right {
   text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.explore-hud-right .btn {
+  margin-top: 0;
 }
 
 .explore-title {
@@ -904,12 +901,6 @@ input[type="text"]:focus {
   color: var(--parchment);
 }
 
-.vn-close-btn {
-  width: auto;
-  padding: 7px 18px;
-  margin-top: 10px;
-}
-
 .vn-puzzle-footer {
   display: flex;
   align-items: center;
@@ -947,13 +938,6 @@ input[type="text"]:focus {
   padding: 26px;
   max-width: 480px;
   width: 100%;
-}
-
-.modal-title {
-  font-family: 'Inter', -apple-system, sans-serif;
-  font-size: 24px;
-  margin: 0 0 14px;
-  color: var(--candle-bright);
 }
 
 .modal-prompt {

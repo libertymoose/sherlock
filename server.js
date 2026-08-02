@@ -156,6 +156,21 @@ const DUNGEON_ZONE_MAPS = {
   outside_sewer: "/assets/maps/outside_sewer.json",
 };
 
+// Superset of DUNGEON_ZONE_MAPS used only by host:skipZonePuzzle below - the
+// dungeon arc is the described use case, but the estate's own sub-buildings
+// can carry barrier-gated puzzles too (or might in the future), so a skip
+// request works the same way anywhere a barrier exists, not just underground.
+// Deliberately not merged into DUNGEON_ZONE_MAPS itself, since that table's
+// existing reconnect-position logic is scoped tightly to the dungeon arc on
+// purpose and shouldn't start matching estate sub-zones too.
+const ALL_ZONE_MAPS = {
+  ...DUNGEON_ZONE_MAPS,
+  barn_interior: "/assets/maps/barn_interior.json",
+  dock_interior: "/assets/maps/dock_interior.json",
+  manor_ground: "/assets/maps/manor_ground.json",
+  manor_upper: "/assets/maps/manor_upper.json",
+};
+
 function buildActPayloadForPlayer(room, socketId) {
   const act = STORY.acts[room.actIndex];
   if (!act) return null;
@@ -280,6 +295,7 @@ function sendActToRoom(code) {
   room.zoneDoors = {};
   room.zoneSimpleLevers = {};
   room.zoneSearches = {};
+  room.zoneForcedOpenBarriers = {};
 
   if (act && act.type === "explore" && act.mapUrl) {
     const mapData = loadMapData(act.mapUrl);
@@ -659,6 +675,13 @@ io.on("connection", (socket) => {
       // interact (by anyone, shared party-wide like everything else here)
       // reveals the item and removes the object.
       zoneSearches: {},
+      // zone -> { animZoneId: true } - barriers the host force-opened via
+      // "Skip this step", independent of whatever puzzle actually governs
+      // them (candle, lever, locked door...). Kept separate from those
+      // puzzles' own solved-state so a skip never has to know or fake which
+      // puzzle type is behind a given barrier, it just adds a second,
+      // always-open layer on top. Same resync-on-entry pattern as the rest.
+      zoneForcedOpenBarriers: {},
     };
     const room = rooms[code];
     const token = genToken();
@@ -768,6 +791,44 @@ io.on("connection", (socket) => {
     const room = rooms[code];
     if (!room || room.hostSocketId !== socket.id) return;
     advanceAct(code);
+  });
+
+  // A lighter-weight escape hatch than host:advanceAct: instead of jumping
+  // to the next story act entirely, this just force-opens whatever barrier
+  // is currently blocking the room(s) the party is standing in, so they can
+  // walk forward on their own rather than skipping the whole chapter. Reads
+  // real barrier data off the actual map file, same as the puzzles that
+  // normally open them, rather than guessing which zone is "stuck" - so it
+  // stays correct no matter which room, or how many different rooms
+  // different players are currently in, since movement between dungeon
+  // rooms is per-player, not synced.
+  socket.on("host:skipZonePuzzle", () => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || room.hostSocketId !== socket.id) return;
+    const act = STORY.acts[room.actIndex];
+    if (!act || act.type !== "explore") return;
+
+    const zones = new Set();
+    for (const p of Object.values(room.players)) {
+      if (p.zone) zones.add(p.zone);
+    }
+    if (!zones.size && act.zone) zones.add(act.zone);
+
+    for (const zone of zones) {
+      const mapUrl = zone === act.zone ? act.mapUrl : ALL_ZONE_MAPS[zone];
+      const mapData = loadMapData(mapUrl);
+      if (!mapData || !mapData.barriers || !mapData.barriers.length) continue;
+      if (!room.zoneForcedOpenBarriers[zone]) room.zoneForcedOpenBarriers[zone] = {};
+      for (const b of mapData.barriers) {
+        room.zoneForcedOpenBarriers[zone][b.animZoneId] = true;
+        io.to(`${code}:${zone}`).emit("door:state", { doorZoneId: b.animZoneId, open: true });
+      }
+      io.to(`${code}:${zone}`).emit("explore:dialogue", {
+        title: "",
+        lines: ["The way ahead has been cleared."],
+      });
+    }
   });
 
   socket.on("host:resetGame", () => {
@@ -1174,12 +1235,13 @@ io.on("connection", (socket) => {
       const simple = (INTERACTIONS.simpleLevers || {})[zone];
       if (simple) socket.emit("door:state", { doorZoneId: simple.exitAnimZoneId, open: true });
     }
-  });
 
-  socket.on("explore:requestDialogue", ({ dialogueId }) => {
-    const entry = INTERACTIONS[dialogueId];
-    if (!entry || entry.type !== "dialogue") return;
-    socket.emit("explore:dialogue", { id: dialogueId, title: entry.title, lines: entry.lines });
+    const forcedOpen = room.zoneForcedOpenBarriers[zone];
+    if (forcedOpen) {
+      for (const animZoneId of Object.keys(forcedOpen)) {
+        socket.emit("door:state", { doorZoneId: animZoneId, open: true });
+      }
+    }
   });
 
   socket.on("inventory:pickup", ({ objectId, itemId }) => {

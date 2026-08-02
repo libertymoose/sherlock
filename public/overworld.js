@@ -110,8 +110,6 @@ window.Overworld = (function () {
   let lastSent = null;
 
   let npcStates = {}; // objId -> wander/animation state, rebuilt on map load
-  let wildlifeTimer = 0;
-  let wildlifeFrame = 0;
 
   let callbacks = { onInteract: null, onNearbyChange: null, onPlateEnter: null, onPlateLeave: null };
 

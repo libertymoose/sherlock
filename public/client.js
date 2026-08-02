@@ -732,6 +732,7 @@ async function enterExplore(act) {
   document.getElementById("explore-title").textContent = act.title;
   document.getElementById("explore-progress-count").textContent = "0";
   document.getElementById("btn-explore-force-advance").classList.toggle("hidden", state.hostId !== state.myId);
+  document.getElementById("btn-explore-skip-puzzle").classList.toggle("hidden", state.hostId !== state.myId);
 
   // Walking through a zone_exit already tells the server which zone-room
   // to join (player:changeZone). Starting a brand new act never did, every
@@ -792,6 +793,7 @@ async function enterExplore(act) {
 async function enterStagedScene(act) {
   document.getElementById("btn-interact").classList.add("hidden");
   document.getElementById("btn-explore-force-advance").classList.add("hidden");
+  document.getElementById("btn-explore-skip-puzzle").classList.add("hidden");
   updateZoneLabel("");
 
   const zoneId = act.zone || "estate";
@@ -934,6 +936,10 @@ document.getElementById("btn-interact").addEventListener("click", () => {
 
 document.getElementById("btn-explore-force-advance").addEventListener("click", () => {
   socket.emit("host:advanceAct");
+});
+
+document.getElementById("btn-explore-skip-puzzle").addEventListener("click", () => {
+  socket.emit("host:skipZonePuzzle");
 });
 
 // Interior zones a player can walk into independently of the rest of the
