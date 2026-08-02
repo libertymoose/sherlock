@@ -77,7 +77,7 @@ window.Overworld = (function () {
   // on-screen height stays consistent with everything else.
   const PLAYER_DRAW_SIZE = 50;
   const WORLD_CHAR_SIZE = 22; // NPC on-map footprint
-  const CRITTER_DRAW_SIZE = 12; // small ambient sprites (dungeon mice), noticeably smaller than a player/NPC
+  const CRITTER_DRAW_SIZE = 24; // small ambient sprites (dungeon mice), noticeably smaller than a player/NPC. Calibrated up from an earlier 12 - the mouse art's real non-transparent content is only ~16x9px within its 32x32 canvas, so 12 rendered it almost invisible
   const CRITTER_FRAME_MS = 220; // shared clock, all critters of the same look stay in sync - fine for an ambient idle loop
   const IDLE_FPS = 3;
   const WALK_FPS = 9;
@@ -581,6 +581,7 @@ window.Overworld = (function () {
     let closest = null;
     let closestDist = Infinity;
     for (const obj of mapData.objects) {
+      if (!obj.interaction) continue; // purely decorative (e.g. ambient critters) - nothing to interact with
       let ox = obj.x * TILE + TILE / 2;
       let oy = obj.y * TILE + TILE / 2;
       if (obj.type === "npc") {

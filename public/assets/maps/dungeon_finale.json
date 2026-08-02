@@ -12598,7 +12598,7 @@
  "objects": [
   {
    "id": "lever_finale_grate",
-   "name": "A Rusted Sewer Lever",
+   "name": "A Rusty Lever",
    "x": 8,
    "y": 16,
    "interaction": {

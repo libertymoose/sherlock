@@ -703,7 +703,9 @@ function refreshInteractButtonLabel() {
   } else if (obj && obj.interaction && obj.interaction.kind === "candle") {
     btn.textContent = candleLitState[obj.interaction.candleId] ? "Extinguish" : "Light";
   } else if (obj && obj.interaction && obj.interaction.kind === "lever") {
-    btn.textContent = "Reset";
+    const zone = Overworld.getZone();
+    const isSimpleLever = interactionsCache && interactionsCache.simpleLevers && interactionsCache.simpleLevers[zone];
+    btn.textContent = isSimpleLever ? "Pull the Lever" : "Reset";
   } else if (obj && obj.interaction && obj.interaction.kind === "pet") {
     btn.textContent = "Pet";
   } else if (obj && obj.interaction && obj.interaction.kind === "locked_door") {

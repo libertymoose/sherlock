@@ -278,6 +278,7 @@ function sendActToRoom(code) {
   room.zonePlates = {};
   room.zoneCandles = {};
   room.zoneDoors = {};
+  room.zoneSimpleLevers = {};
   room.zoneSearches = {};
 
   if (act && act.type === "explore" && act.mapUrl) {
@@ -649,6 +650,10 @@ io.on("connection", (socket) => {
       // Stores door), opened once and persisted per zone, same resync
       // pattern as zoneCandles' solved flag.
       zoneDoors: {},
+      // zone -> true - plain one-shot levers with no puzzle/reset state to
+      // track (e.g. the sewer finale grate), just "has this been pulled
+      // yet", same resync pattern as zoneDoors/zoneCandles' solved flag.
+      zoneSimpleLevers: {},
       // zone -> { searchId: count } - two-stage search spots (Area 4's
       // hidden chest key): first interact shows a decoy line, second
       // interact (by anyone, shared party-wide like everything else here)
@@ -989,7 +994,22 @@ io.on("connection", (socket) => {
     if (!room) return;
     const z = zone || "estate";
     const puzzle = (INTERACTIONS.candlePuzzles || {})[z];
-    if (!puzzle) return;
+    if (!puzzle) {
+      // Not every lever is a torch-sequence puzzle - a plain lever (like
+      // the sewer grate) has nothing to reset, it just opens its door
+      // directly the moment it's pulled, every time, no wrong-order state
+      // to track.
+      const simple = (INTERACTIONS.simpleLevers || {})[z];
+      if (!simple) return;
+      room.zoneSimpleLevers[z] = true;
+      io.to(`${code}:${z}`).emit("door:state", { doorZoneId: simple.exitAnimZoneId, open: true });
+      const pullerName = room.players[socket.id]?.name || "Someone";
+      io.to(`${code}:${z}`).emit("explore:dialogue", {
+        title: "",
+        lines: [`${pullerName} pulled the lever, and the sewer gate lifts with a clunk.`],
+      });
+      return;
+    }
     const wasSolved = !!(room.zoneCandles[z] && room.zoneCandles[z].solved);
     room.zoneCandles[z] = { lit: {}, order: [], solved: wasSolved };
     io.to(`${code}:${z}`).emit("candle:state", { lit: {} });
@@ -1148,6 +1168,11 @@ io.on("connection", (socket) => {
         const lock = (INTERACTIONS.lockedDoors || {})[doorId];
         if (lock) socket.emit("door:state", { doorZoneId: lock.exitAnimZoneId, open: true });
       }
+    }
+
+    if (room.zoneSimpleLevers[zone]) {
+      const simple = (INTERACTIONS.simpleLevers || {})[zone];
+      if (simple) socket.emit("door:state", { doorZoneId: simple.exitAnimZoneId, open: true });
     }
   });
 
