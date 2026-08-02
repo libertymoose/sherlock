@@ -211,13 +211,16 @@ window.Overworld = (function () {
     charSrcs.push(...allFrameSrcs(WILDLIFE_MANIFEST));
     await Promise.all(charSrcs.map(loadImage));
 
-    // Most maps have one spawn everyone lands on. A few (the jail cells,
-    // so far) define spawnPoints instead, one per player, so the party
-    // actually starts split up rather than stacked on one tile. Falls
-    // back to the single spawn when a map doesn't define spawnPoints, or
-    // when we were never told which index we are (e.g. this map was
-    // reached by walking through a zone exit, which sets position itself
-    // right after this runs anyway).
+    initNpcStates();
+
+    return mapData;
+  }
+
+  // Where loadMap() used to set me.x/me.y itself once its own async work was
+  // done (see the fix note on loadMap above). Used by init() for the very
+  // first map of an act, where there's no explicit target position, only
+  // the map's own default spawn/spawnPoints.
+  function applyDefaultSpawn() {
     if (mapData.spawnPoints && mapData.spawnPoints.length && mySpawnIndex != null && mySpawnIndex >= 0) {
       const idx = mySpawnIndex % mapData.spawnPoints.length;
       const sp = mapData.spawnPoints[idx];
@@ -227,10 +230,6 @@ window.Overworld = (function () {
       me.x = mapData.spawn.x * TILE + TILE / 2;
       me.y = mapData.spawn.y * TILE + TILE / 2;
     }
-
-    initNpcStates();
-
-    return mapData;
   }
 
   const doorFrameInfoCache = new Map();
@@ -554,6 +553,7 @@ window.Overworld = (function () {
   }
 
   let zoneChangeInProgress = false;
+  let mapReady = true; // false while a zone transition is loading - gates render(), see changeZone()
 
   function handleKeyDown(e) {
     const k = e.key.toLowerCase();
@@ -657,6 +657,11 @@ window.Overworld = (function () {
       updateStagedScene(dt);
       me.moving = false;
       animClock += dt * 1000;
+      return;
+    }
+
+    if (!mapReady) {
+      me.moving = false;
       return;
     }
 
@@ -999,6 +1004,16 @@ window.Overworld = (function () {
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = "#2e222f";
     ctx.fillRect(0, 0, w, h);
+    if (!mapReady) {
+      ctx.save();
+      ctx.fillStyle = "rgba(80,169,120,0.85)";
+      ctx.font = "bold 15px 'Inter', 'Segoe UI', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Loading...", w / 2, h / 2);
+      ctx.restore();
+      return;
+    }
     if (!mapData) return;
 
     const scaledTile = TILE * RENDER_SCALE;
@@ -1281,6 +1296,25 @@ window.Overworld = (function () {
       ctx.fillText(label, px, py);
       ctx.restore();
     }
+
+    // Small debug readout: the player's current tile coordinate, always
+    // visible in the corner. Exists specifically so a bug screenshot comes
+    // with exact coordinates already in it - collision/tile reports were
+    // previously impossible to pin down precisely from a screenshot alone,
+    // this makes every future one immediately actionable.
+    ctx.save();
+    const tileX = Math.floor(me.x / TILE);
+    const tileY = Math.floor(me.y / TILE);
+    const dbgLabel = `tile ${tileX}, ${tileY}`;
+    ctx.font = "11px 'Inter', 'Segoe UI', sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    const dbgW = ctx.measureText(dbgLabel).width;
+    ctx.fillStyle = "rgba(46,34,47,0.75)";
+    ctx.fillRect(6, 6, dbgW + 10, 16);
+    ctx.fillStyle = "rgba(95,255,148,0.9)";
+    ctx.fillText(dbgLabel, 11, 8);
+    ctx.restore();
   }
 
   // Standalone wildlife decor sprites are gone now that the real map paints
@@ -1343,6 +1377,7 @@ window.Overworld = (function () {
       collectedIds = new Set(opts.collectedIds || []);
 
       await loadMap(opts.mapUrl);
+      applyDefaultSpawn();
 
       window.addEventListener("keydown", handleKeyDown);
       window.addEventListener("keyup", handleKeyUp);
@@ -1516,15 +1551,28 @@ window.Overworld = (function () {
       zoneChangeInProgress = true;
       others = {}; // repopulated by the zone:roster reply from the server
       nearbyObject = null;
+      mapReady = false;
+      // Set the target position immediately, before any of the async work
+      // below even starts. Previously this only happened after loadMap
+      // fully resolved (map JSON fetch, every tileset/character image
+      // loaded), which could take a real amount of time on a first visit
+      // to a zone. The render loop never pauses for any of that, so for
+      // the whole gap it was drawing the just-swapped-in new map centered
+      // on wherever the player physically was in the *previous* zone -
+      // the "camera doesn't know where the player is" flash on zone entry.
+      // Combined with mapReady below (which skips drawing entirely until
+      // this whole transition is done), the camera is simply never wrong,
+      // rather than wrong-but-hidden.
+      me.x = tileX * TILE + TILE / 2;
+      me.y = tileY * TILE + TILE / 2;
       try {
         await loadMap(mapUrl);
-        me.x = tileX * TILE + TILE / 2;
-        me.y = tileY * TILE + TILE / 2;
         currentZone = zoneId;
       } catch (err) {
         console.error(`changeZone(${zoneId}) failed:`, err);
         throw err;
       } finally {
+        mapReady = true;
         // Whatever happened above, this always has to clear - otherwise a
         // failed zone load doesn't just leave a blank map, it leaves the
         // player unable to press interact ever again for the rest of the

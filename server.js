@@ -807,6 +807,60 @@ io.on("connection", (socket) => {
     const room = rooms[code];
     if (!room || room.hostSocketId !== socket.id) return;
     const act = STORY.acts[room.actIndex];
+    if (!act) return;
+
+    if (act.type !== "explore") {
+      advanceAct(code);
+      return;
+    }
+
+    const zones = new Set();
+    for (const p of Object.values(room.players)) {
+      if (p.zone) zones.add(p.zone);
+    }
+    if (!zones.size && act.zone) zones.add(act.zone);
+
+    let clearedAny = false;
+    for (const zone of zones) {
+      const mapUrl = zone === act.zone ? act.mapUrl : ALL_ZONE_MAPS[zone];
+      const mapData = loadMapData(mapUrl);
+      if (!mapData || !mapData.barriers || !mapData.barriers.length) continue;
+      clearedAny = true;
+      if (!room.zoneForcedOpenBarriers[zone]) room.zoneForcedOpenBarriers[zone] = {};
+      for (const b of mapData.barriers) {
+        room.zoneForcedOpenBarriers[zone][b.animZoneId] = true;
+        io.to(`${code}:${zone}`).emit("door:state", { doorZoneId: b.animZoneId, open: true });
+      }
+      io.to(`${code}:${zone}`).emit("explore:dialogue", {
+        title: "",
+        lines: ["The way ahead has been cleared."],
+      });
+    }
+
+    // Nothing to skip in the estate specifically (it completes on evidence
+    // count, not a barrier) - and nowhere else in this explore act had a
+    // barrier either (a plain traversal room, or everyone's already past
+    // every gate). Either way there's no puzzle in front of anyone right
+    // now, so the useful thing "skip" can still do is move the story on.
+    if (!clearedAny) {
+      advanceAct(code);
+    }
+  });
+
+  // The inverse of host:skipZonePuzzle: instead of forcing a zone's
+  // barriers open, this wipes whatever puzzle state is behind them
+  // (candle sequence, lever pull, locked-door unlock, or a prior skip)
+  // back to fresh and re-closes the barriers. Scoped to the same
+  // barrier-gated puzzle types skip covers - it does not touch
+  // search-twice or locked-container puzzles, since those destroy a map
+  // object and hand an item into a player's inventory rather than
+  // gating a barrier, undoing that would mean un-deleting objects and
+  // clawing items back out of inventories, a different feature.
+  socket.on("host:resetZonePuzzle", () => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || room.hostSocketId !== socket.id) return;
+    const act = STORY.acts[room.actIndex];
     if (!act || act.type !== "explore") return;
 
     const zones = new Set();
@@ -819,14 +873,19 @@ io.on("connection", (socket) => {
       const mapUrl = zone === act.zone ? act.mapUrl : ALL_ZONE_MAPS[zone];
       const mapData = loadMapData(mapUrl);
       if (!mapData || !mapData.barriers || !mapData.barriers.length) continue;
-      if (!room.zoneForcedOpenBarriers[zone]) room.zoneForcedOpenBarriers[zone] = {};
+
+      delete room.zoneCandles[zone];
+      delete room.zoneDoors[zone];
+      delete room.zoneSimpleLevers[zone];
+      delete room.zoneForcedOpenBarriers[zone];
+
       for (const b of mapData.barriers) {
-        room.zoneForcedOpenBarriers[zone][b.animZoneId] = true;
-        io.to(`${code}:${zone}`).emit("door:state", { doorZoneId: b.animZoneId, open: true });
+        io.to(`${code}:${zone}`).emit("door:state", { doorZoneId: b.animZoneId, open: false });
       }
+      io.to(`${code}:${zone}`).emit("candle:state", { lit: {} });
       io.to(`${code}:${zone}`).emit("explore:dialogue", {
         title: "",
-        lines: ["The way ahead has been cleared."],
+        lines: ["The Host has reset this room's puzzle."],
       });
     }
   });
@@ -1189,6 +1248,21 @@ io.on("connection", (socket) => {
 
     player.zone = zone;
     player.pos = { x, y, dir: "down", moving: false };
+
+    // Some explore acts complete when the whole party reaches a specific
+    // forward zone (the dungeon arc ends once everyone's out of the
+    // sewers) rather than an evidence count. Zone changes happen
+    // independently per player, so this checks everyone currently
+    // connected, not just the player who just moved.
+    const act = STORY.acts[room.actIndex];
+    if (act && act.type === "explore" && act.completionMode === "zone" && act.completionZone === zone) {
+      const connectedIds = Object.entries(room.players).filter(([, p]) => p.connected).map(([id]) => id);
+      const allThere = connectedIds.every((id) => room.players[id].zone === zone);
+      if (allThere && connectedIds.length) {
+        setTimeout(() => advanceAct(code), 1200);
+      }
+    }
+
     socket.join(`${code}:${zone}`);
     updateOccupancyDoor(room, code, zone);
 

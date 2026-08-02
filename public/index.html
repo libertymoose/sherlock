@@ -82,6 +82,11 @@
 
   <!-- SCREEN: Game -->
   <section id="screen-game" class="screen">
+    <div id="host-tools" class="host-tools hidden">
+      <button id="btn-host-reset-puzzle" class="btn btn-secondary">Host: Reset Puzzle &rarr;</button>
+      <button id="btn-host-skip-step" class="btn btn-secondary">Host: Skip Step &rarr;</button>
+      <button id="btn-host-force-advance" class="btn btn-secondary">Host: Advance &rarr;</button>
+    </div>
     <div class="act-frame" id="act-frame">
       <p class="eyebrow" id="act-eyebrow">Act 1 of 7</p>
       <h2 id="act-title" class="act-title"></h2>
@@ -89,10 +94,6 @@
       <div id="act-body-container"></div>
 
       <div id="act-progress" class="progress-text"></div>
-
-      <div id="host-advance-wrap" class="hidden">
-        <button id="btn-force-advance" class="btn btn-secondary">Host: Force Advance &rarr;</button>
-      </div>
     </div>
 
     <div class="explore-frame hidden" id="explore-frame">
@@ -101,10 +102,6 @@
           <p class="eyebrow" style="text-align:left;margin:0">Now Exploring</p>
           <h2 class="explore-title" id="explore-title"></h2>
           <p class="zone-label" id="explore-zone-label"></p>
-        </div>
-        <div class="explore-hud-right">
-          <button id="btn-explore-skip-puzzle" class="btn btn-secondary hidden">Host: Skip Step &rarr;</button>
-          <button id="btn-explore-force-advance" class="btn btn-secondary hidden">Host: Advance &rarr;</button>
         </div>
       </div>
       <div class="explore-viewport" id="explore-viewport">
@@ -123,7 +120,7 @@
           <div id="vn-portrait-frame" class="pixel-panel-dialogue vn-portrait-frame">
             <canvas id="vn-portrait" width="180" height="180"></canvas>
           </div>
-          <div class="pixel-panel-dialogue vn-text-frame">
+          <div id="vn-text-frame" class="pixel-panel-dialogue vn-text-frame">
             <button id="btn-close-vn" class="pixel-close-btn" aria-label="Close"></button>
             <div class="vn-body">
               <div id="vn-dialogue-set">

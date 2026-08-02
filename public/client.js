@@ -285,7 +285,7 @@ socket.on("room:update", (data) => {
     }
   }
 
-  document.getElementById("host-advance-wrap").classList.toggle("hidden", !isMeHost);
+  document.getElementById("host-tools").classList.toggle("hidden", !isMeHost);
 });
 
 document.getElementById("btn-start").addEventListener("click", () => {
@@ -300,7 +300,7 @@ function leaveGame() {
 document.getElementById("btn-leave-lobby").addEventListener("click", leaveGame);
 document.getElementById("btn-leave-game").addEventListener("click", leaveGame);
 
-document.getElementById("btn-force-advance").addEventListener("click", () => {
+document.getElementById("btn-host-force-advance").addEventListener("click", () => {
   socket.emit("host:advanceAct");
 });
 
@@ -731,8 +731,6 @@ async function enterExplore(act) {
   ZONE_MAPS[zoneId] = act.mapUrl;
   document.getElementById("explore-title").textContent = act.title;
   document.getElementById("explore-progress-count").textContent = "0";
-  document.getElementById("btn-explore-force-advance").classList.toggle("hidden", state.hostId !== state.myId);
-  document.getElementById("btn-explore-skip-puzzle").classList.toggle("hidden", state.hostId !== state.myId);
 
   // Walking through a zone_exit already tells the server which zone-room
   // to join (player:changeZone). Starting a brand new act never did, every
@@ -792,8 +790,6 @@ async function enterExplore(act) {
 // then hands off to a VN dialogue sequence once everyone's arrived.
 async function enterStagedScene(act) {
   document.getElementById("btn-interact").classList.add("hidden");
-  document.getElementById("btn-explore-force-advance").classList.add("hidden");
-  document.getElementById("btn-explore-skip-puzzle").classList.add("hidden");
   updateZoneLabel("");
 
   const zoneId = act.zone || "estate";
@@ -934,12 +930,12 @@ document.getElementById("btn-interact").addEventListener("click", () => {
   Overworld.triggerInteractFromButton();
 });
 
-document.getElementById("btn-explore-force-advance").addEventListener("click", () => {
-  socket.emit("host:advanceAct");
+document.getElementById("btn-host-skip-step").addEventListener("click", () => {
+  socket.emit("host:skipZonePuzzle");
 });
 
-document.getElementById("btn-explore-skip-puzzle").addEventListener("click", () => {
-  socket.emit("host:skipZonePuzzle");
+document.getElementById("btn-host-reset-puzzle").addEventListener("click", () => {
+  socket.emit("host:resetZonePuzzle");
 });
 
 // Interior zones a player can walk into independently of the rest of the
@@ -1052,12 +1048,15 @@ async function handleObjectInteract(obj) {
 function setVnPortrait(obj) {
   const frame = document.getElementById("vn-portrait-frame");
   const canvas = document.getElementById("vn-portrait");
-  if (obj && obj.portrait) {
+  const textFrame = document.getElementById("vn-text-frame");
+  const hasPortrait = !!(obj && obj.portrait);
+  if (hasPortrait) {
     frame.classList.remove("hidden");
     drawFixedPortrait(canvas, obj.portrait);
   } else {
     frame.classList.add("hidden");
   }
+  if (textFrame) textFrame.classList.toggle("vn-compact", !hasPortrait);
 }
 
 // --- Pagination: no scrollbars and no font-shrinking allowed, so when
