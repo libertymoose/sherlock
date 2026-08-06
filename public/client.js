@@ -948,6 +948,8 @@ const ZONE_MAPS = {
   dock_interior: "/assets/maps/dock_interior.json",
   manor_ground: "/assets/maps/manor_ground.json",
   manor_upper: "/assets/maps/manor_upper.json",
+  guild_hall_ground: "/assets/maps/guild_hall_ground.json",
+  guild_hall_upper: "/assets/maps/guild_hall_upper.json",
   dungeon_area_2: "/assets/maps/dungeon_area_2.json",
   dungeon_area_3: "/assets/maps/dungeon_area_3.json",
   dungeon_area_4: "/assets/maps/dungeon_area_4.json",
@@ -959,6 +961,12 @@ const ZONE_MAPS = {
   dungeon_area_6: "/assets/maps/dungeon_area_6.json",
   dungeon_finale: "/assets/maps/dungeon_finale.json",
   outside_sewer: "/assets/maps/outside_sewer.json",
+  training_ground: "/assets/maps/training_ground.json",
+  blacksmith_interior: "/assets/maps/blacksmith_interior.json",
+  // guild_hall_exterior deliberately NOT registered yet - collision was
+  // never built for it (no boundary layer in the source file, see its own
+  // _incomplete note), registering it here would let a player walk in and
+  // crash on the first isBlockedTile check against a null collision grid.
 };
 
 // Zones that make up the post-jail dungeon arc, used to switch the zone_exit
@@ -986,6 +994,8 @@ function updateZoneLabel(zoneId) {
     dock_interior: "The Dockhouse",
     manor_ground: "The Manor",
     manor_upper: "The Manor, Upstairs",
+    guild_hall_ground: "The Guild Hall",
+    guild_hall_upper: "The Guild Hall, Upstairs",
   }[zoneId] || "";
   const el = document.getElementById("explore-zone-label");
   if (el) el.textContent = label;
@@ -995,7 +1005,18 @@ async function handleObjectInteract(obj) {
   const kind = obj.interaction && obj.interaction.kind;
   const data = await getInteractions();
 
-  if (kind === "dialogue") {
+  // Generic hook, not tied to any one interaction kind: any object can
+  // optionally teach the party a trigger fact the instant it's interacted
+  // with (a document, a dialogue line, a note), independent of whatever
+  // else that interaction does. Means and Opportunity's split-knowledge
+  // town gathering is the first real use of this.
+  if (obj.interaction && obj.interaction.learnsFact) {
+    socket.emit("fact:learn", { factId: obj.interaction.learnsFact });
+  }
+
+  if (kind === "two_stage_dialogue") {
+    socket.emit("npc:twoStageDialogue", { npcId: obj.interaction.npcId });
+  } else if (kind === "dialogue") {
     const entry = data[obj.interaction.dialogueId];
     if (entry) openDialogueModal(entry.title, entry.lines, obj);
   } else if (kind === "note") {
@@ -1201,6 +1222,14 @@ function closeVnPanel() {
 document.getElementById("btn-close-vn").addEventListener("click", closeVnPanel);
 
 socket.on("explore:dialogue", (data) => {
+  openDialogueModal(data.title, data.lines);
+});
+
+// Response to npc:twoStageDialogue - separate listener from explore:dialogue
+// above (which is party-wide broadcast content like candle puzzle results)
+// since this is a private answer to one player's own question, resolved
+// server-side against party fact state.
+socket.on("npc:dialogue", (data) => {
   openDialogueModal(data.title, data.lines);
 });
 

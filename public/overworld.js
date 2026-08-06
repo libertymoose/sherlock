@@ -504,7 +504,26 @@ window.Overworld = (function () {
     const tx = Math.floor(px / TILE);
     const ty = Math.floor(py / TILE);
     if (tx < 0 || ty < 0 || tx >= mapData.width || ty >= mapData.height) return true;
-    if (mapData.collision[ty][tx] === 1) return true;
+    if (mapData.collision[ty][tx] === 1) {
+      // Give a small margin of leniency on whichever edges of this tile
+      // border an open (non-wall) neighbor, so a hitbox corner grazing the
+      // very outer boundary of a wall isn't treated as a collision - this
+      // was reading as an "invisible wall" right at the top/sides of wall
+      // segments, since the technical tile edge doesn't always match where
+      // the wall visually looks solid. Edges bordering another wall tile
+      // get no leniency, so a continuous wall run can never develop a gap
+      // at the seam between two of its own tiles.
+      const EDGE_MARGIN = 4;
+      const localX = px - tx * TILE;
+      const localY = py - ty * TILE;
+      const blockedAt = (nx, ny) =>
+        nx < 0 || ny < 0 || nx >= mapData.width || ny >= mapData.height || mapData.collision[ny][nx] === 1;
+      if (!blockedAt(tx - 1, ty) && localX < EDGE_MARGIN) return false;
+      if (!blockedAt(tx + 1, ty) && localX >= TILE - EDGE_MARGIN) return false;
+      if (!blockedAt(tx, ty - 1) && localY < EDGE_MARGIN) return false;
+      if (!blockedAt(tx, ty + 1) && localY >= TILE - EDGE_MARGIN) return false;
+      return true;
+    }
 
     // Barriers are tile rects that are only passable while their linked
     // animation zone is open (or opening), used for things like the jail

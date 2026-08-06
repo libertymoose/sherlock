@@ -169,6 +169,8 @@ const ALL_ZONE_MAPS = {
   dock_interior: "/assets/maps/dock_interior.json",
   manor_ground: "/assets/maps/manor_ground.json",
   manor_upper: "/assets/maps/manor_upper.json",
+  guild_hall_ground: "/assets/maps/guild_hall_ground.json",
+  guild_hall_upper: "/assets/maps/guild_hall_upper.json",
 };
 
 function buildActPayloadForPlayer(room, socketId) {
@@ -655,6 +657,14 @@ io.on("connection", (socket) => {
       inventories: {},
       evidence: [],
       collectedPickups: {},
+      // factId -> true. Party-wide and persistent across acts and zones,
+      // same reasoning as evidence above - a trigger fact learned from one
+      // NPC (e.g. the Mage Tower apprentice mentioning the cold forge) has
+      // to still be known when a different player later talks to a
+      // completely different NPC (the Blacksmith) in a different zone. Not
+      // reset per-act like zoneCandles/zoneDoors/etc below, since the whole
+      // point is it survives the wave-to-wave Guild Hall round trips.
+      knownFacts: {},
       // zone -> plateId -> { holders: Set<socketId>, targetDoorZoneId, selfDoorZoneId }
       zonePlates: {},
       // zone -> { lit: { candleId: true }, order: [candleId, ...] } - the
@@ -1100,6 +1110,37 @@ io.on("connection", (socket) => {
   // Petting an animal is purely cosmetic - broadcast to the zone so
   // everyone sees the heart pop up, but there's nothing to persist or
   // resync, unlike the candle puzzle's door state.
+  // Party-wide trigger facts (Means and Opportunity's split-knowledge town
+  // gathering): learning a fact is purely a server-side flag flip, nothing
+  // to broadcast or resync since it has no visual representation on the
+  // map like the candle/door states do - it only ever matters at the
+  // moment someone later talks to a two-stage NPC, handled below.
+  socket.on("fact:learn", ({ factId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !factId) return;
+    room.knownFacts[factId] = true;
+  });
+
+  // Two-stage NPC dialogue: which of the two dialogue entries to show
+  // depends on party-wide fact state, so unlike the plain "dialogue" kind
+  // (fully client-side, static content) this needs a real round trip.
+  // Response goes to the requesting socket only, not broadcast to the
+  // zone - this is one player asking a question, not a shared event like
+  // lighting a candle everyone can see happen.
+  socket.on("npc:twoStageDialogue", ({ npcId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !npcId) return;
+    const config = (INTERACTIONS.twoStageDialogues || {})[npcId];
+    if (!config) return;
+    const known = !!room.knownFacts[config.requiresFact];
+    const entryId = known ? config.revealDialogueId : config.surfaceDialogueId;
+    const entry = INTERACTIONS[entryId];
+    if (!entry) return;
+    socket.emit("npc:dialogue", { title: entry.title, lines: entry.lines });
+  });
+
   socket.on("pet:animal", ({ zone, x, y }) => {
     const code = socket.data.roomCode;
     const room = rooms[code];

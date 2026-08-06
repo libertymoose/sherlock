@@ -35,24 +35,71 @@ the codebase, mentally substitute "Area 5" wherever this doc says
    key to open a locked chest, the chest grants a second key that opens
    the Lower Stores door forward.
 5. **dungeon_area_5.json** - the rat maze (this is what earlier drafts of
-   this doc called "Area 4"). Built from Elle's Tiled export, collision
-   rebuilt using the PLAN/PLAN OFFSET 16/PLAN OFFSET 32 guide-layer
-   convention. 5 mice placed at Elle's marked positions, animated
-   (idle loop), footprint-checked against nearby walls so none visually
-   overlap. **Currently decorative only** - see "Traps: deliberately
-   deferred" below, this was a real design decision, not an oversight.
+   this doc called "Area 4"). Built from Elle's Tiled export. **Collision
+   went through a real correction worth knowing about**: it was originally
+   derived from a hand-inferred rule (classify each PLAN cell as
+   "horizontal-run" vs "vertical/corner", block a different number of rows
+   for each). That rule was wrong - Elle clarified `PLAN OFFSET 32` is
+   *directly* the walkable boundary, verbatim, no classification needed.
+   Collision is now that layer's footprint exactly, 1516 of 6888 cells
+   changed when corrected. Floor tiles are suppressed only at the specific
+   cells where `OFFSET 32` marks a boundary with no `FINAL WALL ART`
+   covering it (mostly the maze's outer perimeter) - floor stays everywhere
+   else as normal backing under wall art. 5 mice placed at Elle's marked
+   positions, animated (idle loop), footprint-checked against the corrected
+   collision (3 needed re-nudging when the correction landed). **Currently
+   decorative only** - see "Traps: deliberately deferred" below.
 6. **dungeon_area_6.json** - a traversal corridor, no puzzle, connects
    the maze to the finale.
-7. **dungeon_finale.json** - the sewer grate room. A lever opens the exit
-   gate (real door-opening animation built from the actual tileset's
-   column-block frame layout, not guessed), water and fire animations
-   wired from real tileset frame data, broadcasts a party-wide "X pulled
-   the lever" dialogue line.
+7. **dungeon_finale.json** - the sewer grate room. Went through two real
+   corrections worth knowing about if touching this map again:
+   - **Water/fire/door animations**: two earlier attempts (guessing frame
+     layout from the tileset's visual structure) were both wrong - one
+     produced glitchy jumps between unrelated tiles, the other was too
+     conservative to be visible. The actual fix was Elle providing the
+     original CraftPix asset pack, which has the real frame data authored
+     directly in Tiled (`Inside.tmx`/`Outside.tmx` in the pack's
+     `Tiled_files/`, as `<tile><animation>` blocks per tileset). All
+     water/fire/door animations are now sourced from that real data, not
+     inferred. If any other CraftPix-sourced animated tile ever looks
+     wrong, check whether the source pack's own Tiled example files have
+     real animation data before trying to infer frames again - they
+     usually do.
+   - **Collision**: was also inferred at first and wrong. Elle provided
+     the original `DUNGEON_FINALE.tmx`, which has a `DO NOT WALK` object
+     layer (polygon shapes) defining the actual walkable boundary.
+     Collision is now rasterized directly from those polygons.
+   - The lever opens the exit gate, broadcasts a party-wide "X pulled the
+     lever" dialogue line.
 8. **outside_sewer.json** - the surface. Hook's "Out of the Sewers" staged
    scene plays here immediately on exit (this act was originally
    misplaced at the very end of `story.json`'s acts array, after the
    finale/epilogue, making it unreachable - fixed by moving it to its
-   correct position right after "The Dungeons").
+   correct position right after "The Dungeons"). This map's own lattice
+   gate had the same class of bug fixed earlier (collision not matching
+   the lattice's full visual footprint).
+
+## A general lesson from this arc, worth repeating for any future map work
+
+Every time collision or animation was *inferred* from a tileset's visual
+structure rather than sourced from real authored data (Elle's own
+boundary/guide layers, or the original asset pack's Tiled files), it was
+wrong, sometimes in ways that looked plausible until tested. Every time
+real source data was used instead, it was right the first time. Ask for
+the source Tiled file or asset pack before inferring collision or
+animation from scratch.
+
+## Wall-edge collision margin (engine-wide, not maze-specific)
+
+Separately from the OFFSET 32 correction above, `isBlockedTile` in
+`overworld.js` now gives a small (4px) margin of leniency on any wall
+tile's face that borders open floor, so a hitbox corner grazing the very
+outer edge of a wall doesn't read as a collision before the player
+visually looks like they've touched it. Faces bordering another wall tile
+get no leniency, so a continuous wall run can never develop a gap at the
+seam between two of its own tiles (verified against every internal seam
+in the maze, zero gaps). This fixed a real "invisible wall" sensation
+reported at the top of vertical wall segments.
 
 ## Traps: deliberately deferred
 
