@@ -55,6 +55,7 @@ window.Overworld = (function () {
   }
 
   let canvas, ctx;
+  let canvasResizeObserver = null;
   let socket = null;
   let mapData = null;
   let images = {};
@@ -1410,6 +1411,33 @@ window.Overworld = (function () {
     async init(opts) {
       canvas = opts.canvas;
       ctx = canvas.getContext("2d");
+      // Belt-and-braces fix for a real class of bug: manual resize() calls
+      // at specific lifecycle points (right after unhiding the explore
+      // frame, entering a staged scene, etc) can run before the browser
+      // has actually settled on a final layout for the canvas's
+      // container - a fade-in, a font swap, or just paint timing can all
+      // shift the container's real height a frame or two later, after
+      // which the backing store is stuck at a stale size until the next
+      // explicit resize() call happens to fire. A ResizeObserver removes
+      // the guesswork: the backing store gets kept in sync with the
+      // canvas's actual rendered CSS size continuously, for as long as
+      // this instance exists, regardless of what triggered the layout
+      // change. Existing manual resize() calls elsewhere are harmless
+      // now (redundant, not wrong) and left in place rather than ripped
+      // out, since removing them isn't necessary to fix this.
+      if (typeof ResizeObserver !== "undefined") {
+        if (canvasResizeObserver) canvasResizeObserver.disconnect();
+        canvasResizeObserver = new ResizeObserver(() => {
+          if (!canvas) return;
+          const w = canvas.clientWidth;
+          const h = canvas.clientHeight;
+          if (w > 0 && h > 0 && (canvas.width !== w || canvas.height !== h)) {
+            canvas.width = w;
+            canvas.height = h;
+          }
+        });
+        canvasResizeObserver.observe(canvas);
+      }
       socket = opts.socket;
       frozen = false; // fresh zone load always starts unfrozen, regardless of how the previous zone left off
       callbacks.onInteract = opts.onInteract || null;

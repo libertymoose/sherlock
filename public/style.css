@@ -865,9 +865,11 @@ input[type="text"]:focus {
   flex-direction: column;
 }
 
-.vn-text-frame.vn-compact {
-  height: 130px;
-}
+/* Deliberately no separate height for .vn-compact (portrait-less) dialogue
+   any more - it used to drop to 130px, which is exactly why a note-only
+   NPC's box (no portrait yet) looked like a different, smaller panel next
+   to Thorne's or Corwin's. Every dialogue box should be the same size
+   regardless of whether this particular NPC has portrait art yet. */
 
 .vn-body {
   flex: 1;
