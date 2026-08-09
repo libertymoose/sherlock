@@ -88,39 +88,11 @@
       "\"I heard the Commodore wanted this whole gala moved up a week. Odd, that. Probably nothing.\""
     ]
   },
-  "npc_guest_b1": {
-    "type": "dialogue",
-    "title": "A Gala Guest",
-    "lines": [
-      "\"Champions of Azeroth, here, at a garden party! My cousin fought at the Shrine, you know. Never shuts up about it.\""
-    ]
-  },
-  "npc_guest_b2": {
-    "type": "dialogue",
-    "title": "A Gala Guest",
-    "lines": [
-      "\"I do hope they let us go home soon. My feet are absolutely killing me in these shoes.\""
-    ]
-  },
   "npc_guest_a3": {
     "type": "dialogue",
     "title": "A Gala Guest",
     "lines": [
       "\"Surprised to see Lady Ashgate still here - I heard the engagement was called off awfully suddenly...\""
-    ]
-  },
-  "npc_guest_c1": {
-    "type": "dialogue",
-    "title": "A Gala Guest",
-    "lines": [
-      "\"Kestrel looked awfully calm when they found the body, don't you think? ...No, I'm sure that means nothing.\""
-    ]
-  },
-  "npc_guest_c2": {
-    "type": "dialogue",
-    "title": "A Gala Guest",
-    "lines": [
-      "\"Best gala Boralus has seen since the Siege, and now this. Poor Alaric. Poor seating chart, honestly. Who's going to redo it?\""
     ]
   },
   "doc_ashby": {
@@ -770,13 +742,6 @@
     "lines": [
       "He barely glances up from the altar. \"Not now. There is always something that needs doing before evensong, and today it is everything.\"",
       "\"Whatever you need, I am sure it can wait. Or find someone else. I am, as you can see, thoroughly occupied.\""
-    ]
-  },
-  "npc_chapel_monk": {
-    "type": "dialogue",
-    "title": "A Monk",
-    "lines": [
-      "He inclines his head in silent greeting and returns to his prayers, saying nothing more."
     ]
   },
   "npc_chapel_parishioner": {

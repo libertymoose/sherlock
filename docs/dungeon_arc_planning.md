@@ -24,7 +24,7 @@ the codebase, mentally substitute "Area 5" wherever this doc says
    ... cell5's plate opens cell1's door). Playable, complete.
 2. **dungeon_area_2.json** - seeds clues. 3 notebook pages and 2 chests,
    all with real written content in `interactions.json`, plus the "The
-   Rats Know" and "Don't Trust a Nun" graffiti.
+   Rats Know" and "Don't Trust a Monk" graffiti.
 3. **dungeon_area_3.json** - the directional puzzle. Built using the
    candle/shrine approach (see "Area 3 decision" below), a 4-candle
    sequence puzzle (north, west, south, east) gated behind a lever, real
@@ -126,10 +126,15 @@ open questions from the original plan still stand:
   challenge to *apply* the direction under pressure, not to *find* it.
 - **"The Rats Know"** - dungeon_area_2.json. Ties to the maze; rats were
   meant to show the real path (see "Traps: deliberately deferred" above).
-- **"Don't Trust a Nun"** - dungeon_area_2.json. Foreshadowing for the
-  still-unbuilt Into Town chapter (the chapel's nun-always-lies mechanic
-  in `MEANS_AND_OPPORTUNITY_SPEC.md`), no mechanical function in the
-  dungeon itself.
+- **"Don't Trust a Monk"** (reworded from "Don't Trust a Nun" this
+  session) - dungeon_area_2.json. Foreshadowing for the Chapel content in
+  `MEANS_AND_OPPORTUNITY_SPEC.md` / `PROJECT_HANDOFF.md`, no mechanical
+  function in the dungeon itself. Reworded and the art hand-edited
+  (`dont_trust_a_monk.png`, pixel-edited to keep the same crude hand-drawn
+  style) once it turned out the actual Chapel asset pack has no nun sprite
+  at all - the false-testimony content lives on the Chapel's Monks now,
+  one lie each, not a single nun. The old `dont_trust_a_nun.png` file has
+  been removed as dead weight (was orphaned/unreferenced).
 
 Engine note: images render via a generic `mapData.images` array (position,
 size, native aspect ratio, proper Y-sort against the wall it's mounted on)
