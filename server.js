@@ -1196,6 +1196,14 @@ io.on("connection", (socket) => {
     // actually learned, the surface story and the reveal are different
     // claims, not the same one twice).
     collectBoardClue(code, known ? config.revealClueId : config.surfaceClueId);
+    // Some two-stage reveals are themselves a trigger fact for a different
+    // NPC further down the chain (the Glassblower's reveal unlocking the
+    // Inn's serving girl, for instance). Only fires on the reveal stage,
+    // never the surface stage - you have to have actually heard the
+    // reveal, not just visited the NPC.
+    if (known && config.revealTeachesFact) {
+      room.knownFacts[config.revealTeachesFact] = true;
+    }
   });
 
   // Generic hook for single-stage clue-bearing interactions (fighters, the

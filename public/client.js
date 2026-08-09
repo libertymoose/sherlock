@@ -1003,9 +1003,11 @@ const ZONE_MAPS = {
   mage_tower_1st_floor: "/assets/maps/mage_tower_1st_floor.json",
   mage_tower_2nd_floor: "/assets/maps/mage_tower_2nd_floor.json",
   tavern_2nd_floor: "/assets/maps/tavern_2nd_floor.json",
+  tavern_1st_floor: "/assets/maps/tavern_1st_floor.json",
   chapel_interior: "/assets/maps/chapel_interior.json",
   glass_workshop: "/assets/maps/glass_workshop.json",
   guild_hall_exterior: "/assets/maps/guild_hall_exterior.json",
+  town_exterior: "/assets/maps/town_exterior.json",
 };
 
 // Zones that make up the post-jail dungeon arc, used to switch the zone_exit
@@ -1040,6 +1042,19 @@ function updateZoneLabel(zoneId) {
   if (el) el.textContent = label;
 }
 
+// Cycling flavor dialogue: an object that hands back a different line each
+// time it's interacted with (the flirty guy's pickup lines, the dragon's
+// riddle fragments), wrapping back to the start once it runs out. Purely
+// client-side and per-tab, not synced or persisted - there's nothing here
+// worth the round trip, it's a repeatable joke, not game state. Resets on
+// refresh, which is fine for what this is.
+const cycleDialogueState = {};
+function nextCycleLine(objId, lines) {
+  const i = cycleDialogueState[objId] || 0;
+  cycleDialogueState[objId] = (i + 1) % lines.length;
+  return lines[i];
+}
+
 async function handleObjectInteract(obj) {
   const kind = obj.interaction && obj.interaction.kind;
   const data = await getInteractions();
@@ -1071,6 +1086,11 @@ async function handleObjectInteract(obj) {
     if (entry) openDialogueModal(entry.title, entry.lines, obj);
   } else if (kind === "note") {
     openDialogueModal(obj.name, [obj.interaction.text], obj);
+  } else if (kind === "cycle_note") {
+    const lines = obj.interaction.lines || [];
+    if (lines.length) {
+      openDialogueModal(obj.name, [nextCycleLine(obj.id, lines)], obj);
+    }
   } else if (kind === "evidence_document") {
     const entry = data[obj.interaction.documentId];
     if (entry) openDocumentModal(obj, entry);

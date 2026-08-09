@@ -160,12 +160,12 @@
       ]
     },
     "list": [
-      "Stub 401 \u2014 Coastwood Timber, 40,000g",
-      "Stub 402 \u2014 Coastwood Timber, 25,000g",
-      "Stub 403 \u2014 Ironbell Smithy, 15,000g",
-      "Stub 404 \u2014 Harrow & Vale, 90,000g",
-      "Stub 405 \u2014 Coastwood Timber, 55,000g",
-      "Stub 406 \u2014 Ironbell Smithy, 20,000g"
+      "Stub 401, Coastwood Timber, 40,000g",
+      "Stub 402, Coastwood Timber, 25,000g",
+      "Stub 403, Ironbell Smithy, 15,000g",
+      "Stub 404, Harrow & Vale, 90,000g",
+      "Stub 405, Coastwood Timber, 55,000g",
+      "Stub 406, Ironbell Smithy, 20,000g"
     ],
     "closing": "Six stubs for seven withdrawals. If they were issued in ledger order, simply skipping whichever entry lacked a receipt, stub 404 ought to belong to the fifth withdrawal, the Coastwood Timber roof beams. Instead it's stamped for Harrow & Vale, the seventh. Something's been renumbered to cover a gap. The 14th withdrawal, paid straight to 'Duskmere Estate' itself for a contingency reserve, has no stub at all.",
     "itemId": "ledger_ashby"
@@ -413,7 +413,7 @@
   "notebook_page_1": {
     "type": "document",
     "title": "A Second Loose Page",
-    "intro": "A scrap of paper, covered in... drawings of food? \ud83c\udf69\ud83c\udf4a \ud83c\udf5c\ud83c\udf4a\ud83c\udf45 \ud83e\udd5a\ud83c\udf4e\ud83c\udf45 \ud83c\udf45\ud83c\udf2d\ud83e\udd5a \ud83c\udf53\ud83c\udf45\ud83e\udd5a\ud83c\udf49. Maybe it's just from a hungry guard?",
+    "intro": "A scrap of paper, covered in... drawings of food? 🍩🍊 🍜🍊🍅 🥚🍎🍅 🍅🌭🥚 🍓🍅🥚🍉. Maybe it's just from a hungry guard?",
     "closing": "You fold it back up. If it means anything, it isn't obvious.",
     "itemId": "page_area2_food"
   },
@@ -441,7 +441,7 @@
   "area2_chest_2": {
     "type": "document",
     "title": "An Unlocked Chest",
-    "intro": "There's nothing exciting inside - just cobwebs, dust and a scrap of paper with drawings on it: \ud83c\udf5c\ud83c\udf4a \ud83c\udf47\ud83c\udf4a\ud83c\udf4b\ud83c\udf69 \ud83c\udf2d\ud83e\udd5a\ud83c\udf59\ud83e\udd5a. No wonder it wasn't locked.",
+    "intro": "There's nothing exciting inside - just cobwebs, dust and a scrap of paper with drawings on it: 🍜🍊 🍇🍊🍋🍩 🌭🥚🍙🥚. No wonder it wasn't locked.",
     "closing": "Same code as the page upstairs. Still no idea what it says.",
     "itemId": "chest_area2_food"
   },
@@ -486,7 +486,22 @@
       "surfaceDialogueId": "npc_glassblower_surface",
       "revealDialogueId": "npc_glassblower_reveal",
       "surfaceClueId": "clue_glassblower_surface",
-      "revealClueId": "clue_glassblower_reveal"
+      "revealClueId": "clue_glassblower_reveal",
+      "revealTeachesFact": "ashgate_plant_question"
+    },
+    "npc_bartender_tavern": {
+      "requiresFact": "voss_empty_chair",
+      "surfaceDialogueId": "npc_bartender_tavern_surface",
+      "revealDialogueId": "npc_bartender_tavern_reveal",
+      "surfaceClueId": "clue_inn_voss_surface",
+      "revealClueId": "clue_inn_voss_reveal"
+    },
+    "npc_goblin_tavern": {
+      "requiresFact": "ashgate_plant_question",
+      "surfaceDialogueId": "npc_goblin_tavern_surface",
+      "revealDialogueId": "npc_goblin_tavern_reveal",
+      "surfaceClueId": "clue_inn_goblin_surface",
+      "revealClueId": "clue_inn_ashgate_reveal"
     }
   },
   "npc_blacksmith_surface": {
@@ -659,45 +674,45 @@
       "suspectId": "voss",
       "category": "opportunity",
       "title": "Drinking all night",
-      "text": "PLACEHOLDER: not written yet. The bartender says Voss was seen drinking at the tavern all night, solid alibi.",
+      "text": "\"Solid as anyone I've poured for,\" the bartender says. \"He was right there at the end of the bar, from before sundown 'til well past the bell.\"",
       "source": "The Bartender, Inn",
-      "written": false
+      "written": true
     },
     {
       "id": "clue_inn_voss_reveal",
       "suspectId": "voss",
       "category": "opportunity",
       "title": "A second, higher-stakes game",
-      "text": "PLACEHOLDER: not written yet. He'd slipped off to a second, higher-stakes game, ashamed of being caught welching, not of anything worse.",
+      "text": "\"He did slip out for a stretch. Long enough his drink went flat.\" A rougher game upstairs, by her guess. Not murder. Just a man who welched and didn't want to explain it.",
       "source": "The Bartender, Inn (after hearing about the empty chair)",
-      "written": false
+      "written": true
     },
     {
       "id": "clue_inn_ashgate_anxious",
       "suspectId": "ashgate",
       "category": "means",
       "title": "Seemed anxious",
-      "text": "PLACEHOLDER: not written yet. A gossiping guest mentions Ashgate seemed oddly on edge near the drinks table all night.",
+      "text": "\"Odd all evening,\" the gala guest says. \"Kept drifting back to the drinks table like she'd lost something there. Wouldn't sit still, wouldn't finish a conversation.\"",
       "source": "A gala guest, Inn",
-      "written": false
+      "written": true
     },
     {
       "id": "clue_inn_ashby_confirm",
       "suspectId": "ashby",
       "category": "opportunity",
       "title": "Buried in paperwork",
-      "text": "PLACEHOLDER: not written yet. A fellow guest confirms seeing Ashby buried in paperwork all night, muttering about the books.",
+      "text": "\"Buried in paperwork the whole night. Kept muttering about the books not adding up. Didn't have it in him to plan a murder, if you ask me.\"",
       "source": "A gala guest, Inn",
-      "written": false
+      "written": true
     },
     {
       "id": "clue_inn_ashgate_reveal",
       "suspectId": "ashgate",
       "category": "opportunity",
-      "title": "Refilled the glass herself",
-      "text": "PLACEHOLDER: not written yet. Serving staff recall Ashgate personally offering to refill Duskmere's glass, unusual enough to be remembered.",
-      "source": "Serving staff, Inn (after learning about the vial question)",
-      "written": false
+      "title": "Wouldn't share a drop",
+      "text": "\"That's exactly what she wouldn't let me near. Kept it right by her, poured from it herself and everything.\" A drunk goblin, connecting dots he didn't know he had.",
+      "source": "A Cheering Goblin, the Inn (after hearing about the vial question)",
+      "written": true
     },
     {
       "id": "clue_monk_impossible",
@@ -733,6 +748,33 @@
       "title": "At evening prayers",
       "text": "\"Lady Ashgate was here the whole evening. Evening prayers, same as always. I'd stake my own name on it.\"",
       "source": "A Monk, Chapel",
+      "written": true
+    },
+    {
+      "id": "clue_inn_goblin_surface",
+      "suspectId": null,
+      "category": "flavor",
+      "title": "Nobles, eh",
+      "text": "\"Wouldn't share a drop of whatever she had, all night. Practically hissed at me when I reached for it.\" Sounds like nothing. At the time, it was nothing.",
+      "source": "A Cheering Goblin, the Inn",
+      "written": true
+    },
+    {
+      "id": "clue_chapel_ashby_candles",
+      "suspectId": "ashby",
+      "category": "means",
+      "title": "Lighting candles all week",
+      "text": "\"The Steward's been in every day this week. Lighting candles. A lot of them.\" A pause. \"Man like that doesn't pray for nothing.\"",
+      "source": "A Parishioner, Chapel (whispered)",
+      "written": true
+    },
+    {
+      "id": "clue_shopkeeper_glass_corroborate",
+      "suspectId": "ashgate",
+      "category": "means",
+      "title": "Fidgeting with her gloves",
+      "text": "\"There was a woman in not long back, wouldn't stop fidgeting with her gloves the whole time he worked. Never seen someone so nervous over a little glass vial.\"",
+      "source": "The Shopkeeper, Glass Workshop",
       "written": true
     }
   ],
@@ -772,7 +814,8 @@
     "type": "dialogue",
     "title": "The Shopkeeper",
     "lines": [
-      "\"Looking for glassware? The master's through the back, past the archway. I just mind the counter.\""
+      "\"Looking for glassware? The master's through the back, past the archway. I just mind the counter.\"",
+      "\"Actually, funny you ask about customers. There was a woman in not long back, wouldn't stop fidgeting with her gloves the whole time he worked. Never seen someone so nervous over a little glass vial.\""
     ]
   },
   "npc_monk_impossible": {
@@ -805,6 +848,59 @@
     "lines": [
       "\"Lady Ashgate? She was here the whole evening. Evening prayers, same as always.\"",
       "\"I'd stake my own name on it.\""
+    ]
+  },
+  "npc_bartender_tavern_surface": {
+    "type": "dialogue",
+    "title": "The Bartender",
+    "lines": [
+      "\"Commodore Voss? Regular enough face in here.\" She keeps wiping the same spot on the bar. \"Gala night he was parked right there at the end, drinking steady, from before sundown 'til well past the bell. Solid as anyone I've poured for.\"",
+      "\"Don't know what you're after, but if you're asking whether he left, the answer's no. I'd have noticed. He tips well and complains worse, hard to miss either one.\""
+    ]
+  },
+  "npc_bartender_tavern_reveal": {
+    "type": "dialogue",
+    "title": "The Bartender",
+    "lines": [
+      "She glances up properly this time. \"Empty chair, you said? Ah. All right. Between us, he did slip out for a stretch. Not the whole night, mind, just long enough that I noticed the same drink sitting flat when he came back.\"",
+      "\"Went to a second game, is my guess. A rougher one, upstairs at a place I won't name. He came back looking like a man who'd rather not explain himself, which is usually about welching, not murder. Draw your own conclusions.\""
+    ]
+  },
+  "npc_gossip_guest": {
+    "type": "dialogue",
+    "title": "A Gala Guest, Deep in Her Cups",
+    "lines": [
+      "She leans in like she's been waiting all night for someone to ask. \"Lady Ashgate? Odd all evening, if you want my honest word on it. Kept drifting back to the drinks table like she'd lost something there.\"",
+      "\"Wouldn't sit still, wouldn't finish a conversation. My husband said I was imagining it. I wasn't imagining it.\""
+    ]
+  },
+  "npc_ashby_witness": {
+    "type": "dialogue",
+    "title": "A Weary-Looking Guest",
+    "lines": [
+      "\"The Steward? Buried in paperwork the whole night, far as I saw. Practically had to shout to get a word out of him.\"",
+      "\"Kept muttering about the books not adding up. Poor man looked like he hadn't slept in a week. Didn't have it in him to plan a murder, if you ask me, let alone carry one off.\""
+    ]
+  },
+  "npc_parishioner_ashby_whisper": {
+    "type": "dialogue",
+    "title": "A Parishioner",
+    "lines": [
+      "She doesn't look at you, keeps her eyes on the altar. \"The Steward's been in every day this week,\" she says, barely above a breath. \"Lighting candles. A lot of them.\" A pause. \"Man like that doesn't pray for nothing.\""
+    ]
+  },
+  "npc_goblin_tavern_surface": {
+    "type": "dialogue",
+    "title": "A Cheering Goblin",
+    "lines": [
+      "\"Lady Ashgate? Hah! Wouldn't share a drop of whatever she had, all night. Practically hissed at me when I reached for it.\" He laughs it off, sloshing his mug. \"Nobles, eh. Probably wasn't even good wine.\""
+    ]
+  },
+  "npc_goblin_tavern_reveal": {
+    "type": "dialogue",
+    "title": "A Cheering Goblin",
+    "lines": [
+      "He squints at you, the joke suddenly less funny. \"Wait. A little glass vial, you said?\" He goes quiet for a goblin. \"That's, hah, that's exactly what she wouldn't let me near. Kept it right by her, poured from it herself and everything. Didn't think nothing of it at the time.\""
     ]
   }
 }
