@@ -110,17 +110,19 @@
           <img src="/assets/ui/icons/info.png" class="hud-icon" alt="Clues found" />
           <span id="explore-progress-count">0</span>
         </div>
-        <button id="btn-open-inventory" class="inventory-btn inventory-btn-hud" aria-label="Inventory">
-          <img src="/assets/ui/icons/chest.png" class="hud-icon" alt="Inventory" />
-          <span id="inventory-count" class="inventory-count">0</span>
-        </button>
-        <button id="btn-open-board" class="inventory-btn inventory-btn-hud board-btn-hud hidden" aria-label="The Board">
-          <img src="/assets/ui/icons/star.png" class="hud-icon" alt="The Board" />
-          <span id="board-clue-count" class="inventory-count">0/0</span>
-        </button>
-        <button id="btn-open-vote" class="inventory-btn inventory-btn-hud vote-btn-hud hidden" aria-label="Point the Finger">
-          <img src="/assets/ui/icons/info.png" class="hud-icon" alt="Point the Finger" />
-        </button>
+        <div id="hud-action-row" class="hud-action-row">
+          <button id="btn-open-inventory" class="inventory-btn" aria-label="Inventory">
+            <img src="/assets/ui/icons/chest.png" class="hud-icon" alt="Inventory" />
+            <span id="inventory-count" class="inventory-count">0</span>
+          </button>
+          <button id="btn-open-board" class="inventory-btn hidden" aria-label="The Board">
+            <img src="/assets/ui/icons/star.png" class="hud-icon" alt="The Board" />
+            <span id="board-clue-count" class="inventory-count">0/0</span>
+          </button>
+          <button id="btn-open-vote" class="inventory-btn hidden" aria-label="Point the Finger">
+            <img src="/assets/ui/icons/info.png" class="hud-icon" alt="Point the Finger" />
+          </button>
+        </div>
         <button id="btn-interact" class="btn btn-primary interact-btn hidden">Examine</button>
 
         <div id="vn-panel" class="vn-panel hidden">

@@ -709,6 +709,15 @@ input[type="text"]:focus {
   border: 1px solid rgba(var(--candle-rgb),0.18);
   border-radius: var(--radius);
   padding: 18px;
+  /* Capped independently of #app.app-wide's 1500px/96vw ceiling. Smaller
+     maps (a tight dungeon room, an interior) were stretching edge-to-edge
+     on wide desktop viewports while their actual rendered content stayed
+     much narrower, camera-clamped to the real map width, leaving the
+     dialogue panel and HUD looking like they'd overshot the map's edges
+     into dead space. This keeps the whole exploration block at a size
+     that reads sensibly across the range of map sizes in the project. */
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
 .explore-hud {
@@ -796,11 +805,21 @@ input[type="text"]:focus {
   flex-shrink: 0;
 }
 
-.inventory-btn-hud {
+.hud-action-row {
+  /* Replaces the old approach of giving each HUD button its own
+     hand-measured "right: Npx" offset, which assumed every button was
+     roughly icon-width. The Board button's "23/23" text badge is wider
+     than that assumption, so it and the Vote button next to it were
+     overlapping. A flex row lays each one out based on its real
+     rendered width automatically, so this can't drift out of sync again
+     as button content changes. */
   position: absolute;
   right: 14px;
   bottom: 14px;
   z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .vn-panel {
@@ -1218,10 +1237,6 @@ input[type="text"]:focus {
   margin-bottom: 6px;
   font-style: italic;
   color: var(--ink);
-}
-
-.board-btn-hud {
-  right: 76px;
 }
 
 .modal-box-board {

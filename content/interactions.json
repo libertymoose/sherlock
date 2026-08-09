@@ -515,33 +515,28 @@
     "type": "dialogue",
     "title": "The Blacksmith",
     "lines": [
-      "\"Kestrel? Sure, know her. Buys nails and hinges same as anyone shipping crates.\" He does not look up from the anvil.",
-      "\"A receipt with her name on it? Could be, I do a lot of paperwork.\" He shrugs, hammer never breaking rhythm. \"Nothing more to say about it than that.\""
+      "\"Kestrel? Sure, know her. Buys nails and hinges same as anyone shipping crates.\" He does not look up from the anvil, engrossed in his work.\n\n\"A receipt with her name on it? Could be, I do a lot of paperwork.\" He shrugs, hammer never breaking rhythm.\n\n\"Nothing more to say about it than that.\""
     ]
   },
   "npc_blacksmith_reveal": {
     "type": "dialogue",
     "title": "The Blacksmith",
     "lines": [
-      "He sets the hammer down this time. \"Alright. A receipt with her name on it, dated the night of the gala? Could be.\" A pause. \"Could also be dated a few days off.\"",
-      "\"Wouldn't be the first favor I've done for a regular customer who needed paperwork to say something convenient.\"",
-      "\"Nothing to do with any murder, if that's what you're fishing for. Just a woman trying to look like she was somewhere she wasn't, for reasons that are her business, not mine.\""
+      "He sets the hammer down this time. \"Alright. A receipt with her name on it, dated the night of the gala? Could be.\" A pause.\n\n\"Could also be dated a few days off.\"\n\n\"Wouldn't be the first favor I've done for a regular customer who needed paperwork to say something convenient.\"\n\n\"Nothing to do with any murder, if that's what you're fishing for. Just a woman trying to look like she was somewhere she wasn't, for reasons that are her business, not mine.\""
     ]
   },
   "npc_head_warlock": {
     "type": "dialogue",
     "title": "The Head Warlock",
     "lines": [
-      "He doesn't look up from the pentagram chalked into the floor. \"Champions of Azeroth. In my tower. How thrilling for me.\"",
-      "\"I know why you're here. I know most things that happen in this town, eventually.\" He still doesn't look up. \"I simply choose which of them are worth saying out loud.\""
+      "He doesn't look up from the pentagram chalked into the floor. \"Champions of Azeroth. In the tower. Joy. How thrilling for me.\" He continues to stare ahead, not looking at you. \"I know why you're here. I know most things that happen in this town, whether I want to or not.\" He still doesn't look up. \"Doesn't mean any of them are worth saying out loud.\""
     ]
   },
   "npc_head_mage": {
     "type": "dialogue",
     "title": "The Head Mage",
     "lines": [
-      "He gestures vaguely at the window, not breaking his line of sight from whatever he's scrying. \"You want gossip, not magic. Fine.\"",
-      "\"The night of the gala, I had this window open for the stars. The forge below never lit. Not once, all night. Odd, for a man who works metal for a living.\" A thin smile. \"Make of that what you will.\""
+      "He gestures vaguely at the window, not breaking his line of sight from whatever he's scrying. \"I take it you want gossip, not magic.\" He sighs. \"Fine.\" \"The night of the gala, I had this window open for the stars. The forge over the way never lit. Not once, all night. Odd, for a man who works metal for a living.\" A thin smile stretches across his face. \"Make of that what you will.\" He winks."
     ]
   },
   "boardFinalists": [
@@ -789,8 +784,7 @@
     "type": "dialogue",
     "title": "The Priest",
     "lines": [
-      "He barely glances up from the altar. \"Not now. There is always something that needs doing before evensong, and today it is everything.\"",
-      "\"Whatever you need, I am sure it can wait. Or find someone else. I am, as you can see, thoroughly occupied.\""
+      "He barely glances up from the altar. \"Whatever you need, I am sure it can wait. Or find someone else. I am, as you can see, thoroughly occupied.\""
     ]
   },
   "npc_chapel_parishioner": {
@@ -804,89 +798,77 @@
     "type": "dialogue",
     "title": "The Glassmaker",
     "lines": [
-      "He doesn't look up from the pipe he's turning over the flame. \"A vial? Sure, I make plenty. Small, sealed tight, easy to carry without it rattling.\"",
-      "\"Had someone in not long ago wanting exactly that. Didn't think much of it. People want discreet vials for all sorts of reasons, perfume, medicine, ink.\""
+      "He doesn't look up from the pipe he's turning over the flame. \"A vial? Sure, I make plenty. Small, sealed tight, easy to carry without it rattling.\"\n\n\"Had someone in not long ago wanting exactly that. Didn't think much of it. People want discreet vials for all sorts of reasons, perfume, medicine, ink.\""
     ]
   },
   "npc_glassblower_reveal": {
     "type": "dialogue",
     "title": "The Glassmaker",
     "lines": [
-      "He sets the pipe down properly this time. \"Funny you ask. She came back a second time, more insistent. Wanted to know if whatever went in the vial would show through wine once it was poured.\"",
-      "\"Asked me straight out whether a certain tint would still read against red wine. I make glass, not poison, so I told her I couldn't say for certain. She didn't seem to like that answer.\"",
-      "He shrugs. \"Strange thing to need glass for. Strange thing to ask a glassblower at all, now that I think on it.\""
+      "He sets the pipe down properly this time. \"Funny you ask. She came back a second time, more insistent. Wanted to know if whatever went in the vial would show through wine once it was poured.\"\n\n\"Asked me straight out whether a certain tint would still read against red wine. I make glass, not poison, so I told her I couldn't say for certain. She didn't seem to like that answer.\"\n\nHe shrugs. \"Strange thing to need glass for. Strange thing to ask a glassblower at all, now that I think on it.\""
     ]
   },
   "npc_shopkeeper_glass": {
     "type": "dialogue",
     "title": "The Shopkeeper",
     "lines": [
-      "\"Looking for glassware? The master's through the back, past the archway. I just mind the counter.\"",
-      "\"Actually, funny you ask about customers. There was a woman in not long back, wouldn't stop fidgeting with her gloves the whole time he worked. Never seen someone so nervous over a little glass vial.\""
+      "\"Looking for glassware? The master's through the back, past the archway. I just mind the counter.\"\n\n\"Actually, funny you ask about customers. There was a woman in not long back, wouldn't stop fidgeting with her gloves the whole time he worked. Never seen someone so nervous over a little glass vial.\""
     ]
   },
   "npc_monk_impossible": {
     "type": "dialogue",
     "title": "A Monk",
     "lines": [
-      "He greets you warmly, glad of the company. \"Terrible business at the Estate. I hope it's all sorted soon.\"",
-      "\"I heard her confession myself, during matins. Long before the gala ever began, of course.\""
+      "He greets you warmly, glad of the company. \"Terrible business at the Estate. I hope it's all sorted soon.\"\n\n\"I heard her confession myself, during matins. Long before the gala ever began, of course.\""
     ]
   },
   "npc_monk_voss": {
     "type": "dialogue",
     "title": "A Monk",
     "lines": [
-      "\"The Commodore? I remember him well. Left before sundown, actually, here for a private penance.\"",
-      "\"Gambling debts, I'd guess, though it isn't my place to ask.\""
+      "\"The Commodore? I remember him well. Left before sundown, actually, here for a private penance.\"\n\n\"Gambling debts, I'd guess, though it isn't my place to ask.\""
     ]
   },
   "npc_monk_marrow": {
     "type": "dialogue",
     "title": "A Monk",
     "lines": [
-      "\"The architect, you mean? I saw him myself, sneaking through the servants' entrance, well past midnight.\"",
-      "\"Furtive sort of thing. I did wonder what he had to hide.\""
+      "\"The architect, you mean? I saw him myself, sneaking through the servants' entrance, well past midnight.\"\n\n\"Furtive sort of thing. I did wonder what he had to hide.\""
     ]
   },
   "npc_monk_ashgate": {
     "type": "dialogue",
     "title": "A Monk",
     "lines": [
-      "\"Lady Ashgate? She was here the whole evening. Evening prayers, same as always.\"",
-      "\"I'd stake my own name on it.\""
+      "\"Lady Ashgate? She was here the whole evening. Evening prayers, same as always.\"\n\n\"I'd stake my own name on it.\""
     ]
   },
   "npc_bartender_tavern_surface": {
     "type": "dialogue",
     "title": "The Bartender",
     "lines": [
-      "\"Commodore Voss? Regular enough face in here.\" She keeps wiping the same spot on the bar. \"Gala night he was parked right there at the end, drinking steady, from before sundown 'til well past the bell. Solid as anyone I've poured for.\"",
-      "\"Don't know what you're after, but if you're asking whether he left, the answer's no. I'd have noticed. He tips well and complains worse, hard to miss either one.\""
+      "\"Commodore Voss? Regular enough face in here.\" He keeps wiping the same spot on the bar. \"Gala night he was parked right there at the end, drinking steady, from before sundown 'til well past the bell. Solid as anyone I've poured for.\"\n\n\"Don't know what you're after, but if you're asking whether he left, the answer's no. I'd have noticed. He tips well and complains worse, hard to miss either one.\""
     ]
   },
   "npc_bartender_tavern_reveal": {
     "type": "dialogue",
     "title": "The Bartender",
     "lines": [
-      "She glances up properly this time. \"Empty chair, you said? Ah. All right. Between us, he did slip out for a stretch. Not the whole night, mind, just long enough that I noticed the same drink sitting flat when he came back.\"",
-      "\"Went to a second game, is my guess. A rougher one, upstairs at a place I won't name. He came back looking like a man who'd rather not explain himself, which is usually about welching, not murder. Draw your own conclusions.\""
+      "He glances up properly this time. \"Empty chair, you said? Ah. All right. Between us, he did slip out for a stretch. Not the whole night, mind, just long enough that I noticed the same drink sitting flat when he came back.\"\n\n\"Went to a second game, is my guess. A rougher one. Upstairs. He came back looking like a man who'd rather not explain himself, which is usually about welching, not murder. Draw your own conclusions.\""
     ]
   },
   "npc_gossip_guest": {
     "type": "dialogue",
     "title": "A Gala Guest, Deep in Her Cups",
     "lines": [
-      "She leans in like she's been waiting all night for someone to ask. \"Lady Ashgate? Odd all evening, if you want my honest word on it. Kept drifting back to the drinks table like she'd lost something there.\"",
-      "\"Wouldn't sit still, wouldn't finish a conversation. My husband said I was imagining it. I wasn't imagining it.\""
+      "She leans in like she's been waiting all night for someone to ask. \"Lady Ashgate? Odd all evening, if you want my honest word on it. Kept drifting back to the drinks table like she'd lost something there.\"\n\n\"Wouldn't sit still, wouldn't finish a conversation. My husband said I was imagining it. I wasn't imagining it.\""
     ]
   },
   "npc_ashby_witness": {
     "type": "dialogue",
     "title": "A Weary-Looking Guest",
     "lines": [
-      "\"The Steward? Buried in paperwork the whole night, far as I saw. Practically had to shout to get a word out of him.\"",
-      "\"Kept muttering about the books not adding up. Poor man looked like he hadn't slept in a week. Didn't have it in him to plan a murder, if you ask me, let alone carry one off.\""
+      "\"The Steward? Buried in paperwork the whole night, far as I saw. Practically had to shout to get a word out of him.\"\n\n\"Kept muttering about the books not adding up. Poor man looked like he hadn't slept in a week.\" \"Didn't have it in him to *plan* a murder, if you ask me, let alone pull one off.\""
     ]
   },
   "npc_parishioner_ashby_whisper": {
@@ -914,32 +896,28 @@
     "speaker": "Silas \"Hook\" Corwin",
     "portrait": "/assets/npcs/portraits/Fighter3_Portrait.png",
     "lines": [
-      "Corwin shakes his head before you've even finished. \"Ashby? The man's been lighting candles and drowning himself in ledgers since the night it happened. That's not a murderer's guilt, that's an accountant who knows an audit's coming.\"",
-      "\"Forgery's a hanging offence on its own, no need to hang poison on him too. He's not your man.\""
+      "Corwin shakes his head before you've even finished.  \"Ashby? The man's been lighting candles and drowning himself in ledgers since the night it happened. That's not a murderer's guilt, that's an accountant who knows an audit's coming.\"\n\n\"Forgery's a hanging offence on its own, no need to hang poison on him too. He's not your man.\""
     ]
   },
   "vote_clear_voss": {
     "speaker": "Silas \"Hook\" Corwin",
     "portrait": "/assets/npcs/portraits/Fighter3_Portrait.png",
     "lines": [
-      "\"Voss vanished from that dice game for the better part of an hour, sure,\" Corwin says, \"but I know exactly where he really was, and it isn't anywhere near a goblet of wine.\"",
-      "\"Man welched on a second, rougher game and couldn't face the table after. That's shameful. It isn't murder.\""
+      "\"Voss vanished from that dice game for the better part of an hour, sure,\" Corwin says, \"but I know exactly where he really was, and it isn't anywhere near a goblet of wine.\"\n\n\"Man welched on a second, rougher game and couldn't face the table after. That's shameful. It isn't murder.\""
     ]
   },
   "vote_clear_kestrel": {
     "speaker": "Silas \"Hook\" Corwin",
     "portrait": "/assets/npcs/portraits/Fighter3_Portrait.png",
     "lines": [
-      "\"Kestrel's receipt was backdated, I'll give you that,\" Corwin says, \"but that's the blacksmith covering something else entirely, not her. The forge sat cold and dark the whole night, an apprentice up at the tower saw it herself.\"",
-      "\"She was nowhere near the gala when it mattered. Whatever she's hiding, it isn't this.\""
+      "\"Kestrel's receipt was backdated, I'll give you that,\" Corwin says, \"but that's the blacksmith covering something else entirely, not her. The forge sat cold and dark the whole night, an apprentice up at the tower saw it herself.\"\n\n\"She was nowhere near the gala when it mattered. Whatever she's hiding, it isn't this.\""
     ]
   },
   "vote_clear_marrow": {
     "speaker": "Silas \"Hook\" Corwin",
     "portrait": "/assets/npcs/portraits/Fighter3_Portrait.png",
     "lines": [
-      "\"Marrow lied about where he was that evening, no question,\" Corwin admits, \"but not to cover poison. He was back at the Estate's east wall scaffolding, in plain sight, going over materials he was never paid for.\"",
-      "\"A man circling what he's owed isn't hiding a murder. He's just embarrassed about being broke.\""
+      "\"Marrow lied about where he was that evening, no question,\" Corwin admits, \"but not to cover poison. He was back at the Estate's east wall scaffolding, in plain sight, going over materials he was never paid for.\"\n\n\"A man circling what he's owed isn't hiding a murder. He's just embarrassed about being broke.\""
     ]
   },
   "vote_tie": {
@@ -953,30 +931,28 @@
     "speaker": "Silas \"Hook\" Corwin",
     "portrait": "/assets/npcs/portraits/Fighter3_Portrait.png",
     "lines": [
-      "Corwin goes quiet for a long moment, then nods slowly. \"Ashgate. Alright. That tracks with everything else we've got.\"",
-      "\"We're not done yet, though. Knowing who isn't the same as proving how. Let's go find out what was actually in that goblet.\""
+      "Corwin goes quiet for a long moment, then nods slowly. \"Ashgate. Alright. That tracks with everything else we've got.\"\n\n\"We're not done yet, though. Knowing who isn't the same as proving how. Let's go find out what was actually in that goblet.\""
     ]
   },
   "npc_armour_seller_market_surface": {
     "type": "dialogue",
     "title": "The Armour Seller",
     "lines": [
-      "\"Marrow? The architect fella, yeah, sat right over there most of the evening,\" he says, nodding toward an empty stretch of stall. \"Going through his own ledgers, muttering about materials. Practically lived at that stall for a few hours.\""
+      "\"Marrow? The architect fella, yeah? Sat right over there most of the night,\" he says, nodding toward an empty table across the square. \"Going through 'is ledgers, muttering about materials.\" \"Practically lived there for a few hours.\""
     ]
   },
   "npc_armour_seller_market_reveal": {
     "type": "dialogue",
     "title": "The Armour Seller",
     "lines": [
-      "He rubs the back of his neck. \"Shuttered that early, you said? Huh. Now that you mention it, that ledger business was that morning, not the night of the gala. Memory plays tricks.\"",
-      "\"That evening he wasn't here at all. I did see him heading back toward the Estate, though. The east wall, where the scaffolding still is. Didn't think much of it at the time.\""
+      "He rubs the back of his neck. \"Shuttered that early, you said? Huh. Now that you mention it, that ledger business was that morning, not the night of the gala. My memory ain't what it used to be.\"\n\n\"That evening he wasn't here at all. I did see him heading back toward the Estate, though.\" \"Think it was near the east wall, where the scaffolding still is by the ol' temple. Didn't think much of it at the time.\""
     ]
   },
   "npc_bread_seller_market": {
     "type": "dialogue",
     "title": "The Bread Seller",
     "lines": [
-      "\"Everything's fresh,\" he says, then pauses. \"Funny thing, we all shuttered early that night. Boarded up well before dusk, ahead of the gala procession coming through. Nobody was doing business out here after that.\""
+      "\"Everything's fresh,\" she says, then pauses. \"Funny thing, we all shuttered early that night. Boarded up well before dusk, ahead of the gala. Nobody was doing business out here after that.\""
     ]
   }
 }

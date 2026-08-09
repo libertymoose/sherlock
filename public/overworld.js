@@ -1065,7 +1065,13 @@ window.Overworld = (function () {
     camX = Math.max(0, Math.min(worldW - w, camX));
     camY = Math.max(0, Math.min(worldH - h, camY));
     if (worldW < w) camX = (worldW - w) / 2;
-    if (worldH < h) camY = (worldH - h) / 2;
+    // Top-align rather than vertically center when the map is shorter
+    // than the viewport. Centering left dead black space above the
+    // content (the top of a room's back wall should sit flush with the
+    // top of the screen), and pushed everything down far enough that
+    // actors placed further down the map (Voss's walk-in mark, for
+    // instance) could end up below the visible area entirely.
+    if (worldH < h) camY = 0;
 
     const startCol = Math.max(0, Math.floor(camX / scaledTile));
     const endCol = Math.min(mapData.width - 1, Math.ceil((camX + w) / scaledTile));
@@ -1246,7 +1252,15 @@ window.Overworld = (function () {
     });
 
     drawList.push({
-      y: me.y,
+      // During a staged scene, give the local player the same sort-boost
+      // treatment actors can opt into (Thorne uses one here for exactly
+      // this reason) - player marks in this scene sit right in the
+      // furniture-heavy area around the desk, and without a boost their
+      // real (low) y value loses against nearby furniture's inflated sort
+      // key, silently drawing them behind it. Normal gameplay Y-sorting
+      // (walking behind trees, etc) is untouched since this only applies
+      // while a staged scene is active.
+      y: me.y + (stagedScene ? 32 : 0),
       draw: () => {
         const pos = drawPlayer(me.gender, me.color, me.x, me.y, camX, camY, me.dir, me.moving, animFrame);
         if (myName) drawNameLabel(myName, pos.x, pos.y);
@@ -1255,7 +1269,7 @@ window.Overworld = (function () {
 
     Object.values(others).forEach((p) => {
       drawList.push({
-        y: p.y,
+        y: p.y + (stagedScene ? 32 : 0),
         draw: () => {
           const pos = drawPlayer(p.gender || "male", p.color || "red", p.x, p.y, camX, camY, p.dir || "down", p.moving, animFrame);
           if (p.name) drawNameLabel(p.name, pos.x, pos.y);

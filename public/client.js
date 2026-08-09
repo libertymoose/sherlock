@@ -1948,7 +1948,14 @@ function drawFixedPortrait(canvas, src) {
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const img = new Image();
-  img.crossOrigin = "anonymous";
+  // No crossOrigin attribute: every portrait this loads is a same-origin
+  // asset served by this same game server, which never sends CORS headers
+  // (nothing here is actually cross-origin). Setting crossOrigin=anonymous
+  // anyway can cause the canvas to come back tainted for some images
+  // depending on caching/load-order quirks, silently skipping the
+  // chroma-key step below and leaving the original flat background
+  // visible - exactly the "white background" symptom this was causing on
+  // some portraits. Same-origin same-tab image loads don't need it.
   img.onload = () => {
     // Chroma-key the flat white background out via flood fill from the
     // four corners, rather than a blanket colour threshold across the
