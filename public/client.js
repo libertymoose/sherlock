@@ -350,6 +350,9 @@ socket.on("act:show", (act) => {
     // visible at a glance the whole time, per Elle's spec.
     socket.emit("board3:requestState");
   }
+  // Same reasoning as the board button above - Point the Finger only ever
+  // shows during the one act that actually uses it.
+  document.getElementById("btn-open-vote").classList.toggle("hidden", !act.showVote);
   const strayReadyBtn = document.getElementById("staged-scene-ready-btn");
   if (strayReadyBtn) strayReadyBtn.remove();
   const strayLabel = document.getElementById("staged-scene-next-act-label");
@@ -756,6 +759,13 @@ async function enterExplore(act) {
   ZONE_MAPS[zoneId] = act.mapUrl;
   document.getElementById("explore-title").textContent = act.title;
   document.getElementById("explore-progress-count").textContent = "0";
+  // This little counter only means anything for the Estate's own
+  // evidence-gated completion. Acts that finish some other way (the
+  // dungeon's zone-reached completion, this one's vote-based completion)
+  // have their own dedicated progress indicators already (the Board's
+  // clue badge, the vote's "voted: X/Y"), so showing an unrelated "0"
+  // here would just be confusing clutter, not real information.
+  document.getElementById("explore-progress").classList.toggle("hidden", act.completionMode !== "evidence");
 
   // Walking through a zone_exit already tells the server which zone-room
   // to join (player:changeZone). Starting a brand new act never did, every
@@ -1103,6 +1113,8 @@ async function handleObjectInteract(obj) {
     } else {
       openTableModal();
     }
+  } else if (kind === "open_vote") {
+    openVoteModal();
   } else if (kind === "candle") {
     socket.emit("candle:toggle", { zone: Overworld.getZone(), candleId: obj.interaction.candleId });
   } else if (kind === "lever") {
@@ -1617,6 +1629,132 @@ function renderBoard() {
         .forEach((c) => cell.appendChild(buildBoardCard(c)));
       grid.appendChild(cell);
     });
+  });
+}
+
+
+// --- Point the Finger (the accusation vote) ---
+let voteState = { votedIds: [], total: 0, cleared: [] };
+let myVotePick = null;
+
+async function openVoteModal() {
+  if (!boardFinalists.length) {
+    const data = await getInteractions();
+    boardFinalists = data.boardFinalists || [];
+  }
+  socket.emit("vote:requestState");
+  document.getElementById("vote-result-panel").classList.add("hidden");
+  document.getElementById("modal-vote").classList.remove("hidden");
+  renderVoteSuspects();
+}
+
+document.getElementById("btn-open-vote").addEventListener("click", openVoteModal);
+document.getElementById("btn-close-vote").addEventListener("click", () => {
+  document.getElementById("modal-vote").classList.add("hidden");
+});
+document.getElementById("btn-vote-continue").addEventListener("click", () => {
+  document.getElementById("vote-result-panel").classList.add("hidden");
+  myVotePick = null;
+  renderVoteSuspects();
+});
+
+socket.on("vote:state", (state) => {
+  voteState = state;
+  document.getElementById("vote-progress").textContent = `Voted: ${state.votedIds.length} / ${state.total}`;
+  renderVoteSuspects();
+});
+
+socket.on("vote:rejected", ({ reason }) => {
+  if (reason === "no_support") {
+    // Same lightweight inline-feedback approach used elsewhere in the UI
+    // for a rejected action, rather than a full modal/alert for something
+    // this minor.
+    const progress = document.getElementById("vote-progress");
+    const original = progress.textContent;
+    progress.textContent = "Needs at least one card on the board against them first.";
+    setTimeout(() => { progress.textContent = original; }, 2500);
+  }
+});
+
+socket.on("vote:result", (result) => {
+  voteState.cleared = result.cleared;
+  myVotePick = null;
+
+  const revealRow = document.getElementById("vote-reveal-row");
+  revealRow.innerHTML = "";
+  result.reveal.forEach((r) => {
+    const finalist = boardFinalists.find((f) => f.key === r.suspectId);
+    const chip = document.createElement("div");
+    chip.className = "vote-reveal-chip";
+    chip.style.borderColor = r.color || "#999";
+    chip.innerHTML = `<span class="vote-reveal-name" style="color:${r.color || '#ccc'}">${r.name}</span><span class="vote-reveal-pick">${finalist ? finalist.name : r.suspectId}</span>`;
+    revealRow.appendChild(chip);
+  });
+
+  const entry = result.outcome === "tie" ? data_vote_tie
+    : result.outcome === "correct" ? data_vote_correct
+    : data_vote_clear[result.clearedSuspect];
+  // Falls back gracefully if content hasn't loaded for some reason - the
+  // reveal itself (who voted for whom) is the important part and still
+  // shows either way.
+  document.getElementById("vote-result-title").textContent = entry ? entry.speaker : "";
+  document.getElementById("vote-result-lines").innerHTML = entry ? entry.lines.map((l) => `<p>${l}</p>`).join("") : "";
+
+  document.getElementById("vote-result-panel").classList.remove("hidden");
+  renderVoteSuspects();
+});
+
+// Loaded once, alongside boardFinalists, the first time the vote modal
+// opens - small enough to just keep in memory rather than re-fetching
+// per outcome.
+let data_vote_tie = null;
+let data_vote_correct = null;
+let data_vote_clear = {};
+(async () => {
+  const data = await getInteractions();
+  data_vote_tie = data.vote_tie || null;
+  data_vote_correct = data.vote_correct || null;
+  data_vote_clear = {
+    ashby: data.vote_clear_ashby || null,
+    voss: data.vote_clear_voss || null,
+    kestrel: data.vote_clear_kestrel || null,
+    marrow: data.vote_clear_marrow || null,
+  };
+})();
+
+function renderVoteSuspects() {
+  const grid = document.getElementById("vote-suspect-grid");
+  grid.innerHTML = "";
+  const iVoted = voteState.votedIds.includes(socket.id);
+  boardFinalists.forEach((f) => {
+    const cleared = voteState.cleared.includes(f.key);
+    const card = document.createElement("div");
+    card.className = "vote-suspect-card";
+    if (cleared) card.classList.add("cleared");
+    if (myVotePick === f.key) card.classList.add("picked");
+    card.innerHTML = `
+      <img src="${f.sprite}" alt="${f.name}" />
+      <span class="board-suspect-name">${f.name}</span>
+      <span class="board-suspect-motive">${f.motive}</span>
+      ${cleared ? '<span class="vote-cleared-label">Cleared</span>' : ""}
+    `;
+    if (!cleared && !iVoted) {
+      const btn = document.createElement("button");
+      btn.className = "btn btn-secondary vote-cast-btn";
+      btn.textContent = "Point the Finger";
+      btn.addEventListener("click", () => {
+        myVotePick = f.key;
+        socket.emit("vote:cast", { suspectId: f.key });
+        renderVoteSuspects();
+      });
+      card.appendChild(btn);
+    } else if (!cleared && iVoted && myVotePick === f.key) {
+      const waiting = document.createElement("p");
+      waiting.className = "hint-text";
+      waiting.textContent = "Waiting on the rest of the party...";
+      card.appendChild(waiting);
+    }
+    grid.appendChild(card);
   });
 }
 

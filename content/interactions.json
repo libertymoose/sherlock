@@ -502,6 +502,13 @@
       "revealDialogueId": "npc_goblin_tavern_reveal",
       "surfaceClueId": "clue_inn_goblin_surface",
       "revealClueId": "clue_inn_ashgate_reveal"
+    },
+    "npc_armour_seller_market": {
+      "requiresFact": "market_stalls_shuttered",
+      "surfaceDialogueId": "npc_armour_seller_market_surface",
+      "revealDialogueId": "npc_armour_seller_market_reveal",
+      "surfaceClueId": "clue_market_marrow_surface",
+      "revealClueId": "clue_market_marrow_reveal"
     }
   },
   "npc_blacksmith_surface": {
@@ -629,45 +636,45 @@
       "suspectId": "marrow",
       "category": "means",
       "title": "Going through his ledgers",
-      "text": "PLACEHOLDER: not written yet. A market stallholder says Marrow spent the evening at their stall, working out what leftover repair materials he could sell off to recoup what he is owed.",
-      "source": "A stallholder, Market",
-      "written": false
+      "text": "\"Sat right over there most of the evening, going through his own ledgers, muttering about materials. Practically lived at that stall.\"",
+      "source": "The Armour Seller, Market",
+      "written": true
     },
     {
       "id": "clue_market_stalls_shuttered",
       "suspectId": "marrow",
       "category": "means",
-      "title": "Stalls shuttered early",
-      "text": "PLACEHOLDER: not written yet. A second market vendor mentions the stalls were boarded up ahead of the gala procession, nobody doing business there after dusk.",
-      "source": "A vendor, Market",
-      "written": false
+      "title": "Shuttered early",
+      "text": "\"We all shuttered early that night. Boarded up well before dusk, ahead of the gala procession. Nobody was doing business out here after that.\"",
+      "source": "The Bread Seller, Market",
+      "written": true
     },
     {
       "id": "clue_market_marrow_reveal",
       "suspectId": "marrow",
       "category": "means",
-      "title": "Really at the scaffolding",
-      "text": "PLACEHOLDER: not written yet. The stallholder admits the ledger-checking really happened that morning. That evening Marrow was at the Estate's east wall scaffolding instead, openly, going over materials he was never paid for.",
-      "source": "A stallholder, Market (after learning the stalls were shuttered early)",
-      "written": false
+      "title": "Not here at all that night",
+      "text": "\"That ledger business was that morning, not the night of the gala.\" That evening, Marrow was seen heading back toward the Estate, to the east wall scaffolding.",
+      "source": "The Armour Seller, Market (after hearing the stalls were shuttered early)",
+      "written": true
     },
     {
       "id": "clue_glassblower_surface",
       "suspectId": "ashgate",
       "category": "means",
-      "title": "A very particular vial",
-      "text": "PLACEHOLDER: not written yet. The glassblower recalls an odd customer commissioning a very small, tightly-sealable vial, unusually specific about size and discretion.",
-      "source": "The Glassblower, Market",
-      "written": false
+      "title": "A very specific vial",
+      "text": "The glassblower recalls an odd customer commissioning a very small, tightly-sealable vial, unusually specific about size and discretion.",
+      "source": "The Glassmaker, Glass Workshop",
+      "written": true
     },
     {
       "id": "clue_glassblower_reveal",
       "suspectId": "ashgate",
       "category": "means",
-      "title": "Visible against red wine",
-      "text": "PLACEHOLDER: not written yet. She came back a second time, more insistent, asking whether the vial's contents would show through wine once poured, and whether a given tint would still read against red wine specifically.",
-      "source": "The Glassblower, Market (after hearing she seemed anxious)",
-      "written": false
+      "title": "Would it show through wine",
+      "text": "She came back a second time, more insistent, asking whether the vial's contents would show through wine once poured, and whether a given tint would still read against red wine specifically.",
+      "source": "The Glassmaker, Glass Workshop (after hearing she seemed anxious)",
+      "written": true
     },
     {
       "id": "clue_inn_voss_surface",
@@ -901,6 +908,75 @@
     "title": "A Cheering Goblin",
     "lines": [
       "He squints at you, the joke suddenly less funny. \"Wait. A little glass vial, you said?\" He goes quiet for a goblin. \"That's, hah, that's exactly what she wouldn't let me near. Kept it right by her, poured from it herself and everything. Didn't think nothing of it at the time.\""
+    ]
+  },
+  "vote_clear_ashby": {
+    "speaker": "Silas \"Hook\" Corwin",
+    "portrait": "/assets/npcs/portraits/Fighter3_Portrait.png",
+    "lines": [
+      "Corwin shakes his head before you've even finished. \"Ashby? The man's been lighting candles and drowning himself in ledgers since the night it happened. That's not a murderer's guilt, that's an accountant who knows an audit's coming.\"",
+      "\"Forgery's a hanging offence on its own, no need to hang poison on him too. He's not your man.\""
+    ]
+  },
+  "vote_clear_voss": {
+    "speaker": "Silas \"Hook\" Corwin",
+    "portrait": "/assets/npcs/portraits/Fighter3_Portrait.png",
+    "lines": [
+      "\"Voss vanished from that dice game for the better part of an hour, sure,\" Corwin says, \"but I know exactly where he really was, and it isn't anywhere near a goblet of wine.\"",
+      "\"Man welched on a second, rougher game and couldn't face the table after. That's shameful. It isn't murder.\""
+    ]
+  },
+  "vote_clear_kestrel": {
+    "speaker": "Silas \"Hook\" Corwin",
+    "portrait": "/assets/npcs/portraits/Fighter3_Portrait.png",
+    "lines": [
+      "\"Kestrel's receipt was backdated, I'll give you that,\" Corwin says, \"but that's the blacksmith covering something else entirely, not her. The forge sat cold and dark the whole night, an apprentice up at the tower saw it herself.\"",
+      "\"She was nowhere near the gala when it mattered. Whatever she's hiding, it isn't this.\""
+    ]
+  },
+  "vote_clear_marrow": {
+    "speaker": "Silas \"Hook\" Corwin",
+    "portrait": "/assets/npcs/portraits/Fighter3_Portrait.png",
+    "lines": [
+      "\"Marrow lied about where he was that evening, no question,\" Corwin admits, \"but not to cover poison. He was back at the Estate's east wall scaffolding, in plain sight, going over materials he was never paid for.\"",
+      "\"A man circling what he's owed isn't hiding a murder. He's just embarrassed about being broke.\""
+    ]
+  },
+  "vote_tie": {
+    "speaker": "Silas \"Hook\" Corwin",
+    "portrait": "/assets/npcs/portraits/Fighter3_Portrait.png",
+    "lines": [
+      "Corwin looks between the split picks and folds his arms. \"You can't name two murderers and call it a night. Talk it through properly this time, and vote again.\""
+    ]
+  },
+  "vote_correct": {
+    "speaker": "Silas \"Hook\" Corwin",
+    "portrait": "/assets/npcs/portraits/Fighter3_Portrait.png",
+    "lines": [
+      "Corwin goes quiet for a long moment, then nods slowly. \"Ashgate. Alright. That tracks with everything else we've got.\"",
+      "\"We're not done yet, though. Knowing who isn't the same as proving how. Let's go find out what was actually in that goblet.\""
+    ]
+  },
+  "npc_armour_seller_market_surface": {
+    "type": "dialogue",
+    "title": "The Armour Seller",
+    "lines": [
+      "\"Marrow? The architect fella, yeah, sat right over there most of the evening,\" he says, nodding toward an empty stretch of stall. \"Going through his own ledgers, muttering about materials. Practically lived at that stall for a few hours.\""
+    ]
+  },
+  "npc_armour_seller_market_reveal": {
+    "type": "dialogue",
+    "title": "The Armour Seller",
+    "lines": [
+      "He rubs the back of his neck. \"Shuttered that early, you said? Huh. Now that you mention it, that ledger business was that morning, not the night of the gala. Memory plays tricks.\"",
+      "\"That evening he wasn't here at all. I did see him heading back toward the Estate, though. The east wall, where the scaffolding still is. Didn't think much of it at the time.\""
+    ]
+  },
+  "npc_bread_seller_market": {
+    "type": "dialogue",
+    "title": "The Bread Seller",
+    "lines": [
+      "\"Everything's fresh,\" he says, then pauses. \"Funny thing, we all shuttered early that night. Boarded up well before dusk, ahead of the gala procession coming through. Nobody was doing business out here after that.\""
     ]
   }
 }

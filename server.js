@@ -176,7 +176,19 @@ const ALL_ZONE_MAPS = {
 function buildActPayloadForPlayer(room, socketId) {
   const act = STORY.acts[room.actIndex];
   if (!act) return null;
-  const base = { index: room.actIndex, total: STORY.acts.length, type: act.type, title: act.title, chapter: act.chapter || 1 };
+  const base = {
+    index: room.actIndex,
+    total: STORY.acts.length,
+    type: act.type,
+    title: act.title,
+    chapter: act.chapter || 1,
+    // Both default to hidden. Only the acts that actually explicitly ask
+    // for them show either HUD button - this was true in spirit already
+    // (no act set these before now), just making it literal so the intent
+    // reads clearly here rather than only in client.js's toggle call.
+    showBoard: !!act.showBoard,
+    showVote: !!act.showVote,
+  };
 
   if (act.type === "reveal") {
     return { ...base, body: act.body, image: act.image || null, showEvidenceReview: !!act.showEvidenceReview };
@@ -298,6 +310,11 @@ function sendActToRoom(code) {
   room.zoneSimpleLevers = {};
   room.zoneSearches = {};
   room.zoneForcedOpenBarriers = {};
+  // Fresh start for Point the Finger every time an act begins, not just
+  // the vote-completion one - harmless to reset even on acts that never
+  // touch it, and avoids a stale vote leaking into a later act if the
+  // story ever revisits this one.
+  room.vote = { picks: {}, cleared: [] };
 
   if (act && act.type === "explore" && act.mapUrl) {
     const mapData = loadMapData(act.mapUrl);
@@ -717,6 +734,12 @@ io.on("connection", (socket) => {
       // point of the board is that clues found in Wave 1 are still there
       // once the party reaches Wave 2 and beyond.
       boardCards: initBoardCards(),
+      // Point the Finger. picks: socketId -> suspectKey, private until
+      // everyone connected has voted. cleared: suspectKeys ruled out by a
+      // wrong majority already, permanently unselectable for the rest of
+      // the room's life (matches the spec: a cleared suspect stays cleared,
+      // the party narrows down across re-votes rather than starting over).
+      vote: { picks: {}, cleared: [] },
       // zone -> plateId -> { holders: Set<socketId>, targetDoorZoneId, selfDoorZoneId }
       zonePlates: {},
       // zone -> { lit: { candleId: true }, order: [candleId, ...] } - the
@@ -1283,6 +1306,102 @@ io.on("connection", (socket) => {
     io.to(code).emit("board3:state", buildBoardState(room));
   });
 
+  // Point the Finger. A suspect can only be voted for once at least one
+  // card has been placed against them on the board (means or opportunity,
+  // either counts) - a light guard against a zero-effort vote, not a real
+  // gate. Picks stay private (only who's voted, not what) until everyone
+  // connected has cast one, then everything reveals at once, tagged in
+  // each voter's own color. This mirrors the spec's Among Us framing:
+  // the vote itself is the submission, there's no separate confirm step.
+  function hasBoardSupport(room, suspectKey) {
+    return Object.values(room.boardCards).some(
+      (card) => card.placement && typeof card.placement === "object" && card.placement.suspectId === suspectKey
+    );
+  }
+
+  function buildVoteState(room) {
+    return {
+      votedIds: Object.keys(room.vote.picks),
+      total: connectedPlayerCount(room),
+      cleared: room.vote.cleared,
+    };
+  }
+
+  // Shared by vote:cast and the disconnect handler below - if the last
+  // holdout drops connection instead of voting, the party still isn't
+  // stuck waiting on someone who's gone, same reasoning as
+  // recheckGroupThreshold for the Evidence Room's ready-vote.
+  function tryResolveVote(room, code) {
+    const connectedIds = Object.entries(room.players)
+      .filter(([, p]) => p.connected)
+      .map(([id]) => id);
+    const allVoted = connectedIds.length > 0 && connectedIds.every((id) => room.vote.picks[id]);
+    if (!allVoted) return;
+
+    // Tally. Ties (including a tie for the top spot among 3+ options)
+    // clear nobody and just send the party back to vote again, per spec.
+    const tally = {};
+    for (const id of connectedIds) {
+      const pick = room.vote.picks[id];
+      tally[pick] = (tally[pick] || 0) + 1;
+    }
+    const maxVotes = Math.max(...Object.values(tally));
+    const topPicks = Object.keys(tally).filter((k) => tally[k] === maxVotes);
+
+    const reveal = connectedIds.map((id) => ({
+      id,
+      name: room.players[id].name,
+      color: room.players[id].color,
+      suspectId: room.vote.picks[id],
+    }));
+
+    if (topPicks.length > 1) {
+      room.vote.picks = {};
+      io.to(code).emit("vote:result", { outcome: "tie", tally, reveal, cleared: room.vote.cleared });
+      return;
+    }
+
+    const winner = topPicks[0];
+    if (winner === "ashgate") {
+      io.to(code).emit("vote:result", { outcome: "correct", tally, reveal, cleared: room.vote.cleared });
+      const act = STORY.acts[room.actIndex];
+      if (act && act.type === "explore" && act.completionMode === "vote" && !room.actState.transitioning) {
+        room.actState.transitioning = true;
+        io.to(code).emit("scene:fadeToBlack");
+        setTimeout(() => advanceAct(code), 1100);
+      }
+      return;
+    }
+
+    // Wrong majority: that suspect is cleared for good, party re-votes
+    // among whoever's left.
+    room.vote.cleared.push(winner);
+    room.vote.picks = {};
+    io.to(code).emit("vote:result", { outcome: "cleared", clearedSuspect: winner, tally, reveal, cleared: room.vote.cleared });
+  }
+
+  socket.on("vote:requestState", () => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room) return;
+    socket.emit("vote:state", buildVoteState(room));
+  });
+
+  socket.on("vote:cast", ({ suspectId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !suspectId) return;
+    if (!BOARD_SUSPECT_IDS.has(suspectId)) return;
+    if (room.vote.cleared.includes(suspectId)) return;
+    if (!hasBoardSupport(room, suspectId)) {
+      socket.emit("vote:rejected", { reason: "no_support" });
+      return;
+    }
+    room.vote.picks[socket.id] = suspectId;
+    io.to(code).emit("vote:state", buildVoteState(room));
+    tryResolveVote(room, code);
+  });
+
   socket.on("pet:animal", ({ zone, x, y }) => {
     const code = socket.data.roomCode;
     const room = rooms[code];
@@ -1722,6 +1841,13 @@ io.on("connection", (socket) => {
         io.to(code).emit("board3:claimed", { clueId, playerId: null });
       }
     });
+
+    // If everyone else had already voted and were just waiting on this
+    // player, don't leave the vote stuck open forever.
+    if (room.vote && Object.keys(room.vote.picks).length) {
+      io.to(code).emit("vote:state", buildVoteState(room));
+      tryResolveVote(room, code);
+    }
 
     // If they were mid-hold on a pressure plate when they dropped, let go
     // of it for them so whichever door it fed doesn't stay open forever.
