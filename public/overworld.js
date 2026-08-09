@@ -1032,6 +1032,18 @@ window.Overworld = (function () {
   }
 
   function render() {
+    // Redundant safety net on top of the ResizeObserver set up in init():
+    // if the backing store and the element's actual on-screen size have
+    // drifted apart for any reason (an observer that didn't fire, a
+    // browser that doesn't support ResizeObserver at all), catch it here
+    // too, every frame, before doing any camera math with a stale w/h.
+    // Cheap comparison, only actually resizes on the rare frame it's
+    // actually needed.
+    if (canvas.clientWidth > 0 && canvas.clientHeight > 0 &&
+        (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight)) {
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+    }
     const w = canvas.width;
     const h = canvas.height;
     ctx.imageSmoothingEnabled = false;

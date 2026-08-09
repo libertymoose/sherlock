@@ -1513,13 +1513,13 @@ document.getElementById("btn-close-board").addEventListener("click", () => {
 socket.on("board3:state", (state) => {
   boardState = state;
   updateBoardCounters();
-  renderBoard();
+  renderDeductionBoard();
 });
 
 socket.on("board3:claimed", ({ clueId, playerId }) => {
   if (!boardState.clues[clueId]) return;
   boardState.clues[clueId].claimedBy = playerId;
-  renderBoard();
+  renderDeductionBoard();
 });
 
 function updateBoardCounters() {
@@ -1596,7 +1596,7 @@ function wireBoardDropzone(el, placement) {
   });
 }
 
-function renderBoard() {
+function renderDeductionBoard() {
   const clueList = Object.values(boardState.clues || {}).filter((c) => c.collected);
 
   const tray = document.getElementById("board-tray");
@@ -1972,11 +1972,15 @@ function drawFixedPortrait(canvas, src) {
     // Cover-fit anchored at the bottom: fills the whole frame the way a
     // Stardew-style bust portrait does, cropping off any excess (usually
     // the top of the hair) rather than leaving empty space around a
-    // smaller contained image. A small extra zoom on top of pure cover-fit
-    // keeps this tight even when a source image has some breathing room
-    // baked in around the character, rather than only filling the frame
-    // exactly when the source happens to already be a perfect crop.
-    const ZOOM = 1.15;
+    // smaller contained image. A bigger zoom on top of pure cover-fit
+    // keeps this tight even when a source image has a lot of breathing
+    // room baked in around the character - several portraits have quite
+    // a bit of background above and to the sides of the actual bust,
+    // and even correctly chroma-keyed to transparent, that much empty
+    // area let the frame's own background colour read as a visible flat
+    // block behind the character rather than a tight portrait crop.
+    // Cropping in harder leaves less of that area on screen at all.
+    const ZOOM = 1.4;
     const scale = Math.max(canvas.width / source.width, canvas.height / source.height) * ZOOM;
     const w = source.width * scale;
     const h = source.height * scale;
