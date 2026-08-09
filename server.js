@@ -640,6 +640,53 @@ function letterForIndex(i) {
   return s;
 }
 
+// Fresh boardCards keyed by every clue id in INTERACTIONS.boardClues, all
+// starting uncollected and in the tray. Built from the manifest so the
+// "X/Y found" total is always accurate even for clues whose source NPC
+// doesn't exist as real content yet (Wave 2 town locations) - those clues
+// just never leave 0 until that content is built.
+function initBoardCards() {
+  const cards = {};
+  (INTERACTIONS.boardClues || []).forEach((c) => {
+    cards[c.id] = { collected: false, placement: "tray", ignored: false, claimedBy: null };
+  });
+  return cards;
+}
+
+function buildBoardState(room) {
+  const manifest = INTERACTIONS.boardClues || [];
+  const clues = {};
+  manifest.forEach((c) => {
+    const card = room.boardCards[c.id] || { collected: false, placement: "tray", ignored: false, claimedBy: null };
+    clues[c.id] = {
+      id: c.id,
+      suspectId: c.suspectId,
+      category: c.category,
+      title: c.title,
+      text: c.text,
+      source: c.source,
+      collected: card.collected,
+      placement: card.placement,
+      ignored: card.ignored,
+      claimedBy: card.claimedBy,
+    };
+  });
+  const foundCount = manifest.filter((c) => room.boardCards[c.id] && room.boardCards[c.id].collected).length;
+  return { clues, total: manifest.length, foundCount };
+}
+
+// Marks a clue collected if it isn't already and broadcasts the new count
+// to the whole room - shared by the generic single-stage hook and the
+// two-stage dialogue resolver below, since both need identical behavior.
+function collectBoardClue(code, clueId) {
+  const room = rooms[code];
+  if (!room || !clueId) return;
+  const card = room.boardCards[clueId];
+  if (!card || card.collected) return;
+  card.collected = true;
+  io.to(code).emit("board3:state", buildBoardState(room));
+}
+
 io.on("connection", (socket) => {
   socket.on("host:createRoom", (data, cb) => {
     let code = genCode();
@@ -665,6 +712,11 @@ io.on("connection", (socket) => {
       // reset per-act like zoneCandles/zoneDoors/etc below, since the whole
       // point is it survives the wave-to-wave Guild Hall round trips.
       knownFacts: {},
+      // clueId -> { collected, placement, ignored, claimedBy }. Same
+      // persistence reasoning as knownFacts/evidence above - the whole
+      // point of the board is that clues found in Wave 1 are still there
+      // once the party reaches Wave 2 and beyond.
+      boardCards: initBoardCards(),
       // zone -> plateId -> { holders: Set<socketId>, targetDoorZoneId, selfDoorZoneId }
       zonePlates: {},
       // zone -> { lit: { candleId: true }, order: [candleId, ...] } - the
@@ -1139,6 +1191,88 @@ io.on("connection", (socket) => {
     const entry = INTERACTIONS[entryId];
     if (!entry) return;
     socket.emit("npc:dialogue", { title: entry.title, lines: entry.lines });
+    // Whichever stage the player actually saw is the clue they now hold,
+    // not both - matches the board's design (a card represents what you
+    // actually learned, the surface story and the reveal are different
+    // claims, not the same one twice).
+    collectBoardClue(code, known ? config.revealClueId : config.surfaceClueId);
+  });
+
+  // Generic hook for single-stage clue-bearing interactions (fighters, the
+  // dragon statue, anything wired with boardClueId directly rather than
+  // going through the two-stage system above).
+  socket.on("board:clueFound", ({ clueId }) => {
+    const code = socket.data.roomCode;
+    collectBoardClue(code, clueId);
+  });
+
+  socket.on("board3:requestState", () => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room) return;
+    socket.emit("board3:state", buildBoardState(room));
+  });
+
+  // Claiming is a light lock, not ownership of the card's content - it
+  // only exists to stop two players from both dragging the same card at
+  // once, same "first request wins" pattern already used for inventory
+  // pickups and evidence adds. Broadcasts a small claim-only message
+  // rather than full board state, since every other client just needs to
+  // know "don't grab this one right now," not re-render everything.
+  socket.on("board3:claimCard", ({ clueId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !clueId) return;
+    const card = room.boardCards[clueId];
+    if (!card || !card.collected || card.claimedBy) return;
+    card.claimedBy = socket.id;
+    io.to(code).emit("board3:claimed", { clueId, playerId: socket.id });
+  });
+
+  socket.on("board3:releaseCard", ({ clueId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !clueId) return;
+    const card = room.boardCards[clueId];
+    if (!card || card.claimedBy !== socket.id) return;
+    card.claimedBy = null;
+    io.to(code).emit("board3:claimed", { clueId, playerId: null });
+  });
+
+  const BOARD_SUSPECT_IDS = new Set((INTERACTIONS.boardFinalists || []).map((f) => f.key));
+
+  socket.on("board3:placeCard", ({ clueId, placement }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !clueId) return;
+    const card = room.boardCards[clueId];
+    if (!card || !card.collected) return;
+    // A drop finalizes the move regardless of who currently holds the
+    // claim - the dragging player's own drop always wins over a stale
+    // claim, and this also self-heals a client that never sent a release.
+    if (placement === "tray") {
+      card.placement = "tray";
+    } else if (
+      placement && typeof placement === "object" &&
+      BOARD_SUSPECT_IDS.has(placement.suspectId) &&
+      (placement.category === "means" || placement.category === "opportunity")
+    ) {
+      card.placement = { suspectId: placement.suspectId, category: placement.category };
+    } else {
+      return;
+    }
+    card.claimedBy = null;
+    io.to(code).emit("board3:state", buildBoardState(room));
+  });
+
+  socket.on("board3:toggleIgnore", ({ clueId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !clueId) return;
+    const card = room.boardCards[clueId];
+    if (!card || !card.collected) return;
+    card.ignored = !card.ignored;
+    io.to(code).emit("board3:state", buildBoardState(room));
   });
 
   socket.on("pet:animal", ({ zone, x, y }) => {
@@ -1299,8 +1433,22 @@ io.on("connection", (socket) => {
     if (act && act.type === "explore" && act.completionMode === "zone" && act.completionZone === zone) {
       const connectedIds = Object.entries(room.players).filter(([, p]) => p.connected).map(([id]) => id);
       const allThere = connectedIds.every((id) => room.players[id].zone === zone);
-      if (allThere && connectedIds.length) {
-        setTimeout(() => advanceAct(code), 1200);
+      if (allThere && connectedIds.length && !room.actState.transitioning) {
+        // Guard against firing twice if two players' zone-change events
+        // both satisfy "everyone's here" in quick succession - advanceAct
+        // isn't safe to call more than once, it would silently skip an
+        // act. room.actState gets fully replaced the moment the next act
+        // actually starts (see sendActToRoom), so this resets itself,
+        // no explicit cleanup needed.
+        room.actState.transitioning = true;
+        // Fade to black immediately, room-wide, and freeze every player's
+        // input (not just this zone's) so nobody can trigger a stray
+        // interaction in the sewer while the screen is going black.
+        // advanceAct fires after the overlay's own CSS transition (0.9s
+        // in style.css) plus a small buffer, so the cutscene only ever
+        // appears once the screen is already fully black.
+        io.to(code).emit("scene:fadeToBlack");
+        setTimeout(() => advanceAct(code), 1100);
       }
     }
 
@@ -1556,6 +1704,16 @@ io.on("connection", (socket) => {
       recheckGroupThreshold(room, code);
       updateOccupancyDoor(room, code, zone);
     }
+
+    // Same reasoning as the pressure-plate release below: if they were
+    // mid-drag on a board card when they dropped, don't leave it locked
+    // for everyone else.
+    Object.entries(room.boardCards || {}).forEach(([clueId, card]) => {
+      if (card.claimedBy === socket.id) {
+        card.claimedBy = null;
+        io.to(code).emit("board3:claimed", { clueId, playerId: null });
+      }
+    });
 
     // If they were mid-hold on a pressure plate when they dropped, let go
     // of it for them so whichever door it fed doesn't stay open forever.
