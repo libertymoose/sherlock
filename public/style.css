@@ -1219,3 +1219,142 @@ input[type="text"]:focus {
   font-style: italic;
   color: var(--ink);
 }
+
+.board-btn-hud {
+  right: 76px;
+}
+
+.modal-box-board {
+  max-width: 960px;
+  width: 96vw;
+}
+
+.board-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 64px;
+  padding: 10px;
+  margin-bottom: 14px;
+  border: 1px dashed var(--border-strong, #888);
+  border-radius: 8px;
+}
+
+.board-tray.drag-over,
+.board-cell.drag-over {
+  border-color: var(--candle, #50a978);
+  background: rgba(var(--candle-rgb, 80, 169, 120), 0.08);
+}
+
+.board-card {
+  width: 150px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--parchment, #e5d6a1);
+  color: #2c2416;
+  font-size: 12px;
+  line-height: 1.35;
+  cursor: grab;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+.board-card:active {
+  cursor: grabbing;
+}
+
+.board-card-title {
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.board-card-source {
+  font-style: italic;
+  font-size: 11px;
+  opacity: 0.75;
+  margin-top: 4px;
+}
+
+.board-card.ignored {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.board-card.claimed-by-other {
+  outline: 2px solid var(--candle, #50a978);
+  outline-offset: 2px;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.board-card-ignore-btn {
+  float: right;
+  font-size: 10px;
+  background: none;
+  border: 1px solid rgba(0,0,0,0.3);
+  border-radius: 4px;
+  padding: 1px 5px;
+  cursor: pointer;
+  color: inherit;
+}
+
+.board-grid {
+  display: grid;
+  grid-template-columns: 90px repeat(5, minmax(140px, 1fr));
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.board-grid-header-spacer {
+  grid-column: 1;
+}
+
+.board-suspect-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+}
+
+.board-suspect-header img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  image-rendering: pixelated;
+}
+
+.board-suspect-name {
+  font-size: 11px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.board-suspect-motive {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+
+.board-row-label {
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  font-size: 12px;
+  writing-mode: horizontal-tb;
+}
+
+.board-cell {
+  min-height: 70px;
+  padding: 6px;
+  border: 1px dashed var(--border-strong, #888);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.board-cell .board-card {
+  width: 100%;
+}

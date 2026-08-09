@@ -312,6 +312,12 @@ socket.on("game:reset", () => {
   showScreen("screen-lobby");
 });
 
+socket.on("scene:fadeToBlack", () => {
+  document.getElementById("cutscene-fade-overlay").classList.add("visible");
+  document.getElementById("btn-interact").classList.add("hidden");
+  Overworld.freeze();
+});
+
 // --- Act rendering ---
 socket.on("act:show", (act) => {
   if (!act) return;
@@ -324,7 +330,26 @@ socket.on("act:show", (act) => {
   // and the overlay would otherwise sit there opaque forever. Every act
   // transition goes through here, so this is the one place that's always
   // guaranteed to run, regardless of how the transition happened.
-  document.getElementById("cutscene-fade-overlay").classList.remove("visible");
+  // Exception: acts flagged fadeIn arrive with the overlay already visible
+  // (from scene:fadeToBlack, broadcast the moment the previous act's
+  // completion condition was met) - those clear it themselves once their
+  // own setup is actually ready, in enterStagedScene, so the fade up
+  // happens after the scene is loaded and positioned, not before.
+  if (!act.fadeIn) {
+    document.getElementById("cutscene-fade-overlay").classList.remove("visible");
+  }
+
+  // Same "one guaranteed place, every transition" reasoning as the fade
+  // overlay above - the board button's visibility just tracks whatever
+  // the current act says, on every single act change, so it can never be
+  // left showing (or hidden) from a previous act's setting.
+  document.getElementById("btn-open-board").classList.toggle("hidden", !act.showBoard);
+  if (act.showBoard) {
+    // Pulls the live count for the HUD badge immediately, not just once
+    // the player actually opens the panel - the counter is meant to be
+    // visible at a glance the whole time, per Elle's spec.
+    socket.emit("board3:requestState");
+  }
   const strayReadyBtn = document.getElementById("staged-scene-ready-btn");
   if (strayReadyBtn) strayReadyBtn.remove();
   const strayLabel = document.getElementById("staged-scene-next-act-label");
@@ -823,6 +848,17 @@ async function enterStagedScene(act) {
     socket.emit("player:move", { x: myMark[0] * 16 + 8, y: myMark[1] * 16 + 8, dir: "up", moving: false });
   }
 
+  // Fade up now that the scene is actually loaded and everyone's mark is
+  // set - see act:show's matching skip of the instant clear for fadeIn
+  // acts. A tiny delay lets the mark position above actually paint one
+  // frame before the black clears, so the fade-up doesn't reveal a
+  // half-placed scene.
+  if (act.fadeIn) {
+    requestAnimationFrame(() => {
+      document.getElementById("cutscene-fade-overlay").classList.remove("visible");
+    });
+  }
+
   if (act.video) {
     showStagedSceneVideoPrompt(act);
   } else {
@@ -963,10 +999,13 @@ const ZONE_MAPS = {
   outside_sewer: "/assets/maps/outside_sewer.json",
   training_ground: "/assets/maps/training_ground.json",
   blacksmith_interior: "/assets/maps/blacksmith_interior.json",
-  // guild_hall_exterior deliberately NOT registered yet - collision was
-  // never built for it (no boundary layer in the source file, see its own
-  // _incomplete note), registering it here would let a player walk in and
-  // crash on the first isBlockedTile check against a null collision grid.
+  mage_tower_basement: "/assets/maps/mage_tower_basement.json",
+  mage_tower_1st_floor: "/assets/maps/mage_tower_1st_floor.json",
+  mage_tower_2nd_floor: "/assets/maps/mage_tower_2nd_floor.json",
+  tavern_2nd_floor: "/assets/maps/tavern_2nd_floor.json",
+  chapel_interior: "/assets/maps/chapel_interior.json",
+  glass_workshop: "/assets/maps/glass_workshop.json",
+  guild_hall_exterior: "/assets/maps/guild_hall_exterior.json",
 };
 
 // Zones that make up the post-jail dungeon arc, used to switch the zone_exit
@@ -1012,6 +1051,17 @@ async function handleObjectInteract(obj) {
   // town gathering is the first real use of this.
   if (obj.interaction && obj.interaction.learnsFact) {
     socket.emit("fact:learn", { factId: obj.interaction.learnsFact });
+  }
+
+  // Same generic-hook pattern as learnsFact above, for interactions that
+  // hand the party a board clue directly (not gated behind a two-stage
+  // reveal, which handles its own clue collection server-side since only
+  // the server knows which stage the player actually saw). Some NPCs
+  // (the lying monk) hand over several clues in one conversation, so this
+  // accepts either a single id or an array.
+  if (obj.interaction && obj.interaction.boardClueId) {
+    const ids = Array.isArray(obj.interaction.boardClueId) ? obj.interaction.boardClueId : [obj.interaction.boardClueId];
+    ids.forEach((clueId) => socket.emit("board:clueFound", { clueId }));
   }
 
   if (kind === "two_stage_dialogue") {
@@ -1408,6 +1458,148 @@ function buildItemCard(item, opts) {
   if (opts.onClick) card.addEventListener("click", opts.onClick);
   return card;
 }
+
+// --- Means and Opportunity deduction board (shared, live-synced) ---
+let boardState = { clues: {}, total: 0, foundCount: 0 };
+let boardFinalists = [];
+let draggedClueId = null;
+
+async function openBoardModal() {
+  if (!boardFinalists.length) {
+    const data = await getInteractions();
+    boardFinalists = data.boardFinalists || [];
+  }
+  socket.emit("board3:requestState");
+  document.getElementById("modal-board").classList.remove("hidden");
+}
+
+document.getElementById("btn-open-board").addEventListener("click", openBoardModal);
+document.getElementById("btn-close-board").addEventListener("click", () => {
+  document.getElementById("modal-board").classList.add("hidden");
+});
+
+socket.on("board3:state", (state) => {
+  boardState = state;
+  updateBoardCounters();
+  renderBoard();
+});
+
+socket.on("board3:claimed", ({ clueId, playerId }) => {
+  if (!boardState.clues[clueId]) return;
+  boardState.clues[clueId].claimedBy = playerId;
+  renderBoard();
+});
+
+function updateBoardCounters() {
+  const text = `${boardState.foundCount} / ${boardState.total}`;
+  document.getElementById("board-clue-progress").textContent = `Clues found: ${text}`;
+  document.getElementById("board-clue-count").textContent = text;
+}
+
+function buildBoardCard(clue) {
+  const card = document.createElement("div");
+  card.className = "board-card";
+  if (clue.ignored) card.classList.add("ignored");
+  const claimedByMe = clue.claimedBy === socket.id;
+  const claimedByOther = clue.claimedBy && !claimedByMe;
+  if (claimedByOther) card.classList.add("claimed-by-other");
+  card.draggable = !claimedByOther;
+  card.dataset.clueId = clue.id;
+
+  const ignoreBtn = document.createElement("button");
+  ignoreBtn.className = "board-card-ignore-btn";
+  ignoreBtn.textContent = clue.ignored ? "unignore" : "ignore";
+  ignoreBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    socket.emit("board3:toggleIgnore", { clueId: clue.id });
+  });
+  card.appendChild(ignoreBtn);
+
+  const title = document.createElement("div");
+  title.className = "board-card-title";
+  title.textContent = clue.title;
+  card.appendChild(title);
+
+  const text = document.createElement("div");
+  text.textContent = clue.text;
+  card.appendChild(text);
+
+  const source = document.createElement("div");
+  source.className = "board-card-source";
+  source.textContent = clue.source;
+  card.appendChild(source);
+
+  card.addEventListener("dragstart", () => {
+    draggedClueId = clue.id;
+    socket.emit("board3:claimCard", { clueId: clue.id });
+  });
+  card.addEventListener("dragend", () => {
+    // If the drop landed on a real zone, board3:placeCard already cleared
+    // the claim server-side by the time this fires. If it didn't land
+    // anywhere valid, this releases the lock so the card isn't stuck
+    // showing as claimed for everyone else.
+    if (draggedClueId === clue.id) {
+      socket.emit("board3:releaseCard", { clueId: clue.id });
+      draggedClueId = null;
+    }
+  });
+
+  return card;
+}
+
+function wireBoardDropzone(el, placement) {
+  el.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    el.classList.add("drag-over");
+  });
+  el.addEventListener("dragleave", () => {
+    el.classList.remove("drag-over");
+  });
+  el.addEventListener("drop", (e) => {
+    e.preventDefault();
+    el.classList.remove("drag-over");
+    if (!draggedClueId) return;
+    socket.emit("board3:placeCard", { clueId: draggedClueId, placement });
+    draggedClueId = null;
+  });
+}
+
+function renderBoard() {
+  const clueList = Object.values(boardState.clues || {}).filter((c) => c.collected);
+
+  const tray = document.getElementById("board-tray");
+  tray.innerHTML = "";
+  wireBoardDropzone(tray, "tray");
+  clueList.filter((c) => c.placement === "tray").forEach((c) => tray.appendChild(buildBoardCard(c)));
+
+  const grid = document.getElementById("board-grid");
+  grid.innerHTML = "";
+  grid.appendChild(document.createElement("div")).className = "board-grid-header-spacer";
+  boardFinalists.forEach((f) => {
+    const header = document.createElement("div");
+    header.className = "board-suspect-header";
+    header.innerHTML = `<img src="${f.sprite}" alt="${f.name}" /><span class="board-suspect-name">${f.name}</span><span class="board-suspect-motive">${f.motive}</span>`;
+    grid.appendChild(header);
+  });
+
+  ["means", "opportunity"].forEach((category) => {
+    const label = document.createElement("div");
+    label.className = "board-row-label";
+    label.textContent = category === "means" ? "Means" : "Opportunity";
+    grid.appendChild(label);
+
+    boardFinalists.forEach((f) => {
+      const cell = document.createElement("div");
+      cell.className = "board-cell";
+      wireBoardDropzone(cell, { suspectId: f.key, category });
+      clueList
+        .filter((c) => c.placement && c.placement.suspectId === f.key && c.placement.category === category)
+        .forEach((c) => cell.appendChild(buildBoardCard(c)));
+      grid.appendChild(cell);
+    });
+  });
+}
+
 
 // --- The Evidence Table (shared, synced across the whole party) ---
 let tableExhibits = [];

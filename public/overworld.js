@@ -572,6 +572,14 @@ window.Overworld = (function () {
   }
 
   let zoneChangeInProgress = false;
+  // Set during the fade-to-black window between the Dungeons' natural
+  // completion (last player reaches outside_sewer) and the Hook cutscene
+  // actually starting - blocks movement and interaction so nobody can
+  // trigger a stray object/dialogue in the sewer while the screen is
+  // going black, same "why is this happening mid-fade" problem the staged
+  // scene's own input freeze already solves, just for a plain explore
+  // zone instead.
+  let frozen = false;
   let mapReady = true; // false while a zone transition is loading - gates render(), see changeZone()
 
   function handleKeyDown(e) {
@@ -587,7 +595,7 @@ window.Overworld = (function () {
   }
 
   function triggerInteract() {
-    if (zoneChangeInProgress) return;
+    if (zoneChangeInProgress || frozen) return;
     if (nearbyObject && callbacks.onInteract) {
       callbacks.onInteract(nearbyObject);
     }
@@ -676,6 +684,11 @@ window.Overworld = (function () {
       updateStagedScene(dt);
       me.moving = false;
       animClock += dt * 1000;
+      return;
+    }
+
+    if (frozen) {
+      me.moving = false;
       return;
     }
 
@@ -1384,6 +1397,7 @@ window.Overworld = (function () {
       canvas = opts.canvas;
       ctx = canvas.getContext("2d");
       socket = opts.socket;
+      frozen = false; // fresh zone load always starts unfrozen, regardless of how the previous zone left off
       callbacks.onInteract = opts.onInteract || null;
       callbacks.onNearbyChange = opts.onNearbyChange || null;
       callbacks.onPlateEnter = opts.onPlateEnter || null;
@@ -1621,6 +1635,14 @@ window.Overworld = (function () {
 
     triggerInteractFromButton() {
       triggerInteract();
+    },
+
+    freeze() {
+      frozen = true;
+    },
+
+    unfreeze() {
+      frozen = false;
     },
 
     resize() {

@@ -505,7 +505,16 @@
     "npc_blacksmith": {
       "requiresFact": "cold_forge",
       "surfaceDialogueId": "npc_blacksmith_surface",
-      "revealDialogueId": "npc_blacksmith_reveal"
+      "revealDialogueId": "npc_blacksmith_reveal",
+      "surfaceClueId": "clue_blacksmith_surface",
+      "revealClueId": "clue_blacksmith_reveal"
+    },
+    "npc_glassblower": {
+      "requiresFact": "ashgate_anxious",
+      "surfaceDialogueId": "npc_glassblower_surface",
+      "revealDialogueId": "npc_glassblower_reveal",
+      "surfaceClueId": "clue_glassblower_surface",
+      "revealClueId": "clue_glassblower_reveal"
     }
   },
   "npc_blacksmith_surface": {
@@ -523,6 +532,314 @@
       "He sets the hammer down this time. \"Alright. A receipt with her name on it, dated the night of the gala? Could be.\" A pause. \"Could also be dated a few days off.\"",
       "\"Wouldn't be the first favor I've done for a regular customer who needed paperwork to say something convenient.\"",
       "\"Nothing to do with any murder, if that's what you're fishing for. Just a woman trying to look like she was somewhere she wasn't, for reasons that are her business, not mine.\""
+    ]
+  },
+  "npc_head_warlock": {
+    "type": "dialogue",
+    "title": "The Head Warlock",
+    "lines": [
+      "He doesn't look up from the pentagram chalked into the floor. \"Champions of Azeroth. In my tower. How thrilling for me.\"",
+      "\"I know why you're here. I know most things that happen in this town, eventually.\" He still doesn't look up. \"I simply choose which of them are worth saying out loud.\""
+    ]
+  },
+  "npc_head_mage": {
+    "type": "dialogue",
+    "title": "The Head Mage",
+    "lines": [
+      "He gestures vaguely at the window, not breaking his line of sight from whatever he's scrying. \"You want gossip, not magic. Fine.\"",
+      "\"The night of the gala, I had this window open for the stars. The forge below never lit. Not once, all night. Odd, for a man who works metal for a living.\" A thin smile. \"Make of that what you will.\""
+    ]
+  },
+  "boardFinalists": [
+    {
+      "key": "ashby",
+      "name": "Steward Wren Ashby",
+      "sprite": "/assets/npcs/portraits/citizen1.png",
+      "motive": "FORGERY"
+    },
+    {
+      "key": "voss",
+      "name": "Commodore Brannigan Voss",
+      "sprite": "/assets/npcs/portraits/fighter4.png",
+      "motive": "GAMBLER"
+    },
+    {
+      "key": "kestrel",
+      "name": "Merchant Odalys Kestrel",
+      "sprite": "/assets/npcs/portraits/citizen3.png",
+      "motive": "UNDERCUT"
+    },
+    {
+      "key": "marrow",
+      "name": "Architect Tobias Marrow",
+      "sprite": "/assets/npcs/portraits/citizen2.png",
+      "motive": "UNPAID"
+    },
+    {
+      "key": "ashgate",
+      "name": "Lady Isobel Ashgate",
+      "sprite": "/assets/npcs/portraits/ashgate_fancy.png",
+      "motive": "INHERITANCE"
+    }
+  ],
+  "boardClues": [
+    {
+      "id": "clue_voss_empty_chair_a",
+      "suspectId": "voss",
+      "category": "opportunity",
+      "title": "The empty chair",
+      "text": "The fighter lowers his shield half an inch. \"You're not here about the dice game, are you?\" A beat. \"No? Shame. That empty chair's still bothering half the barracks.\"",
+      "source": "A fighter, Training Ground",
+      "written": true
+    },
+    {
+      "id": "clue_voss_empty_chair_b",
+      "suspectId": "voss",
+      "category": "opportunity",
+      "title": "Gone mid-game",
+      "text": "\"Commodore Voss? Used to sit in on our dice nights, regular as anything,\" the fighter says, not looking up from the mannequin. \"That night, he vanished mid-game. Chair sat empty the better part of an hour. Nobody's said where he got to.\"",
+      "source": "A fighter, Training Ground",
+      "written": true
+    },
+    {
+      "id": "clue_dragon_cryptic",
+      "suspectId": "kestrel",
+      "category": "opportunity",
+      "title": "Ash and roses",
+      "text": "The stone dragon's jaw does not move, but the words come anyway, low as a bellows drawing breath. \"Ash and roses smell the same to the dead. The tower's own fire burns only for those it favors. A cold hearth, on the night it should have roared, tells truer tales than any warm one ever will.\"",
+      "source": "The dragon statue, Training Ground",
+      "written": true
+    },
+    {
+      "id": "clue_mage_cold_forge",
+      "suspectId": "kestrel",
+      "category": "opportunity",
+      "title": "The forge never lit",
+      "text": "\"The night of the gala, I had this window open for the stars. The forge below never lit. Not once, all night. Odd, for a man who works metal for a living.\"",
+      "source": "The Head Mage, Mage Tower",
+      "written": true
+    },
+    {
+      "id": "clue_blacksmith_surface",
+      "suspectId": "kestrel",
+      "category": "opportunity",
+      "title": "Just paperwork",
+      "text": "\"A receipt with her name on it? Could be, I do a lot of paperwork.\" He shrugs, hammer never breaking rhythm. \"Nothing more to say about it than that.\"",
+      "source": "The Blacksmith, Training Ground",
+      "written": true
+    },
+    {
+      "id": "clue_blacksmith_reveal",
+      "suspectId": "kestrel",
+      "category": "opportunity",
+      "title": "A backdated favor",
+      "text": "\"Wouldn't be the first favor I've done for a regular customer who needed paperwork to say something convenient.\" Nothing to do with any murder, just a woman trying to look like she was somewhere she wasn't.",
+      "source": "The Blacksmith, Training Ground (after learning the forge never lit)",
+      "written": true
+    },
+    {
+      "id": "clue_market_marrow_surface",
+      "suspectId": "marrow",
+      "category": "means",
+      "title": "Going through his ledgers",
+      "text": "PLACEHOLDER: not written yet. A market stallholder says Marrow spent the evening at their stall, working out what leftover repair materials he could sell off to recoup what he is owed.",
+      "source": "A stallholder, Market",
+      "written": false
+    },
+    {
+      "id": "clue_market_stalls_shuttered",
+      "suspectId": "marrow",
+      "category": "means",
+      "title": "Stalls shuttered early",
+      "text": "PLACEHOLDER: not written yet. A second market vendor mentions the stalls were boarded up ahead of the gala procession, nobody doing business there after dusk.",
+      "source": "A vendor, Market",
+      "written": false
+    },
+    {
+      "id": "clue_market_marrow_reveal",
+      "suspectId": "marrow",
+      "category": "means",
+      "title": "Really at the scaffolding",
+      "text": "PLACEHOLDER: not written yet. The stallholder admits the ledger-checking really happened that morning. That evening Marrow was at the Estate's east wall scaffolding instead, openly, going over materials he was never paid for.",
+      "source": "A stallholder, Market (after learning the stalls were shuttered early)",
+      "written": false
+    },
+    {
+      "id": "clue_glassblower_surface",
+      "suspectId": "ashgate",
+      "category": "means",
+      "title": "A very particular vial",
+      "text": "PLACEHOLDER: not written yet. The glassblower recalls an odd customer commissioning a very small, tightly-sealable vial, unusually specific about size and discretion.",
+      "source": "The Glassblower, Market",
+      "written": false
+    },
+    {
+      "id": "clue_glassblower_reveal",
+      "suspectId": "ashgate",
+      "category": "means",
+      "title": "Visible against red wine",
+      "text": "PLACEHOLDER: not written yet. She came back a second time, more insistent, asking whether the vial's contents would show through wine once poured, and whether a given tint would still read against red wine specifically.",
+      "source": "The Glassblower, Market (after hearing she seemed anxious)",
+      "written": false
+    },
+    {
+      "id": "clue_inn_voss_surface",
+      "suspectId": "voss",
+      "category": "opportunity",
+      "title": "Drinking all night",
+      "text": "PLACEHOLDER: not written yet. The bartender says Voss was seen drinking at the tavern all night, solid alibi.",
+      "source": "The Bartender, Inn",
+      "written": false
+    },
+    {
+      "id": "clue_inn_voss_reveal",
+      "suspectId": "voss",
+      "category": "opportunity",
+      "title": "A second, higher-stakes game",
+      "text": "PLACEHOLDER: not written yet. He'd slipped off to a second, higher-stakes game, ashamed of being caught welching, not of anything worse.",
+      "source": "The Bartender, Inn (after hearing about the empty chair)",
+      "written": false
+    },
+    {
+      "id": "clue_inn_ashgate_anxious",
+      "suspectId": "ashgate",
+      "category": "means",
+      "title": "Seemed anxious",
+      "text": "PLACEHOLDER: not written yet. A gossiping guest mentions Ashgate seemed oddly on edge near the drinks table all night.",
+      "source": "A gala guest, Inn",
+      "written": false
+    },
+    {
+      "id": "clue_inn_ashby_confirm",
+      "suspectId": "ashby",
+      "category": "opportunity",
+      "title": "Buried in paperwork",
+      "text": "PLACEHOLDER: not written yet. A fellow guest confirms seeing Ashby buried in paperwork all night, muttering about the books.",
+      "source": "A gala guest, Inn",
+      "written": false
+    },
+    {
+      "id": "clue_inn_ashgate_reveal",
+      "suspectId": "ashgate",
+      "category": "opportunity",
+      "title": "Refilled the glass herself",
+      "text": "PLACEHOLDER: not written yet. Serving staff recall Ashgate personally offering to refill Duskmere's glass, unusual enough to be remembered.",
+      "source": "Serving staff, Inn (after learning about the vial question)",
+      "written": false
+    },
+    {
+      "id": "clue_monk_impossible",
+      "suspectId": null,
+      "category": "flavor",
+      "title": "A confession during matins",
+      "text": "\"I heard her confession myself, during matins. Long before the gala ever began, of course.\"",
+      "source": "A Monk, Chapel",
+      "written": true
+    },
+    {
+      "id": "clue_monk_voss_dispute",
+      "suspectId": "voss",
+      "category": "opportunity",
+      "title": "Penance before sundown",
+      "text": "\"The Commodore? Left before sundown, actually, here for a private penance.\"",
+      "source": "A Monk, Chapel",
+      "written": true
+    },
+    {
+      "id": "clue_monk_marrow_dispute",
+      "suspectId": "marrow",
+      "category": "means",
+      "title": "Sneaking in at midnight",
+      "text": "\"I saw the architect myself, sneaking through the servants' entrance, well past midnight.\"",
+      "source": "A Monk, Chapel",
+      "written": true
+    },
+    {
+      "id": "clue_monk_ashgate_alibi",
+      "suspectId": "ashgate",
+      "category": "opportunity",
+      "title": "At evening prayers",
+      "text": "\"Lady Ashgate was here the whole evening. Evening prayers, same as always. I'd stake my own name on it.\"",
+      "source": "A Monk, Chapel",
+      "written": true
+    }
+  ],
+  "npc_priest": {
+    "type": "dialogue",
+    "title": "The Priest",
+    "lines": [
+      "He barely glances up from the altar. \"Not now. There is always something that needs doing before evensong, and today it is everything.\"",
+      "\"Whatever you need, I am sure it can wait. Or find someone else. I am, as you can see, thoroughly occupied.\""
+    ]
+  },
+  "npc_chapel_monk": {
+    "type": "dialogue",
+    "title": "A Monk",
+    "lines": [
+      "He inclines his head in silent greeting and returns to his prayers, saying nothing more."
+    ]
+  },
+  "npc_chapel_parishioner": {
+    "type": "dialogue",
+    "title": "A Parishioner",
+    "lines": [
+      "\"Terrible business at the Estate,\" they murmur, eyes still on the altar. \"Terrible. We pray for the family.\""
+    ]
+  },
+  "npc_glassblower_surface": {
+    "type": "dialogue",
+    "title": "The Glassmaker",
+    "lines": [
+      "He doesn't look up from the pipe he's turning over the flame. \"A vial? Sure, I make plenty. Small, sealed tight, easy to carry without it rattling.\"",
+      "\"Had someone in not long ago wanting exactly that. Didn't think much of it. People want discreet vials for all sorts of reasons, perfume, medicine, ink.\""
+    ]
+  },
+  "npc_glassblower_reveal": {
+    "type": "dialogue",
+    "title": "The Glassmaker",
+    "lines": [
+      "He sets the pipe down properly this time. \"Funny you ask. She came back a second time, more insistent. Wanted to know if whatever went in the vial would show through wine once it was poured.\"",
+      "\"Asked me straight out whether a certain tint would still read against red wine. I make glass, not poison, so I told her I couldn't say for certain. She didn't seem to like that answer.\"",
+      "He shrugs. \"Strange thing to need glass for. Strange thing to ask a glassblower at all, now that I think on it.\""
+    ]
+  },
+  "npc_shopkeeper_glass": {
+    "type": "dialogue",
+    "title": "The Shopkeeper",
+    "lines": [
+      "\"Looking for glassware? The master's through the back, past the archway. I just mind the counter.\""
+    ]
+  },
+  "npc_monk_impossible": {
+    "type": "dialogue",
+    "title": "A Monk",
+    "lines": [
+      "He greets you warmly, glad of the company. \"Terrible business at the Estate. I hope it's all sorted soon.\"",
+      "\"I heard her confession myself, during matins. Long before the gala ever began, of course.\""
+    ]
+  },
+  "npc_monk_voss": {
+    "type": "dialogue",
+    "title": "A Monk",
+    "lines": [
+      "\"The Commodore? I remember him well. Left before sundown, actually, here for a private penance.\"",
+      "\"Gambling debts, I'd guess, though it isn't my place to ask.\""
+    ]
+  },
+  "npc_monk_marrow": {
+    "type": "dialogue",
+    "title": "A Monk",
+    "lines": [
+      "\"The architect, you mean? I saw him myself, sneaking through the servants' entrance, well past midnight.\"",
+      "\"Furtive sort of thing. I did wonder what he had to hide.\""
+    ]
+  },
+  "npc_monk_ashgate": {
+    "type": "dialogue",
+    "title": "A Monk",
+    "lines": [
+      "\"Lady Ashgate? She was here the whole evening. Evening prayers, same as always.\"",
+      "\"I'd stake my own name on it.\""
     ]
   }
 }

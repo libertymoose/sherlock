@@ -91162,9 +91162,9 @@
       "y": 12,
       "interaction": {
         "kind": "zone_exit",
-        "targetZone": "PLACEHOLDER_MAGE_TOWER",
-        "targetX": 0,
-        "targetY": 0
+        "targetZone": "mage_tower_basement",
+        "targetX": 7,
+        "targetY": 10
       }
     },
     {
@@ -91174,7 +91174,8 @@
       "y": 13,
       "interaction": {
         "kind": "note",
-        "text": "The stone dragon's jaw does not move, but the words come anyway, low as a bellows drawing breath. \"Ash and roses smell the same to the dead. The tower's own fire burns only for those it favors. A cold hearth, on the night it should have roared, tells truer tales than any warm one ever will.\""
+        "text": "The stone dragon's jaw does not move, but the words come anyway, low as a bellows drawing breath. \"Ash and roses smell the same to the dead. The tower's own fire burns only for those it favors. A cold hearth, on the night it should have roared, tells truer tales than any warm one ever will.\"",
+        "boardClueId": "clue_dragon_cryptic"
       }
     },
     {
@@ -91194,7 +91195,8 @@
       "y": 36,
       "interaction": {
         "kind": "note",
-        "text": "The fighter lowers his shield half an inch. \"You're not here about the dice game, are you?\" A beat. \"No? Shame. That empty chair's still bothering half the barracks.\""
+        "text": "The fighter lowers his shield half an inch. \"You're not here about the dice game, are you?\" A beat. \"No? Shame. That empty chair's still bothering half the barracks.\"",
+        "boardClueId": "clue_voss_empty_chair_a"
       }
     },
     {
@@ -91224,7 +91226,8 @@
       "y": 38,
       "interaction": {
         "kind": "note",
-        "text": "\"Commodore Voss? Used to sit in on our dice nights, regular as anything,\" the fighter says, not looking up from the mannequin. \"That night, he vanished mid-game. Chair sat empty the better part of an hour. Nobody's said where he got to.\""
+        "text": "\"Commodore Voss? Used to sit in on our dice nights, regular as anything,\" the fighter says, not looking up from the mannequin. \"That night, he vanished mid-game. Chair sat empty the better part of an hour. Nobody's said where he got to.\"",
+        "boardClueId": "clue_voss_empty_chair_b"
       }
     }
   ],
