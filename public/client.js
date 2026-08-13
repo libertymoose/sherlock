@@ -876,6 +876,7 @@ async function enterStagedScene(act) {
       myMark,
       actors: act.actors || [],
       cameraCenter: act.cameraCenter || null,
+      playerSortBoost: act.playerSortBoost || 0,
       onArrived: () => {
         playScriptedDialogue(act.dialogue || [], () => finishStagedScene(act));
       },
@@ -1148,18 +1149,72 @@ async function handleObjectInteract(obj) {
   }
 }
 
+// Sprite-based dialogue "portraits": Act 1 and Act 3 alike no longer use
+// illustrated character art in the dialogue frame - too many NPCs to
+// commission full portraits for consistently, so the whole game now uses
+// each NPC's own walking sprite instead, kept small and simple rather
+// than trying to make a tiny pixel-art figure fill a big portrait frame.
+let npcLooksManifestCache = null;
+async function getNpcLooksManifest() {
+  if (!npcLooksManifestCache) {
+    const res = await fetch("/assets/npcs/looks/manifest.json");
+    npcLooksManifestCache = await res.json();
+  }
+  return npcLooksManifestCache;
+}
+
+async function drawNpcSpritePortrait(canvas, lookKey) {
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const manifest = await getNpcLooksManifest();
+  const look = manifest[lookKey];
+  if (!look) return;
+  const frameSet = look.idle || look.walk;
+  const img = new Image();
+  img.onload = () => {
+    const cell = frameSet.cell;
+    // Down-facing, first idle frame (a plain standing pose) - row 0 always
+    // means "down" across every look in this manifest, matching the same
+    // convention the overworld renderer uses for these NPCs.
+    const sx = 0;
+    const sy = 0;
+    // Contain-fit, not cover-fit: unlike the old illustrated portraits,
+    // there's no reason to crop a small sprite - the whole character
+    // should be visible, just centred and scaled up cleanly.
+    const scale = Math.min(canvas.width / cell, canvas.height / cell);
+    const drawW = cell * scale;
+    const drawH = cell * scale;
+    const dx = (canvas.width - drawW) / 2;
+    const dy = (canvas.height - drawH) / 2;
+    ctx.drawImage(img, sx, sy, cell, cell, dx, dy, drawW, drawH);
+  };
+  img.src = frameSet.src;
+}
+
 function setVnPortrait(obj) {
   const frame = document.getElementById("vn-portrait-frame");
   const canvas = document.getElementById("vn-portrait");
   const textFrame = document.getElementById("vn-text-frame");
   const hasPortrait = !!(obj && obj.portrait);
+  const hasSprite = !hasPortrait && !!(obj && obj.look);
   if (hasPortrait) {
     frame.classList.remove("hidden");
+    frame.classList.remove("vn-sprite-mode");
+    canvas.classList.remove("vn-sprite-mode");
     drawFixedPortrait(canvas, obj.portrait);
+  } else if (hasSprite) {
+    frame.classList.remove("hidden");
+    frame.classList.add("vn-sprite-mode");
+    canvas.classList.add("vn-sprite-mode");
+    drawNpcSpritePortrait(canvas, obj.look);
   } else {
     frame.classList.add("hidden");
   }
-  if (textFrame) textFrame.classList.toggle("vn-compact", !hasPortrait);
+  if (textFrame) {
+    textFrame.classList.toggle("vn-compact", !hasPortrait && !hasSprite);
+    textFrame.classList.toggle("vn-sprite-mode", hasSprite);
+  }
 }
 
 // --- Pagination: no scrollbars and no font-shrinking allowed, so when
@@ -1267,7 +1322,7 @@ function playScriptedDialogue(pages, onComplete) {
 function showScriptedDialoguePage(i) {
   const page = scriptedDialoguePages[i];
   document.getElementById("dialogue-title").textContent = page.speaker || "";
-  setVnPortrait({ portrait: page.portrait || null });
+  setVnPortrait({ portrait: page.portrait || null, look: page.look || null });
   setupPagination("dialogue-lines", [page.text || ""], "dialogue-line");
   document.getElementById("vn-continue-indicator").classList.remove("hidden");
 }
@@ -1552,6 +1607,14 @@ function buildBoardCard(clue) {
   const ignoreBtn = document.createElement("button");
   ignoreBtn.className = "board-card-ignore-btn";
   ignoreBtn.textContent = clue.ignored ? "unignore" : "ignore";
+  // The card itself is draggable=true. Without this, a browser can
+  // interpret a click that starts on this button as the start of a card
+  // drag instead (any tiny mouse movement during the click gets read as
+  // a drag gesture beginning on a draggable ancestor), so the button's
+  // own click handler never fires - this was very likely why "ignore"
+  // looked completely dead rather than just unreliable.
+  ignoreBtn.draggable = false;
+  ignoreBtn.addEventListener("dragstart", (e) => e.stopPropagation());
   ignoreBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     socket.emit("board3:toggleIgnore", { clueId: clue.id });
@@ -1563,9 +1626,29 @@ function buildBoardCard(clue) {
   title.textContent = clue.title;
   card.appendChild(title);
 
+  // Full clue quotes can run long, and with 23 of these across the tray
+  // and grid the board was growing far taller than the viewport. Shows
+  // a short preview on the card itself; "more" opens the full text in
+  // its own modal rather than expanding the card in place, so reading
+  // one long clue doesn't reflow every other card around it.
   const text = document.createElement("div");
-  text.textContent = clue.text;
+  text.className = "board-card-text";
+  const isLong = clue.text.length > 70;
+  text.textContent = isLong ? clue.text.slice(0, 70).trimEnd() + "\u2026" : clue.text;
   card.appendChild(text);
+
+  if (isLong) {
+    const toggle = document.createElement("button");
+    toggle.className = "board-card-expand-btn";
+    toggle.textContent = "more";
+    toggle.draggable = false;
+    toggle.addEventListener("dragstart", (e) => e.stopPropagation());
+    toggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openClueDetailModal(clue);
+    });
+    card.appendChild(toggle);
+  }
 
   const source = document.createElement("div");
   source.className = "board-card-source";
@@ -1590,6 +1673,16 @@ function buildBoardCard(clue) {
   return card;
 }
 
+function openClueDetailModal(clue) {
+  document.getElementById("clue-detail-title").textContent = clue.title;
+  document.getElementById("clue-detail-text").textContent = clue.text;
+  document.getElementById("clue-detail-source").textContent = clue.source;
+  document.getElementById("modal-clue-detail").classList.remove("hidden");
+}
+document.getElementById("btn-close-clue-detail").addEventListener("click", () => {
+  document.getElementById("modal-clue-detail").classList.add("hidden");
+});
+
 function wireBoardDropzone(el, placement) {
   el.addEventListener("dragover", (e) => {
     e.preventDefault();
@@ -1602,8 +1695,21 @@ function wireBoardDropzone(el, placement) {
     e.preventDefault();
     el.classList.remove("drag-over");
     if (!draggedClueId) return;
-    socket.emit("board3:placeCard", { clueId: draggedClueId, placement });
+    const clueId = draggedClueId;
     draggedClueId = null;
+    // Update and re-render immediately rather than waiting on the
+    // server's broadcast to come back - a card visibly landing in its
+    // box the instant you drop it shouldn't depend on a network
+    // round-trip. The server call right after is still the source of
+    // truth (and syncs everyone else's board); if it disagrees for any
+    // reason, the next board3:state message corrects this local guess.
+    const clue = boardState.clues[clueId];
+    if (clue) {
+      clue.placement = placement;
+      clue.claimedBy = null;
+      renderDeductionBoard();
+    }
+    socket.emit("board3:placeCard", { clueId, placement });
   });
 }
 
@@ -1611,8 +1717,17 @@ function renderDeductionBoard() {
   const clueList = Object.values(boardState.clues || {}).filter((c) => c.collected);
 
   const tray = document.getElementById("board-tray");
+  // The tray element itself persists across renders (unlike the grid's
+  // cells, which are torn down and rebuilt fresh every time) - wiring it
+  // unconditionally on every render was stacking up a new "drop" listener
+  // on top of the last one each time the board state changed, so a drop
+  // late in a session could fire several duplicate placeCard emits at
+  // once. Wire it exactly once.
+  if (!tray.dataset.wired) {
+    wireBoardDropzone(tray, "tray");
+    tray.dataset.wired = "1";
+  }
   tray.innerHTML = "";
-  wireBoardDropzone(tray, "tray");
   clueList.filter((c) => c.placement === "tray").forEach((c) => tray.appendChild(buildBoardCard(c)));
 
   const grid = document.getElementById("board-grid");

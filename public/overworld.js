@@ -379,6 +379,63 @@ window.Overworld = (function () {
       currentBatch = [];
     };
 
+    // A single structure (a building's walls+roof+flags, a dragon's
+    // body+wing+tail) is often authored across several separate "sorted"
+    // layers in Tiled. Sorting each of those layers independently by its
+    // own vertical extent breaks the structure apart: a roof sits higher
+    // on the map than the walls beneath it, so it was getting a smaller
+    // sort key and drawing UNDER those walls instead of capping them.
+    // mapData.layerGroups (optional, additive - absent for every map that
+    // doesn't need it) lists sets of layer names that belong to one
+    // structure. Every layer in a group shares the SAME sort key (the
+    // group's own lowest/bottommost extent per column, not each layer's
+    // own), so the whole structure sorts as one object against the player
+    // and everything else - and because layers are still processed and
+    // queued in their original authored order, with a stable sort behind
+    // equal keys, layers listed later in that group draw after (on top
+    // of) layers listed earlier, exactly matching the hierarchy as
+    // authored: whatever was meant to be the top layer stays the top
+    // layer.
+    const layerToGroupIndex = {};
+    const groupBottomOfRun = [];
+    (mapData.layerGroups || []).forEach((groupNames, gi) => {
+      groupNames.forEach((name) => { layerToGroupIndex[name] = gi; });
+    });
+    if (mapData.layerGroups && mapData.layerGroups.length) {
+      const w = mapData.width, h = mapData.height;
+      mapData.layerGroups.forEach((groupNames) => {
+        // One shared value per COLUMN, not per cell: the single lowest row
+        // where ANY member layer of this group has a tile at all. A roof's
+        // rows and the wall's rows below it usually don't overlap or even
+        // touch (there's no tile-row where both a roof layer and a wall
+        // layer are simultaneously non-zero) - taking a max only where two
+        // layers' own runs happen to overlap would leave the roof keeping
+        // its own (much higher, much smaller) sort key. What's needed is
+        // simpler: whatever the bottom of the whole structure is in this
+        // column, every tile belonging to this group in that column - roof
+        // included - uses that one number.
+        const columnBottom = new Int16Array(w).fill(-1);
+        groupNames.forEach((name) => {
+          const layer = mapData.layers.find((l) => l.name === name);
+          if (!layer || !layer.dense) return;
+          for (let x = 0; x < w; x++) {
+            for (let y = h - 1; y >= 0; y--) {
+              if (layer.data[y * w + x]) {
+                if (y > columnBottom[x]) columnBottom[x] = y;
+                break; // lowest non-zero row in this layer for this column found
+              }
+            }
+          }
+        });
+        const shared = new Int16Array(w * h).fill(-1);
+        for (let x = 0; x < w; x++) {
+          if (columnBottom[x] < 0) continue;
+          for (let y = 0; y <= columnBottom[x]; y++) shared[y * w + x] = columnBottom[x];
+        }
+        groupBottomOfRun.push(shared);
+      });
+    }
+
     mapData.layers.forEach((layer) => {
       try {
         const isAnimatedLayer = (gid) => mapData.animations && mapData.animations[gid];
@@ -393,8 +450,12 @@ window.Overworld = (function () {
         // in a contiguous vertical run within one column shares the run's
         // bottom row as its sort key, so the whole tree/rail segment sorts
         // as one object relative to the player, the way it visually reads.
-        let bottomOfRun = null;
-        if (layer.kind !== "floor" && layer.dense) {
+        // A layer belonging to a layerGroup uses that group's shared extent
+        // instead of computing its own (see above).
+        let bottomOfRun = layerToGroupIndex[layer.name] !== undefined
+          ? groupBottomOfRun[layerToGroupIndex[layer.name]]
+          : null;
+        if (bottomOfRun === null && layer.kind !== "floor" && layer.dense) {
           const w = mapData.width, h = mapData.height;
           bottomOfRun = new Int16Array(w * h).fill(-1);
           for (let x = 0; x < w; x++) {
@@ -1300,7 +1361,7 @@ window.Overworld = (function () {
       // key, silently drawing them behind it. Normal gameplay Y-sorting
       // (walking behind trees, etc) is untouched since this only applies
       // while a staged scene is active.
-      y: me.y + (stagedScene ? 32 : 0),
+      y: me.y + (stagedScene ? stagedScene.playerSortBoost : 0),
       draw: () => {
         const pos = drawPlayer(me.gender, me.color, me.x, me.y, camX, camY, me.dir, me.moving, animFrame, worldScale);
         if (myName) drawNameLabel(myName, pos.x, pos.y);
@@ -1309,7 +1370,7 @@ window.Overworld = (function () {
 
     Object.values(others).forEach((p) => {
       drawList.push({
-        y: p.y + (stagedScene ? 32 : 0),
+        y: p.y + (stagedScene ? stagedScene.playerSortBoost : 0),
         draw: () => {
           const pos = drawPlayer(p.gender || "male", p.color || "red", p.x, p.y, camX, camY, p.dir || "down", p.moving, animFrame, worldScale);
           if (p.name) drawNameLabel(p.name, pos.x, pos.y);
@@ -1383,7 +1444,7 @@ window.Overworld = (function () {
           // never shrinks/grows with worldScale beyond the normal player/NPC
           // convention, only its position does.
           const aspect = cutout.contentW / cutout.contentH;
-          const drawH = WORLD_CHAR_SIZE * RENDER_SCALE;
+          const drawH = WORLD_CHAR_SIZE * RENDER_SCALE * (cutout.drawScale || 1);
           const drawW = drawH * aspect;
           const dx = Math.round(cutout.anchorX * worldScale - camX - drawW / 2);
           const dy = Math.round(cutout.anchorY * worldScale - camY - drawH);
@@ -1594,7 +1655,7 @@ window.Overworld = (function () {
     // Positions are set locally only; the caller is responsible for
     // broadcasting the local player's mark via the normal player:move
     // event so other clients see them standing in the right spot too.
-    beginStagedScene({ myMark, actors, onArrived, cameraCenter }) {
+    beginStagedScene({ myMark, actors, onArrived, cameraCenter, playerSortBoost }) {
       if (myMark) {
         me.x = myMark[0] * TILE + TILE / 2;
         me.y = myMark[1] * TILE + TILE / 2;
@@ -1605,6 +1666,17 @@ window.Overworld = (function () {
       stagedScene = {
         arrivedFired: false,
         onArrived,
+        // Per-scene, not a blanket constant: the manor cutscene's marks
+        // sit right in a furniture-heavy area around the desk, where the
+        // player's real (low) y value loses against nearby furniture's
+        // inflated sort key without a boost - but that boost was tuned
+        // for THAT specific layout, and blindly applying it to every
+        // staged scene pushed the player behind terrain they shouldn't
+        // be behind in scenes with a completely different layout (the
+        // sewer exit, notably - the player was rendering, just sorted
+        // behind something it had no business losing to). Defaults to 0,
+        // so a scene with no reason to need this is unaffected.
+        playerSortBoost: playerSortBoost || 0,
         // Cutscenes are composed, not followed - the camera has to show the
         // whole tableau (actors, desk, doorway) regardless of where any one
         // player's mark happens to sit, rather than the normal follow-camera

@@ -207,6 +207,18 @@
     </div>
   </div>
 
+  <!-- Clue detail: opened from a "more" link on a board card, so a long
+       quote reads as a proper popup rather than stretching the card
+       itself and pushing everything else on the board around. -->
+  <div id="modal-clue-detail" class="modal-overlay hidden">
+    <div class="pixel-panel pixel-panel-popup modal-box modal-box-wide">
+      <button id="btn-close-clue-detail" class="pixel-close-btn" aria-label="Close"></button>
+      <h3 class="pixel-panel-title" id="clue-detail-title"></h3>
+      <p class="hint-text" id="clue-detail-text" style="white-space:pre-line"></p>
+      <p class="board-card-source" id="clue-detail-source"></p>
+    </div>
+  </div>
+
   <!-- Point the Finger: the accusation vote (shared, synced across the whole party) -->
   <div id="modal-vote" class="modal-overlay hidden">
     <div class="pixel-panel pixel-panel-popup modal-box modal-box-board">
