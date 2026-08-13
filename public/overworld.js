@@ -957,17 +957,21 @@ window.Overworld = (function () {
   // asset generation follows the same convention: a grid of square cells,
   // one row per direction (or a single row for non-directional wildlife),
   // frames laid out left-to-right. `frameSet` describes one sheet's grid.
-  function drawFrame(img, frameSet, dirRow, frameIndex, worldX, worldY, camX, camY, drawWorldSize) {
+  function drawFrame(img, frameSet, dirRow, frameIndex, worldX, worldY, camX, camY, drawWorldSize, posScale) {
     if (!img) return;
+    posScale = posScale || RENDER_SCALE;
     const cell = frameSet.cell;
     const cols = frameSet.cols;
     const col = frameIndex % cols;
     const row = Math.min(dirRow, (frameSet.rows || 1) - 1);
     const sx = col * cell;
     const sy = row * cell;
+    // Draw *size* always uses the fixed RENDER_SCALE regardless of any
+    // per-map world scale override below - the player and dynamic NPCs
+    // should never themselves shrink, only where they sit in the world.
     const drawSize = drawWorldSize * RENDER_SCALE;
-    const dx = Math.round(worldX * RENDER_SCALE - camX - drawSize / 2);
-    const dy = Math.round(worldY * RENDER_SCALE - camY - drawSize);
+    const dx = Math.round(worldX * posScale - camX - drawSize / 2);
+    const dy = Math.round(worldY * posScale - camY - drawSize);
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(img, sx, sy, cell, cell, dx, dy, drawSize, drawSize);
@@ -975,18 +979,19 @@ window.Overworld = (function () {
     return { x: dx + drawSize / 2, y: dy };
   }
 
-  function drawPlayer(gender, color, worldX, worldY, camX, camY, dir, moving, frame) {
+  function drawPlayer(gender, color, worldX, worldY, camX, camY, dir, moving, frame, posScale) {
     const genderManifest = BASE_MANIFEST[gender] || BASE_MANIFEST.male;
     const entry = genderManifest[color] || genderManifest.red;
-    if (!entry) return { x: worldX * RENDER_SCALE - camX, y: worldY * RENDER_SCALE - camY };
+    posScale = posScale || RENDER_SCALE;
+    if (!entry) return { x: worldX * posScale - camX, y: worldY * posScale - camY };
     const state = moving ? "walk" : "idle";
     const frameSet = entry[state];
     const img = getImg(frameSet.src);
     const dirRow = PLAYER_DIR_ROW[dir] ?? 0;
-    return drawFrame(img, frameSet, dirRow, frame, worldX, worldY, camX, camY, PLAYER_DRAW_SIZE);
+    return drawFrame(img, frameSet, dirRow, frame, worldX, worldY, camX, camY, PLAYER_DRAW_SIZE, posScale);
   }
 
-  function drawNpc(o, camX, camY) {
+  function drawNpc(o, camX, camY, posScale) {
     const st = npcStates[o.id];
     const look = NPC_MANIFEST[(st && st.look) || "citizen1"];
     if (!look) return null;
@@ -997,13 +1002,14 @@ window.Overworld = (function () {
     const worldY = o.y * TILE + TILE / 2 + (st ? st.offsetY : 0);
     const dirRow = NPC_DIR_ROW[(st && st.dir) || "down"] ?? 0;
     const frame = st ? st.frame : 0;
-    return drawFrame(img, frameSet, dirRow, frame, worldX, worldY, camX, camY, WORLD_CHAR_SIZE);
+    return drawFrame(img, frameSet, dirRow, frame, worldX, worldY, camX, camY, WORLD_CHAR_SIZE, posScale);
   }
 
-  function spriteScreenPos(worldSize, worldX, worldY, camX, camY) {
+  function spriteScreenPos(worldSize, worldX, worldY, camX, camY, posScale) {
+    posScale = posScale || RENDER_SCALE;
     return {
-      x: worldX * RENDER_SCALE - camX,
-      y: worldY * RENDER_SCALE - camY - worldSize * RENDER_SCALE,
+      x: worldX * posScale - camX,
+      y: worldY * posScale - camY - worldSize * RENDER_SCALE,
     };
   }
 
@@ -1061,7 +1067,24 @@ window.Overworld = (function () {
     }
     if (!mapData) return;
 
-    const scaledTile = TILE * RENDER_SCALE;
+    // Optional, per-map, additive-only zoom correction. Several Act 3
+    // packs (Training Ground's fighters and similar baked-tile character
+    // art) were drawn at a noticeably larger native footprint than the
+    // player/NPC sprite convention used everywhere else, so characters
+    // read as oversized next to a normal-sized player. Rather than touch
+    // the shared RENDER_SCALE constant (used by every zone in the game,
+    // Act 1 and 2 included), this shrinks the world's own tile grid only
+    // for maps that explicitly opt in via `tileRenderScale` in their own
+    // JSON - every map without that field computes worldScale as exactly
+    // RENDER_SCALE (mapData.tileRenderScale defaults to 1), so nothing
+    // about any existing map's rendered output changes at all. The
+    // player and dynamic "look" NPCs still draw at their normal fixed
+    // pixel size regardless (drawFrame's drawSize always uses the raw
+    // RENDER_SCALE constant, never worldScale) - only where things sit
+    // in a shrunk world, not how big the player itself looks, changes.
+    const worldScale = RENDER_SCALE * (mapData.tileRenderScale || 1);
+
+    const scaledTile = TILE * worldScale;
     const worldW = mapData.width * scaledTile;
     const worldH = mapData.height * scaledTile;
     // Clamp the camera to the map bounds so the void beyond the edge is never
@@ -1069,11 +1092,11 @@ window.Overworld = (function () {
     // was correctly stopping the player right at the boundary.
     let camX, camY;
     if (stagedScene && stagedScene.cameraCenter) {
-      camX = stagedScene.cameraCenter.x * RENDER_SCALE - w / 2;
-      camY = stagedScene.cameraCenter.y * RENDER_SCALE - h / 2;
+      camX = stagedScene.cameraCenter.x * worldScale - w / 2;
+      camY = stagedScene.cameraCenter.y * worldScale - h / 2;
     } else {
-      camX = me.x * RENDER_SCALE - w / 2;
-      camY = me.y * RENDER_SCALE - h / 2;
+      camX = me.x * worldScale - w / 2;
+      camY = me.y * worldScale - h / 2;
     }
     camX = Math.max(0, Math.min(worldW - w, camX));
     camY = Math.max(0, Math.min(worldH - h, camY));
@@ -1095,10 +1118,10 @@ window.Overworld = (function () {
     // preserving real layer z-order between static bakes and animated
     // tiles, instead of one static blit followed by every animated tile
     // unconditionally on top.
-    const sx = camX / RENDER_SCALE;
-    const sy = camY / RENDER_SCALE;
-    const sw = w / RENDER_SCALE;
-    const sh = h / RENDER_SCALE;
+    const sx = camX / worldScale;
+    const sy = camY / worldScale;
+    const sw = w / worldScale;
+    const sh = h / worldScale;
     for (const seg of floorSegments) {
       if (seg.type === "static") {
         ctx.drawImage(seg.canvas, sx, sy, sw, sh, 0, 0, w, h);
@@ -1150,19 +1173,19 @@ window.Overworld = (function () {
         drawList.push({
           y: o.y * TILE + TILE,
           draw: () => {
-            const pos = drawNpc(o, camX, camY);
+            const pos = drawNpc(o, camX, camY, worldScale);
             if (pos) drawNameLabel(o.name, pos.x, pos.y);
           },
         });
       } else if (o.type === "scrap" && !o.__solved) {
-        const pos = spriteScreenPos(16, o.x * TILE + TILE / 2, o.y * TILE + TILE / 2, camX, camY);
+        const pos = spriteScreenPos(16, o.x * TILE + TILE / 2, o.y * TILE + TILE / 2, camX, camY, worldScale);
         drawList.push({
           y: o.y * TILE + TILE,
           draw: () => drawStaticSprite("/assets/props/paper_scrap.png", pos.x, pos.y - 4, 16),
         });
       } else if (o.type === "table") {
-        const centerX = o.x * TILE * RENDER_SCALE - camX + (TILE * RENDER_SCALE) / 2;
-        const topY = o.y * TILE * RENDER_SCALE - camY - (TILE * RENDER_SCALE) / 2;
+        const centerX = o.x * TILE * worldScale - camX + scaledTile / 2;
+        const topY = o.y * TILE * worldScale - camY - scaledTile / 2;
         drawList.push({
           y: o.y * TILE + TILE,
           draw: () => drawStaticSprite("/assets/props/evidence_table.png", centerX, topY, 32),
@@ -1185,8 +1208,8 @@ window.Overworld = (function () {
               const curGid = currentGidFor(c.gid, EMPTY_ANIM_LAYER, 0);
               const r = resolveGid(curGid);
               if (!r) return;
-              const dx = Math.round((o.x + c.dx) * scaledTile - camX + offX * RENDER_SCALE);
-              const dy = Math.round((o.y + c.dy) * scaledTile - camY + offY * RENDER_SCALE);
+              const dx = Math.round((o.x + c.dx) * scaledTile - camX + offX * worldScale);
+              const dy = Math.round((o.y + c.dy) * scaledTile - camY + offY * worldScale);
               drawTile(ctx, getImg(r.src), r.sx, r.sy, TILE, dx, dy, scaledTile, false, false);
             });
           },
@@ -1202,7 +1225,7 @@ window.Overworld = (function () {
             const img = getImg(frameSet.src);
             const frameCount = frameSet.cols || 1;
             const frame = Math.floor(animClock / CRITTER_FRAME_MS) % frameCount;
-            drawFrame(img, frameSet, 0, frame, o.x * TILE + TILE / 2, o.y * TILE + TILE / 2, camX, camY, CRITTER_DRAW_SIZE);
+            drawFrame(img, frameSet, 0, frame, o.x * TILE + TILE / 2, o.y * TILE + TILE / 2, camX, camY, CRITTER_DRAW_SIZE, worldScale);
           },
         });
       } else if (o.interaction && o.interaction.kind === "evidence_document" && !o.showMarker) {
@@ -1227,19 +1250,23 @@ window.Overworld = (function () {
         // A lever is already obviously a lever - the generic marker on top
         // reads as a bug, not an invitation. Opt back in via showMarker.
       } else {
-        drawList.push({ y: o.y * TILE + TILE, draw: () => drawObjectMarker(o, camX, camY) });
+        drawList.push({ y: o.y * TILE + TILE, draw: () => drawObjectMarker(o, camX, camY, worldScale) });
       }
     });
 
     (mapData.images || []).forEach((img) => {
       const img_ = getImg(img.src);
       if (!img_) return;
-      const worldW = img.width || img_.naturalWidth;
-      const worldH = img.height || img_.naturalHeight;
-      const dx = img.x * RENDER_SCALE - camX;
-      const dy = img.y * RENDER_SCALE - camY;
-      const dw = worldW * RENDER_SCALE;
-      const dh = worldH * RENDER_SCALE;
+      const imgWorldW = img.width || img_.naturalWidth;
+      const imgWorldH = img.height || img_.naturalHeight;
+      // A wall decal is part of the environment (painted directly onto a
+      // wall, like a tile), not a character - it should shrink and grow
+      // with the world's own scale, unlike the player/NPC sprites above
+      // which always stay a fixed size regardless of worldScale.
+      const dx = img.x * worldScale - camX;
+      const dy = img.y * worldScale - camY;
+      const dw = imgWorldW * worldScale;
+      const dh = imgWorldH * worldScale;
       drawList.push({
         // +32 (two tiles): a wall-mounted decal like this sits right at a
         // wall row, but the wall it's mounted on sorts by the bottom of its
@@ -1275,7 +1302,7 @@ window.Overworld = (function () {
       // while a staged scene is active.
       y: me.y + (stagedScene ? 32 : 0),
       draw: () => {
-        const pos = drawPlayer(me.gender, me.color, me.x, me.y, camX, camY, me.dir, me.moving, animFrame);
+        const pos = drawPlayer(me.gender, me.color, me.x, me.y, camX, camY, me.dir, me.moving, animFrame, worldScale);
         if (myName) drawNameLabel(myName, pos.x, pos.y);
       },
     });
@@ -1284,7 +1311,7 @@ window.Overworld = (function () {
       drawList.push({
         y: p.y + (stagedScene ? 32 : 0),
         draw: () => {
-          const pos = drawPlayer(p.gender || "male", p.color || "red", p.x, p.y, camX, camY, p.dir || "down", p.moving, animFrame);
+          const pos = drawPlayer(p.gender || "male", p.color || "red", p.x, p.y, camX, camY, p.dir || "down", p.moving, animFrame, worldScale);
           if (p.name) drawNameLabel(p.name, pos.x, pos.y);
         },
       });
@@ -1301,12 +1328,72 @@ window.Overworld = (function () {
             const frameSet = moving ? look.walk : look.idle;
             const img = getImg(frameSet.src);
             const dirRow = NPC_DIR_ROW[a.dir] ?? 0;
-            const pos = drawFrame(img, frameSet, dirRow, moving ? a.frame : 0, a.x, a.y, camX, camY, WORLD_CHAR_SIZE);
+            const pos = drawFrame(img, frameSet, dirRow, moving ? a.frame : 0, a.x, a.y, camX, camY, WORLD_CHAR_SIZE, worldScale);
             if (pos) drawNameLabel(a.name, pos.x, pos.y);
           },
         });
       });
     }
+
+    // Sprite cutouts: characters that were baked directly into a tile layer
+    // (by design - they need to sit at an exact, hand-placed position
+    // relative to other baked props like mannequins, weapon racks, etc,
+    // which a normal floating NPC object can't guarantee). Their own tiles
+    // were zeroed out of that layer's data when the cutout was authored, so
+    // the normal tile-drawing pass above already skips them cleanly - this
+    // is the only place they get drawn. Composited live, every frame, using
+    // the exact same animated-tile lookup (currentGidFor) that drives every
+    // other animation in the game, so a sparring swing or a wave keeps
+    // playing in sync with everything else rather than being frozen at
+    // whatever frame happened to be baked in. Drawn at WORLD_CHAR_SIZE,
+    // matching every other NPC, anchored at the character's own feet
+    // (contentBottom) so shrinking them never moves where they're standing.
+    (mapData.spriteCutouts || []).forEach((cutout) => {
+      const layer = mapData.layers.find((l) => l.name === cutout.layer);
+      if (!layer) return;
+      drawList.push({
+        y: cutout.anchorY,
+        draw: () => {
+          const buf = document.createElement("canvas");
+          buf.width = cutout.contentW;
+          buf.height = cutout.contentH;
+          const bctx = buf.getContext("2d");
+          bctx.imageSmoothingEnabled = false;
+          // Tiles are stored with their own absolute map position; draw each
+          // relative to the cutout's own content top-left so the buffer is
+          // exactly the tight character crop, not the full (padded) tile block.
+          const originPxX = Math.min(...cutout.tiles.map((t) => t.x)) * TILE;
+          const originPxY = Math.min(...cutout.tiles.map((t) => t.y)) * TILE;
+          const contentLeft = cutout.anchorX - cutout.contentW / 2 - originPxX;
+          const contentTop = cutout.anchorY - cutout.contentH - originPxY;
+          cutout.tiles.forEach((t) => {
+            const curGid = currentGidFor(t.gid, layer, t.index);
+            const r = resolveGid(curGid);
+            if (!r) return;
+            const img = getImg(r.src);
+            if (!img) return;
+            bctx.drawImage(
+              img, r.sx, r.sy, TILE, TILE,
+              t.x * TILE - originPxX - contentLeft,
+              t.y * TILE - originPxY - contentTop,
+              TILE, TILE
+            );
+          });
+          // Fixed draw size (WORLD_CHAR_SIZE), matching every other NPC -
+          // never shrinks/grows with worldScale beyond the normal player/NPC
+          // convention, only its position does.
+          const aspect = cutout.contentW / cutout.contentH;
+          const drawH = WORLD_CHAR_SIZE * RENDER_SCALE;
+          const drawW = drawH * aspect;
+          const dx = Math.round(cutout.anchorX * worldScale - camX - drawW / 2);
+          const dy = Math.round(cutout.anchorY * worldScale - camY - drawH);
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(buf, dx, dy, drawW, drawH);
+          ctx.restore();
+        },
+      });
+    });
 
     drawList.sort((a, b) => a.y - b.y);
     // Each entry isolated on purpose: without this, one item throwing (a
@@ -1326,8 +1413,8 @@ window.Overworld = (function () {
       petHearts.forEach((h) => {
         const t = h.elapsed / PET_HEART_DURATION;
         const riseUp = t * 24 * RENDER_SCALE;
-        const hx = h.x * RENDER_SCALE - camX;
-        const hy = h.y * RENDER_SCALE - camY - 30 * RENDER_SCALE - riseUp;
+        const hx = h.x * worldScale - camX;
+        const hy = h.y * worldScale - camY - 30 * RENDER_SCALE - riseUp;
         ctx.save();
         ctx.globalAlpha = Math.max(0, 1 - t);
         ctx.font = `bold ${18 * (1 + t * 0.3)}px 'Inter', 'Segoe UI', sans-serif`;
@@ -1343,8 +1430,8 @@ window.Overworld = (function () {
       ctx.save();
       ctx.font = "bold 14px 'Inter', 'Segoe UI', sans-serif";
       ctx.textAlign = "center";
-      const px = me.x * RENDER_SCALE - camX;
-      const py = me.y * RENDER_SCALE - camY - 70;
+      const px = me.x * worldScale - camX;
+      const py = me.y * worldScale - camY - 70;
       const label = nearbyObject.name;
       const textW = ctx.measureText(label).width;
       ctx.fillStyle = "rgba(46,34,47,0.9)";
@@ -1382,9 +1469,10 @@ window.Overworld = (function () {
   // engine's animator, that's a reasonable follow-up if animated wildlife on
   // the ground layer is wanted later.
 
-  function drawObjectMarker(o, camX, camY) {
-    const dx = Math.round(o.x * TILE * RENDER_SCALE - camX + (TILE * RENDER_SCALE) / 2);
-    const dy = Math.round(o.y * TILE * RENDER_SCALE - camY);
+  function drawObjectMarker(o, camX, camY, posScale) {
+    posScale = posScale || RENDER_SCALE;
+    const dx = Math.round(o.x * TILE * posScale - camX + (TILE * posScale) / 2);
+    const dy = Math.round(o.y * TILE * posScale - camY);
     const solved = o.__solved;
     ctx.save();
     ctx.beginPath();

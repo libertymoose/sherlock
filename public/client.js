@@ -1173,7 +1173,18 @@ function paginateIntoContainer(containerId, lines, className) {
   const container = document.getElementById(containerId);
   container.innerHTML = "";
 
-  const elements = lines.map((line) => {
+  // Authored content uses "\n\n" as a paragraph break within a single
+  // logical utterance (the same convention used throughout the dialogue
+  // script), but each incoming array entry was being turned into exactly
+  // one <p> regardless of how many paragraphs it actually contained. A
+  // long multi-paragraph entry became one giant unsplittable element -
+  // pagination only ever triggers between separate elements, so that
+  // whole block just overflowed instead of splitting into pages. Flatten
+  // every entry's internal paragraph breaks into their own elements
+  // first, so pagination has real, individually-sized units to work with.
+  const paragraphs = lines.flatMap((line) => String(line).split(/\n\s*\n/));
+
+  const elements = paragraphs.map((line) => {
     const p = document.createElement("p");
     p.className = className;
     p.textContent = line;
@@ -1980,7 +1991,7 @@ function drawFixedPortrait(canvas, src) {
     // area let the frame's own background colour read as a visible flat
     // block behind the character rather than a tight portrait crop.
     // Cropping in harder leaves less of that area on screen at all.
-    const ZOOM = 1.4;
+    const ZOOM = 1.15;
     const scale = Math.max(canvas.width / source.width, canvas.height / source.height) * ZOOM;
     const w = source.width * scale;
     const h = source.height * scale;
