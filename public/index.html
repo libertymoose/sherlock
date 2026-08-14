@@ -127,7 +127,7 @@
 
         <div id="vn-panel" class="vn-panel hidden">
           <div id="vn-portrait-frame" class="pixel-panel-dialogue vn-portrait-frame">
-            <canvas id="vn-portrait" width="180" height="180"></canvas>
+            <canvas id="vn-portrait" width="150" height="150"></canvas>
           </div>
           <div id="vn-text-frame" class="pixel-panel-dialogue vn-text-frame">
             <button id="btn-close-vn" class="pixel-close-btn" aria-label="Close"></button>
@@ -210,6 +210,19 @@
   <!-- Clue detail: opened from a "more" link on a board card, so a long
        quote reads as a proper popup rather than stretching the card
        itself and pushing everything else on the board around. -->
+  <!-- Falling behind in a linear dungeon zone offers a way to rejoin the
+       group rather than forcing it or leaving the player stuck. -->
+  <div id="modal-catch-up" class="modal-overlay hidden">
+    <div class="pixel-panel pixel-panel-popup modal-box">
+      <h3 class="pixel-panel-title">Catching up?</h3>
+      <p class="hint-text">Looks like the rest of your group has moved ahead. Want to jump forward and join them?</p>
+      <div style="display:flex; gap:10px; margin-top:14px">
+        <button id="btn-catch-up-yes" class="btn btn-primary">Catch up</button>
+        <button id="btn-catch-up-no" class="btn btn-secondary">Stay here</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-clue-detail" class="modal-overlay hidden">
     <div class="pixel-panel pixel-panel-popup modal-box modal-box-wide">
       <button id="btn-close-clue-detail" class="pixel-close-btn" aria-label="Close"></button>

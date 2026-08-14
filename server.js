@@ -156,6 +156,26 @@ const DUNGEON_ZONE_MAPS = {
   outside_sewer: "/assets/maps/outside_sewer.json",
 };
 
+// How far along the dungeon's one-way chain each zone counts as - used
+// only to detect a party member falling behind, never to gate movement.
+// The four Area 4 side-rooms are detours off the same hub, not forward
+// progress in their own right, so they share Area 4's own rank rather
+// than getting one of their own.
+const DUNGEON_PROGRESS_ORDER = [
+  "jail_cells", "dungeon_area_2", "dungeon_area_3", "dungeon_area_4",
+  "dungeon_area_5", "dungeon_area_6", "dungeon_finale", "outside_sewer",
+];
+const DUNGEON_SUBROOM_CANONICAL = {
+  dungeon_area_4_kennels: "dungeon_area_4",
+  dungeon_area_4_ossuary: "dungeon_area_4",
+  dungeon_area_4_treasury: "dungeon_area_4",
+  dungeon_area_4_lower_stores: "dungeon_area_4",
+};
+function dungeonProgressRank(zone) {
+  const canonical = DUNGEON_SUBROOM_CANONICAL[zone] || zone;
+  return DUNGEON_PROGRESS_ORDER.indexOf(canonical);
+}
+
 // Superset of DUNGEON_ZONE_MAPS used only by host:skipZonePuzzle below - the
 // dungeon arc is the described use case, but the estate's own sub-buildings
 // can carry barrier-gated puzzles too (or might in the future), so a skip
@@ -389,6 +409,25 @@ function advanceAct(code) {
   }
   sendActToRoom(code);
   broadcastRoomState(code);
+}
+
+// Every path that ends an "explore" act's completion condition - however
+// different they are (a vote, everyone reaching the same forward zone,
+// the evidence table filling up) - should end the same way: the screen
+// fades to black first, on every connected player's client regardless of
+// which sub-zone they're currently in, THEN (once that fade has actually
+// finished, not the instant it starts) the next act loads. Three separate
+// completion paths used to each remember to do this themselves; one of
+// them (the evidence-gated Estate) didn't, so that transition alone had
+// no fade and could yank the screen straight into a cutscene while a
+// dialogue box was still sitting open. Centralized here instead so this
+// can't be forgotten again the next time a fourth completion mode exists.
+function fadeAndAdvanceAct(code) {
+  const room = rooms[code];
+  if (!room || room.actState.transitioning) return;
+  room.actState.transitioning = true;
+  io.to(code).emit("scene:fadeToBlack");
+  setTimeout(() => advanceAct(code), 1100);
 }
 
 function normalize(str) {
@@ -795,11 +834,43 @@ io.on("connection", (socket) => {
       cb && cb({ ok: false, error: "Room not found. Double-check the code." });
       return;
     }
+    const cleanName = String(name || "Detective").trim().slice(0, 24) || "Detective";
     if (room.started) {
-      cb && cb({ ok: false, error: "This game has already started." });
+      // Not a new player joining mid-mystery - this is the fallback for
+      // a returning one whose automatic reconnect (player:rejoin, keyed
+      // on a token saved in that browser's own localStorage) can't run:
+      // a different device, a cleared browser, a lost tab. If their name
+      // matches an existing seat that's currently disconnected, treat
+      // this exactly like a rejoin - same seat, same inventory, same
+      // act - rather than leaving them locked out with no way back in
+      // except finding the original device again.
+      const oldId = Object.keys(room.players).find(
+        (id) => !room.players[id].connected &&
+          room.players[id].name.toLowerCase() === cleanName.toLowerCase()
+      );
+      if (!oldId) {
+        cb && cb({ ok: false, error: "This game has already started. If you were already playing, rejoin with the same name you used before." });
+        return;
+      }
+      const token = genToken();
+      remapSocketId(room, oldId, socket.id);
+      const player = room.players[socket.id];
+      player.connected = true;
+      player.token = token;
+      socket.data.roomCode = code;
+      socket.data.isHost = room.hostSocketId === socket.id;
+      socket.join(code);
+      cb && cb({ ok: true, code, token, started: true });
+      broadcastRoomState(code);
+      if (room.actIndex >= 0) {
+        const payload = buildActPayloadForPlayer(room, socket.id);
+        io.to(socket.id).emit("act:show", payload);
+        io.to(socket.id).emit("inventory:state", buildInventoryState(room, socket.id));
+        io.to(socket.id).emit("evidence:state", buildEvidenceState(room));
+        emitProgress(code);
+      }
       return;
     }
-    const cleanName = String(name || "Detective").trim().slice(0, 24) || "Detective";
     const token = genToken();
     room.players[socket.id] = {
       id: socket.id,
@@ -1366,9 +1437,7 @@ io.on("connection", (socket) => {
       io.to(code).emit("vote:result", { outcome: "correct", tally, reveal, cleared: room.vote.cleared });
       const act = STORY.acts[room.actIndex];
       if (act && act.type === "explore" && act.completionMode === "vote" && !room.actState.transitioning) {
-        room.actState.transitioning = true;
-        io.to(code).emit("scene:fadeToBlack");
-        setTimeout(() => advanceAct(code), 1100);
+        fadeAndAdvanceAct(code);
       }
       return;
     }
@@ -1551,6 +1620,40 @@ io.on("connection", (socket) => {
     player.zone = zone;
     player.pos = { x, y, dir: "down", moving: false };
 
+    // A party member who's fallen behind in the dungeon's one-way chain
+    // gets offered a way to catch up rather than either being silently
+    // stuck or forcibly yanked along - the player themselves decides
+    // whether now's a good time. Only re-prompts once the gap actually
+    // grows further than whatever they were last offered (behindPromptRank),
+    // so declining doesn't mean getting immediately re-asked on the very
+    // next unrelated zone change from a teammate. Resets once they're
+    // caught up, so a future gap can prompt fresh.
+    const moverRank = dungeonProgressRank(zone);
+    if (moverRank >= 0) {
+      const connected = Object.entries(room.players).filter(([, p]) => p.connected);
+      const leadRank = Math.max(...connected.map(([, p]) => dungeonProgressRank(p.zone || "")));
+      const leadEntry = connected.find(([, p]) => dungeonProgressRank(p.zone || "") === leadRank);
+      const leadZone = leadEntry ? leadEntry[1].zone : null;
+      connected.forEach(([id, p]) => {
+        const rank = dungeonProgressRank(p.zone || "");
+        if (rank < 0) return;
+        if (rank >= leadRank) {
+          p.behindPromptRank = null;
+          return;
+        }
+        if (p.behindPromptRank !== null && p.behindPromptRank !== undefined && p.behindPromptRank >= leadRank) return;
+        p.behindPromptRank = leadRank;
+        const leadMapData = loadMapData(DUNGEON_ZONE_MAPS[leadZone]);
+        const spawn = (leadMapData && leadMapData.spawn) || { x: 0, y: 0 };
+        io.to(id).emit("party:behindPrompt", {
+          zone: leadZone,
+          mapUrl: DUNGEON_ZONE_MAPS[leadZone],
+          x: spawn.x,
+          y: spawn.y,
+        });
+      });
+    }
+
     // Some explore acts complete when the whole party reaches a specific
     // forward zone (the dungeon arc ends once everyone's out of the
     // sewers) rather than an evidence count. Zone changes happen
@@ -1567,15 +1670,7 @@ io.on("connection", (socket) => {
         // act. room.actState gets fully replaced the moment the next act
         // actually starts (see sendActToRoom), so this resets itself,
         // no explicit cleanup needed.
-        room.actState.transitioning = true;
-        // Fade to black immediately, room-wide, and freeze every player's
-        // input (not just this zone's) so nobody can trigger a stray
-        // interaction in the sewer while the screen is going black.
-        // advanceAct fires after the overlay's own CSS transition (0.9s
-        // in style.css) plus a small buffer, so the cutscene only ever
-        // appears once the screen is already fully black.
-        io.to(code).emit("scene:fadeToBlack");
-        setTimeout(() => advanceAct(code), 1100);
+        fadeAndAdvanceAct(code);
       }
     }
 
@@ -1730,7 +1825,7 @@ io.on("connection", (socket) => {
     const ackCount = Object.keys(room.actState.ackBy).length;
     io.to(code).emit("evidenceRoom:readyProgress", { ready: ackCount, total: totalPlayers });
     if (ackCount >= totalPlayers) {
-      advanceAct(code);
+      fadeAndAdvanceAct(code);
     }
   });
 

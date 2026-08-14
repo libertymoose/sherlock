@@ -1833,6 +1833,36 @@ window.Overworld = (function () {
       return currentZone;
     },
 
+    // Static (resting-frame) draw instructions for a spriteCutout NPC, keyed
+    // by the same objectId used in the map's own objects array. Used to give
+    // baked-tile Act 3 NPCs (the market crowd, tavern patrons, etc) a real
+    // dialogue portrait instead of falling back to no-portrait "compact"
+    // mode just because they have no walk-sheet `look` and no illustrated
+    // `portrait` - see setVnPortrait/drawCutoutPortrait in client.js.
+    getSpriteCutoutFrame(objectId) {
+      if (!mapData) return null;
+      const cutout = (mapData.spriteCutouts || []).find((c) => c.objectId === objectId);
+      if (!cutout || !cutout.tiles || !cutout.tiles.length) return null;
+      const originPxX = Math.min(...cutout.tiles.map((t) => t.x)) * TILE;
+      const originPxY = Math.min(...cutout.tiles.map((t) => t.y)) * TILE;
+      const contentLeft = cutout.anchorX - cutout.contentW / 2 - originPxX;
+      const contentTop = cutout.anchorY - cutout.contentH - originPxY;
+      const draws = [];
+      cutout.tiles.forEach((t) => {
+        const { gid, hFlip, vFlip } = stripFlip(t.gid);
+        const r = resolveGid(gid);
+        if (!r) return;
+        draws.push({
+          src: r.src, sx: r.sx, sy: r.sy, size: TILE,
+          dx: t.x * TILE - originPxX - contentLeft,
+          dy: t.y * TILE - originPxY - contentTop,
+          hFlip, vFlip,
+        });
+      });
+      if (!draws.length) return null;
+      return { draws, contentW: cutout.contentW, contentH: cutout.contentH };
+    },
+
     start() {
       running = true;
       lastTime = 0;

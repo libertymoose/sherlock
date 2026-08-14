@@ -835,22 +835,27 @@ input[type="text"]:focus {
   padding: 0 14px;
 }
 
+/* One fixed dialogue-box height, used everywhere - illustrated portraits,
+   NPC sprite portraits, cutout-based Act 3 portraits, and the no-portrait
+   (vn-compact) case alike. Previously this was two different sizes (210px
+   for illustrated portraits, 130px for sprite portraits) plus a third,
+   unstyled fallback for no-portrait dialogue that just inherited the 210px
+   base - three effectively different box sizes in practice. 170px is the
+   middle ground between the old 210 and 130, tall enough that a 180px
+   illustrated portrait still reads fine slightly cropped, short enough that
+   sprite/cutout portraits aren't swimming in empty space. */
 .vn-portrait-frame {
   flex-shrink: 0;
   padding: 3px;
   background: transparent;
   box-sizing: border-box;
-  height: 210px;
-}
-
-.vn-portrait-frame.vn-sprite-mode {
-  height: 130px;
+  height: 170px;
 }
 
 #vn-portrait {
   display: block;
-  width: 180px;
-  height: 180px;
+  width: 150px;
+  height: 150px;
   image-rendering: pixelated;
   background: #e5d6a1;
   border-radius: 2px;
@@ -866,16 +871,12 @@ input[type="text"]:focus {
   flex: 1 1 700px;
   min-width: 0;
   max-width: 700px;
-  height: 210px;
+  height: 170px;
   box-sizing: border-box;
   padding: 8px 14px;
   background: transparent;
   display: flex;
   flex-direction: column;
-}
-
-.vn-text-frame.vn-sprite-mode {
-  height: 130px;
 }
 
 /* Every illustrated-portrait dialogue box is 210px, every walking-sprite
@@ -978,6 +979,12 @@ input[type="text"]:focus {
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
+  /* overflow-y:auto alone left overflow-x at its default (visible), and
+     per the CSS overflow spec a browser then silently promotes that visible
+     axis to auto too - so a one/two-pixel sub-pixel rounding overflow from
+     the item grid was enough to show a horizontal scrollbar under a
+     one-item inventory that never actually needed to scroll sideways. */
+  overflow-x: hidden;
 }
 
 .modal-prompt {

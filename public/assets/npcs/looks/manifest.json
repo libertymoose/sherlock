@@ -222,5 +222,19 @@
       "cols": 6,
       "rows": 4
     }
+  },
+  "herbalist": {
+    "idle": {
+      "src": "/assets/npcs/looks/herbalist_idle.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    },
+    "walk": {
+      "src": "/assets/npcs/looks/herbalist_walk.png",
+      "cell": 32,
+      "cols": 6,
+      "rows": 4
+    }
   }
 }

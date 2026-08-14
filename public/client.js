@@ -225,7 +225,14 @@ document.getElementById("btn-join").addEventListener("click", () => {
     state.roomCode = res.code;
     saveSession(res.code, res.token);
     document.getElementById("room-code-display").textContent = res.code;
-    showScreen("screen-lobby");
+    // A fresh join goes to the lobby as normal. Reclaiming a seat in a
+    // game already underway is handled the same way attemptResume()
+    // handles it - the server follows this same callback with act:show,
+    // which switches to screen-game on its own. Forcing screen-lobby
+    // here regardless would flash the lobby for a returning player, or
+    // strand them there if act:show's own screen switch didn't win the
+    // race against it.
+    if (!res.started) showScreen("screen-lobby");
   });
 });
 
@@ -316,6 +323,47 @@ socket.on("scene:fadeToBlack", () => {
   document.getElementById("cutscene-fade-overlay").classList.add("visible");
   document.getElementById("btn-interact").classList.add("hidden");
   Overworld.freeze();
+  closeEverythingBeforeCutscene();
+});
+
+// A cutscene taking over mid-session shouldn't leave whatever the player
+// happened to have open still sitting there underneath (or worse, on top
+// of) the fade - an open dialogue line, an inventory check, the board,
+// all of it needs to be gone before the scene actually starts. Closing
+// the panels is enough; nothing here needs to warn the player their
+// dialogue got interrupted; the fade itself is the signal something's
+// happening.
+function closeEverythingBeforeCutscene() {
+  closeVnPanel();
+  document.querySelectorAll(".modal-overlay").forEach((el) => el.classList.add("hidden"));
+}
+
+// Offered when the rest of the party has moved further along the
+// dungeon's one-way chain than this player has - their own choice
+// whether to jump forward now or keep exploring where they are.
+let pendingCatchUp = null;
+socket.on("party:behindPrompt", (target) => {
+  pendingCatchUp = target;
+  document.getElementById("modal-catch-up").classList.remove("hidden");
+});
+document.getElementById("btn-catch-up-no").addEventListener("click", () => {
+  pendingCatchUp = null;
+  document.getElementById("modal-catch-up").classList.add("hidden");
+});
+document.getElementById("btn-catch-up-yes").addEventListener("click", async () => {
+  const target = pendingCatchUp;
+  pendingCatchUp = null;
+  document.getElementById("modal-catch-up").classList.add("hidden");
+  if (!target) return;
+  document.getElementById("btn-interact").classList.add("hidden");
+  try {
+    await Overworld.changeZone(target.zone, target.mapUrl, target.x, target.y);
+  } catch (err) {
+    console.error("Catch-up zone change to", target.zone, "failed:", err);
+    return;
+  }
+  socket.emit("player:changeZone", { zone: target.zone, x: target.x, y: target.y });
+  updateZoneLabel(target.zone);
 });
 
 // --- Act rendering ---
@@ -1014,6 +1062,8 @@ const ZONE_MAPS = {
   mage_tower_1st_floor: "/assets/maps/mage_tower_1st_floor.json",
   mage_tower_2nd_floor: "/assets/maps/mage_tower_2nd_floor.json",
   tavern_2nd_floor: "/assets/maps/tavern_2nd_floor.json",
+  herbalist_hut_exterior: "/assets/maps/herbalist_hut_exterior.json",
+  herbalist_interior: "/assets/maps/herbalist_interior.json",
   tavern_1st_floor: "/assets/maps/tavern_1st_floor.json",
   chapel_interior: "/assets/maps/chapel_interior.json",
   glass_workshop: "/assets/maps/glass_workshop.json",
@@ -1192,28 +1242,80 @@ async function drawNpcSpritePortrait(canvas, lookKey) {
   img.src = frameSet.src;
 }
 
+// Composites a spriteCutout NPC's own tiles (resting frame) into a small
+// buffer at their native pixel size, then contain-fits that into the
+// portrait canvas the same way drawNpcSpritePortrait does for walk-sheet
+// NPCs - whole character visible, centred, scaled up cleanly, no cropping.
+function drawCutoutPortrait(canvas, cutoutFrame) {
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const buf = document.createElement("canvas");
+  buf.width = cutoutFrame.contentW;
+  buf.height = cutoutFrame.contentH;
+  const bctx = buf.getContext("2d");
+  bctx.imageSmoothingEnabled = false;
+
+  let remaining = cutoutFrame.draws.length;
+  cutoutFrame.draws.forEach((d) => {
+    const img = new Image();
+    img.onload = () => {
+      bctx.save();
+      if (d.hFlip || d.vFlip) {
+        bctx.translate(d.hFlip ? d.dx + d.size : d.dx, d.vFlip ? d.dy + d.size : d.dy);
+        bctx.scale(d.hFlip ? -1 : 1, d.vFlip ? -1 : 1);
+        bctx.drawImage(img, d.sx, d.sy, d.size, d.size, 0, 0, d.size, d.size);
+      } else {
+        bctx.drawImage(img, d.sx, d.sy, d.size, d.size, d.dx, d.dy, d.size, d.size);
+      }
+      bctx.restore();
+      remaining -= 1;
+      if (remaining === 0) {
+        const scale = Math.min(canvas.width / buf.width, canvas.height / buf.height);
+        const drawW = buf.width * scale;
+        const drawH = buf.height * scale;
+        const dx = (canvas.width - drawW) / 2;
+        const dy = (canvas.height - drawH) / 2;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(buf, 0, 0, buf.width, buf.height, dx, dy, drawW, drawH);
+      }
+    };
+    img.src = d.src;
+  });
+}
+
 function setVnPortrait(obj) {
   const frame = document.getElementById("vn-portrait-frame");
   const canvas = document.getElementById("vn-portrait");
   const textFrame = document.getElementById("vn-text-frame");
   const hasPortrait = !!(obj && obj.portrait);
   const hasSprite = !hasPortrait && !!(obj && obj.look);
+  // Baked-tile Act 3 NPCs (market crowd, tavern patrons, the Armour Seller,
+  // etc) have neither a walk-sheet `look` nor illustrated `portrait` - they
+  // exist only as a spriteCutout on the current map. Without this, they fell
+  // through to no-portrait "compact" mode, which is why they looked
+  // inconsistent with every other NPC's dialogue box.
+  const cutoutFrame = !hasPortrait && !hasSprite && obj && obj.id
+    ? Overworld.getSpriteCutoutFrame(obj.id)
+    : null;
+  const hasCutout = !!cutoutFrame;
   if (hasPortrait) {
     frame.classList.remove("hidden");
-    frame.classList.remove("vn-sprite-mode");
     canvas.classList.remove("vn-sprite-mode");
     drawFixedPortrait(canvas, obj.portrait);
   } else if (hasSprite) {
     frame.classList.remove("hidden");
-    frame.classList.add("vn-sprite-mode");
     canvas.classList.add("vn-sprite-mode");
     drawNpcSpritePortrait(canvas, obj.look);
+  } else if (hasCutout) {
+    frame.classList.remove("hidden");
+    canvas.classList.add("vn-sprite-mode");
+    drawCutoutPortrait(canvas, cutoutFrame);
   } else {
     frame.classList.add("hidden");
   }
   if (textFrame) {
-    textFrame.classList.toggle("vn-compact", !hasPortrait && !hasSprite);
-    textFrame.classList.toggle("vn-sprite-mode", hasSprite);
+    textFrame.classList.toggle("vn-compact", !hasPortrait && !hasSprite && !hasCutout);
   }
 }
 
@@ -1224,6 +1326,65 @@ let vnPages = [];
 let vnPageIndex = 0;
 let vnPageContainerId = null;
 
+function makeVnLine(text, className) {
+  const p = document.createElement("p");
+  p.className = className;
+  p.textContent = text;
+  return p;
+}
+
+// A single paragraph can still be taller than the whole box on its own (a
+// long unbroken quote with no "\n\n" break in it). The page-splitter below
+// only ever breaks *between* elements, so one such paragraph used to just
+// silently overflow past the box's overflow:hidden edge, cutting the text
+// off with no continue indicator and no way to read the rest. This measures
+// a candidate string directly against the (now-empty) container and, if it
+// doesn't fit alone, recursively splits it on sentence boundaries first,
+// then falls back to word boundaries for a single very long run-on
+// sentence, until every returned element is guaranteed to fit by itself.
+function splitToFit(container, text, className) {
+  const fitsAlone = (t) => {
+    container.innerHTML = "";
+    const el = makeVnLine(t, className);
+    container.appendChild(el);
+    const fits = container.scrollHeight <= container.clientHeight + 1;
+    container.innerHTML = "";
+    return fits;
+  };
+
+  if (fitsAlone(text)) return [makeVnLine(text, className)];
+
+  const sentences = (text.match(/[^.!?]+[.!?]+(\s+|$)|[^.!?]+$/g) || [text])
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (sentences.length > 1) {
+    return sentences.flatMap((s) => splitToFit(container, s, className));
+  }
+
+  // A single sentence that's still too long on its own - chunk by words
+  // instead, packing as many as fit per element.
+  const words = text.split(/\s+/);
+  if (words.length > 1) {
+    const chunks = [];
+    let current = [];
+    words.forEach((w) => {
+      const attempt = current.concat(w).join(" ");
+      if (current.length && !fitsAlone(attempt)) {
+        chunks.push(current.join(" "));
+        current = [w];
+      } else {
+        current.push(w);
+      }
+    });
+    if (current.length) chunks.push(current.join(" "));
+    return chunks.map((c) => makeVnLine(c, className));
+  }
+
+  // A single word longer than the box - nothing more can be done, show it
+  // as-is rather than losing it entirely.
+  return [makeVnLine(text, className)];
+}
+
 function paginateIntoContainer(containerId, lines, className) {
   const container = document.getElementById(containerId);
   container.innerHTML = "";
@@ -1231,20 +1392,12 @@ function paginateIntoContainer(containerId, lines, className) {
   // Authored content uses "\n\n" as a paragraph break within a single
   // logical utterance (the same convention used throughout the dialogue
   // script), but each incoming array entry was being turned into exactly
-  // one <p> regardless of how many paragraphs it actually contained. A
-  // long multi-paragraph entry became one giant unsplittable element -
-  // pagination only ever triggers between separate elements, so that
-  // whole block just overflowed instead of splitting into pages. Flatten
-  // every entry's internal paragraph breaks into their own elements
-  // first, so pagination has real, individually-sized units to work with.
+  // one <p> regardless of how many paragraphs it actually contained. Flatten
+  // every entry's internal paragraph breaks first, then further split any
+  // individual paragraph that's still too tall on its own (see splitToFit),
+  // so pagination always has real, individually-sized units to work with.
   const paragraphs = lines.flatMap((line) => String(line).split(/\n\s*\n/));
-
-  const elements = paragraphs.map((line) => {
-    const p = document.createElement("p");
-    p.className = className;
-    p.textContent = line;
-    return p;
-  });
+  const elements = paragraphs.flatMap((line) => splitToFit(container, line, className));
 
   const pages = [];
   let currentPage = [];
