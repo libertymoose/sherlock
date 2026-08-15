@@ -1498,3 +1498,47 @@ input[type="text"]:focus {
   opacity: 0.85;
 }
 
+
+/* --- The Herbalist's cauldron (Herbalist's Hut act) --- */
+.cauldron-stage {
+  position: relative;
+  width: 256px;
+  height: 128px;
+  margin: 0 auto 10px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(var(--candle-rgb), 0.4);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.15);
+}
+.cauldron-art {
+  width: 256px;
+  height: 128px;
+  image-rendering: pixelated;
+  transition: filter 0.4s ease;
+}
+.cauldron-tint-green { filter: sepia(1) hue-rotate(70deg) saturate(4) brightness(0.95); }
+.cauldron-tint-red { filter: sepia(1) hue-rotate(-50deg) saturate(5) brightness(0.9); }
+.cauldron-tint-blue { filter: sepia(1) hue-rotate(150deg) saturate(4) brightness(1); }
+.cauldron-smoke {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 220px;
+  height: 220px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.cauldron-result {
+  margin-top: 8px;
+  text-align: center;
+}
+#cauldron-tray.item-grid-small {
+  min-height: 64px;
+}
+.cauldron-stage.hidden,
+.cauldron-smoke.hidden {
+  display: none;
+}

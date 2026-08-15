@@ -273,6 +273,33 @@
     </div>
   </div>
 
+  <!-- The Herbalist's cauldron: drag a held specimen in, one attempt live
+       at a time, shared/synced across the whole party like the Evidence
+       Table above. -->
+  <div id="modal-cauldron" class="modal-overlay hidden">
+    <div class="pixel-panel pixel-panel-popup modal-box modal-box-wide">
+      <button id="btn-close-cauldron" class="pixel-close-btn" aria-label="Close"></button>
+      <h3 class="pixel-panel-title">The Boiling Cauldron</h3>
+      <div class="sync-banner">Shared with your whole party</div>
+
+      <div class="cauldron-stage" id="cauldron-stage">
+        <img id="cauldron-art" class="cauldron-art" src="/assets/ui/cauldron/frame_00.png" alt="A boiling cauldron" />
+        <img id="cauldron-smoke" class="cauldron-smoke hidden" src="/assets/ui/cauldron/smoke/smoke.gif" alt="" />
+      </div>
+
+      <p class="hint-text" id="cauldron-hint">Drag a specimen from your inventory into the cauldron.</p>
+
+      <div class="item-grid item-grid-small" id="cauldron-tray"></div>
+      <p class="hint-text" id="cauldron-tray-empty">You aren't holding any specimens yet.</p>
+
+      <div id="cauldron-result" class="cauldron-result hidden">
+        <p class="section-label" id="cauldron-result-title"></p>
+        <p class="hint-text" id="cauldron-result-text"></p>
+        <button id="btn-cauldron-again" class="btn btn-secondary hidden">Try Again</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Thorne's evidence-complete line. She doesn't have portrait art yet,
        so this is a text-only announcement rather than the full VN dialogue
        treatment the NPCs with real portraits get. Broadcasts to every

@@ -323,6 +323,11 @@ function sendActToRoom(code) {
     solvedClues: {},
     boardZone: [],
   };
+  // The Herbalist's Hut cauldron puzzle - one attempt live at a time,
+  // reset by the "Try Again" flow. Scoped per-act like everything else
+  // above, since a stale correct/wrong state from a previous act would
+  // make no sense once the party's moved on.
+  room.cauldron = { status: "idle", submittedItemId: null, heldBy: null };
   room.dungeonChain = null;
   room.zonePlates = {};
   room.zoneCandles = {};
@@ -1770,11 +1775,93 @@ io.on("connection", (socket) => {
     }
   });
 
+  // The Herbalist's Hut: throwing a held specimen into the cauldron.
+  // Deliberately modeled as an item-consumption action, not a typed
+  // answer - matches the "no typed answers" rule the rest of the game
+  // follows. Only one live attempt at a time; a wrong or harmless result
+  // has to be cleared with cauldron:reset before anyone can try again,
+  // so the whole party sees the same outcome rather than someone
+  // quietly retrying in the background.
+  socket.on("cauldron:submit", ({ itemId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !itemId) return;
+    const act = STORY.acts[room.actIndex];
+    if (!act || act.type !== "explore") return;
+    if (!room.cauldron) room.cauldron = { status: "idle" };
+    if (room.cauldron.status !== "idle") return;
+
+    const inv = getInventory(room, socket.id);
+    const idx = inv.findIndex((it) => it.itemId === itemId);
+    if (idx === -1) return;
+    inv.splice(idx, 1);
+
+    const puzzle = INTERACTIONS.cauldronPuzzle || {};
+    let status = "wrong";
+    if (itemId === puzzle.correctItemId) status = "correct";
+    else if ((puzzle.harmlessItemIds || []).includes(itemId)) status = "harmless";
+
+    room.cauldron = { status, submittedItemId: itemId, heldBy: socket.id };
+
+    const reactionKey =
+      status === "correct" ? "cauldronCorrect" : status === "harmless" ? "cauldronHarmless" : "cauldronWrong";
+    const reaction = puzzle[reactionKey] || {};
+
+    io.to(code).emit("cauldron:result", {
+      status,
+      itemId,
+      title: reaction.title || "The Herbalist",
+      lines: reaction.lines || [],
+    });
+    socket.emit("inventory:state", buildInventoryState(room, socket.id));
+
+    if (status === "correct" && act.completionMode === "cauldron" && !room.actState.transitioning) {
+      fadeAndAdvanceAct(code);
+    }
+  });
+
+  // "Try Again": clears a wrong/harmless cauldron result back to idle, and
+  // hands the wasted specimen back to whoever threw it in, so the party
+  // isn't forced to walk back out to the garden for a plant they've
+  // already gathered once. Correct results don't reset - the act is over.
+  socket.on("cauldron:reset", () => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !room.cauldron) return;
+    if (room.cauldron.status === "idle" || room.cauldron.status === "correct") return;
+
+    const { submittedItemId, heldBy } = room.cauldron;
+    if (heldBy && submittedItemId) {
+      const def = ITEMS[submittedItemId];
+      if (def) {
+        getInventory(room, heldBy).push({
+          itemId: submittedItemId,
+          name: def.name,
+          description: def.description,
+          art: def.art,
+        });
+        io.to(heldBy).emit("inventory:state", buildInventoryState(room, heldBy));
+      }
+    }
+    room.cauldron = { status: "idle", submittedItemId: null, heldBy: null };
+    io.to(code).emit("cauldron:reset");
+  });
+
   socket.on("inventory:requestState", () => {
     const code = socket.data.roomCode;
     const room = rooms[code];
     if (!room) return;
     socket.emit("inventory:state", buildInventoryState(room, socket.id));
+  });
+
+  // A player joining mid-puzzle (reconnect, or arriving at the cauldron
+  // after someone else already threw something in) needs to see whatever
+  // the current shared result is, not always start from "idle".
+  socket.on("cauldron:requestState", () => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !room.cauldron) return;
+    socket.emit("cauldron:currentState", { status: room.cauldron.status });
   });
 
   socket.on("evidence:requestState", () => {

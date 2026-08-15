@@ -1164,6 +1164,8 @@ async function handleObjectInteract(obj) {
     } else {
       openTableModal();
     }
+  } else if (kind === "cauldron_puzzle") {
+    openCauldronModal();
   } else if (kind === "open_vote") {
     openVoteModal();
   } else if (kind === "candle") {
@@ -1651,6 +1653,9 @@ socket.on("inventory:state", (items) => {
   myInventory = items || [];
   document.getElementById("inventory-count").textContent = myInventory.length;
   renderInventoryGrid();
+  if (!document.getElementById("modal-cauldron").classList.contains("hidden")) {
+    renderCauldronTray();
+  }
 });
 
 function renderInventoryGrid() {
@@ -1709,6 +1714,115 @@ function buildItemCard(item, opts) {
   if (opts.onClick) card.addEventListener("click", opts.onClick);
   return card;
 }
+
+// --- The Herbalist's cauldron (shared, live-synced, one attempt at a time) ---
+// Real animated cauldron frames extracted from the same Boiler.png tileset
+// the map itself uses (see mapsrc/herbalist_interior), cycled here in JS at
+// a faster rate than the map's own 150ms so the modal reads as more
+// dramatic than ambient bubbling - genuinely the same art, just sped up.
+const CAULDRON_FRAME_COUNT = 12;
+let cauldronFrameIdx = 0;
+let cauldronFrameTimer = null;
+
+function startCauldronAnimation(intervalMs) {
+  stopCauldronAnimation();
+  const img = document.getElementById("cauldron-art");
+  cauldronFrameTimer = setInterval(() => {
+    cauldronFrameIdx = (cauldronFrameIdx + 1) % CAULDRON_FRAME_COUNT;
+    img.src = `/assets/ui/cauldron/frame_${String(cauldronFrameIdx).padStart(2, "0")}.png`;
+  }, intervalMs);
+}
+function stopCauldronAnimation() {
+  if (cauldronFrameTimer) {
+    clearInterval(cauldronFrameTimer);
+    cauldronFrameTimer = null;
+  }
+}
+
+function resetCauldronResultUI() {
+  const art = document.getElementById("cauldron-art");
+  art.classList.remove("cauldron-tint-green", "cauldron-tint-red", "cauldron-tint-blue");
+  document.getElementById("cauldron-smoke").classList.add("hidden");
+  document.getElementById("cauldron-result").classList.add("hidden");
+  document.getElementById("cauldron-hint").classList.remove("hidden");
+  document.getElementById("cauldron-tray").classList.remove("hidden");
+}
+
+function renderCauldronTray() {
+  const tray = document.getElementById("cauldron-tray");
+  const empty = document.getElementById("cauldron-tray-empty");
+  const specimens = myInventory.filter((it) => (it.itemId || "").startsWith("specimen_"));
+  tray.innerHTML = "";
+  empty.classList.toggle("hidden", specimens.length > 0);
+  specimens.forEach((item) => {
+    const card = buildItemCard(item, { title: item.name });
+    // Native HTML5 drag/drop, same idiom already used by the board's
+    // clue cards - draggable=true plus a dragstart that stashes the
+    // payload, no custom drag library needed.
+    card.draggable = true;
+    card.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", item.itemId);
+    });
+    tray.appendChild(card);
+  });
+}
+
+function openCauldronModal() {
+  document.getElementById("modal-cauldron").classList.remove("hidden");
+  resetCauldronResultUI();
+  renderCauldronTray();
+  startCauldronAnimation(90);
+  socket.emit("cauldron:requestState");
+}
+function closeCauldronModal() {
+  document.getElementById("modal-cauldron").classList.add("hidden");
+  stopCauldronAnimation();
+}
+
+document.getElementById("btn-close-cauldron").addEventListener("click", closeCauldronModal);
+
+const cauldronDropZone = document.getElementById("cauldron-stage");
+cauldronDropZone.addEventListener("dragover", (e) => e.preventDefault());
+cauldronDropZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  const itemId = e.dataTransfer.getData("text/plain");
+  if (!itemId) return;
+  document.getElementById("cauldron-hint").classList.add("hidden");
+  document.getElementById("cauldron-tray").classList.add("hidden");
+  document.getElementById("cauldron-smoke").classList.remove("hidden");
+  startCauldronAnimation(40); // brewing flurry, covered by the smoke overlay
+  socket.emit("cauldron:submit", { itemId });
+});
+
+// The 1.8s delay lets the smoke overlay actually read as "something is
+// happening" before the result underneath it is revealed, rather than the
+// colour change and the herbalist's line landing the instant you drop the
+// specimen.
+socket.on("cauldron:result", (data) => {
+  setTimeout(() => {
+    document.getElementById("cauldron-smoke").classList.add("hidden");
+    startCauldronAnimation(90);
+    const art = document.getElementById("cauldron-art");
+    art.classList.remove("cauldron-tint-green", "cauldron-tint-red", "cauldron-tint-blue");
+    const tintClass =
+      data.status === "correct" ? "cauldron-tint-green" : data.status === "harmless" ? "cauldron-tint-blue" : "cauldron-tint-red";
+    art.classList.add(tintClass);
+
+    document.getElementById("cauldron-result").classList.remove("hidden");
+    document.getElementById("cauldron-result-title").textContent = data.title || "The Herbalist";
+    document.getElementById("cauldron-result-text").textContent = (data.lines || []).join("\n\n");
+    document.getElementById("btn-cauldron-again").classList.toggle("hidden", data.status === "correct");
+  }, 1800);
+});
+
+document.getElementById("btn-cauldron-again").addEventListener("click", () => {
+  socket.emit("cauldron:reset");
+});
+
+socket.on("cauldron:reset", () => {
+  resetCauldronResultUI();
+  renderCauldronTray();
+});
 
 // --- Means and Opportunity deduction board (shared, live-synced) ---
 let boardState = { clues: {}, total: 0, foundCount: 0 };
