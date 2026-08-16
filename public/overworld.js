@@ -1412,8 +1412,22 @@ window.Overworld = (function () {
     (mapData.spriteCutouts || []).forEach((cutout) => {
       const layer = mapData.layers.find((l) => l.name === cutout.layer);
       if (!layer) return;
+      // Every other entry in this draw list sorts by a tile-quantized key
+      // (row*TILE + TILE), never a raw pixel value - furniture, NPCs, the
+      // player, all of it. cutout.anchorY is the alpha-trimmed pixel bottom
+      // of the character's own art, which is almost always a few pixels
+      // less than that quantized value for whatever tile row it's standing
+      // in (art rarely fills a tile to its literal last pixel row). That
+      // mismatch meant a cutout NPC standing in the same row as a table or
+      // rack would systematically sort as "further back" than the
+      // furniture and draw underneath it - reading as the NPC being
+      // shrunk down to a sliver, when it was actually just mostly hidden
+      // behind the furniture. Sort key has to use the same tile-quantized
+      // convention as everything else; anchorY itself still drives the
+      // actual draw position below, unaffected.
+      const sortTileY = Math.max(...cutout.tiles.map((t) => t.y));
       drawList.push({
-        y: cutout.anchorY,
+        y: sortTileY * TILE + TILE,
         draw: () => {
           const buf = document.createElement("canvas");
           buf.width = cutout.contentW;

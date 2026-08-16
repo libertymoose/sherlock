@@ -1311,3 +1311,108 @@ Opportunity" and "The Herbalist's Hut."
 - BFS reachability, spawn to every object, across every map in the
   project, including the rebuilt maze - only flagged object is the
   tavern's sealed 2nd floor, expected
+
+
+---
+
+# v118 delivery notes
+
+## Guild Hall - rebuilt from your source files
+
+**Exterior**: tile data is byte-for-byte identical to what was already
+converted, so nothing needed changing there.
+
+**Ground floor**, rebuilt from `Interior_1st_floor_EDITED.tmx`: found a
+real, concrete bug while doing it - a decorative hanging chain and a
+corner armchair were sealing off the only corridor connecting the back
+door to the rest of the room, so the door was flat-out unreachable.
+Checked which pieces were genuinely decorative versus real furniture by
+looking at the actual tile art before touching anything (the chain
+wasn't blocking anything real; the armchair was legitimate, so a narrow
+bypass was carved around it instead of through it). Confirmed full
+reachability afterward.
+
+**Upper floor**, rebuilt from `GUILD_HALL_INTERIOR_UP.tmx`: the file
+registers a long list of character tilesets (fighters, mages,
+mannequins, a reader, fire) but none of them are actually placed
+anywhere on the map yet - so there's nothing to extract into cutouts on
+this floor yet, that's not a bug, they just haven't been placed in
+Tiled. Moved the stairs-down landing point from a mostly-isolated
+corner to open floor near the room's center.
+
+## The tavern sizing/layering bug - found the actual cause
+
+You were right to push back - this was real, and it was the same root
+cause behind several of the specific things you described. Found it in
+`overworld.js`'s draw-order logic:
+
+Every other thing in the game sorts its draw order by a **tile-rounded**
+Y value - furniture, the player, every other NPC. The cutout-based
+NPCs (the tavern patrons) were sorting by the **exact, alpha-trimmed
+pixel** position of their own art instead. Those two numbers are
+almost never equal - character art essentially never fills a tile
+right down to its last pixel row - so a cutout NPC standing in the
+same row as a table or rack would consistently get sorted as "further
+back" than furniture next to it and draw underneath it. That reads as
+the character being shrunk to a sliver, because most of them actually
+was hidden behind the table. This explains the card player and the
+dracthyr specifically - "shrunk" and "below the table" were the same
+bug described two ways. Fixed the sort key to use the same
+tile-rounded convention as everything else; the actual draw position
+is untouched.
+
+Also found and fixed a real typo while in there: one of the tavern's
+own character layers was named `Charactes3` (missing the "r")
+throughout the file - internally consistent so it wasn't itself
+causing a visible bug, but a landmine for anything that ever
+cross-references layer names correctly spelled. Fixed everywhere.
+
+**Not yet resolved**: the draenei and the flirty guy going fully
+invisible. I traced this as far as finding that both have tiles
+carrying a genuine 12-frame animation cycle that, when rendered in
+isolation, shows mostly near-empty content rather than a full
+character - which would explain intermittent full disappearance
+depending on where in the cycle a screenshot lands. I wasn't able to
+confirm whether that animation data legitimately belongs to a tiny
+decorative detail that got swept into their cutout by mistake, or
+something else, without more time than I had left this pass. Flagging
+this rather than shipping a guess.
+
+## Validation run before packaging
+
+- JSON-parsed all files under `content/` and `public/assets/maps/`
+- `node --check` on `overworld.js`
+- BFS reachability, spawn to every object, across every map in the
+  project, including both rebuilt Guild Hall floors - only flagged
+  object is the tavern's sealed 2nd floor, expected
+
+
+---
+
+# v119 delivery notes
+
+## Guild Hall ground floor - three changes
+
+- **Chain and armchair are now walkable.** Straightforward - both are
+  non-blocking now instead of the narrow bypass carve from last time.
+- **The back door is locked.** No longer a functional exit - walking up
+  to it now gives: "Locked. \"Don't you have a murder to solve instead
+  of running away?\" Corwin's voice, from somewhere behind you, not
+  even looking up from what he's doing." Also stopped the door's own
+  swing-open animation, since a door that visibly opens on approach
+  contradicts being locked - it now just stays shut.
+- **Added a real desk**, roughly centered in the room (the exact
+  center was already claimed by the existing weapon racks/bookshelf
+  against the back wall, so it sits in the nearest open floor to that,
+  toward the front of the room). Both puzzle boards are anchored there
+  now: the vote sits right at the desk, and a new flavor note on the
+  desk itself ties it to the deduction board (still opened the same
+  way it already was, via the board button - this just gives it a
+  physical home to point at).
+
+## Validation run before packaging
+
+- JSON-parsed all files under `content/` and `public/assets/maps/`
+- `node --check` on `overworld.js`
+- BFS reachability, spawn to every object - only flagged object is the
+  tavern's sealed 2nd floor, expected
