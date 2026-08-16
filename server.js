@@ -191,6 +191,8 @@ const ALL_ZONE_MAPS = {
   manor_upper: "/assets/maps/manor_upper.json",
   guild_hall_ground: "/assets/maps/guild_hall_ground.json",
   guild_hall_upper: "/assets/maps/guild_hall_upper.json",
+  herbalist_hut_exterior: "/assets/maps/herbalist_hut_exterior.json",
+  herbalist_interior: "/assets/maps/herbalist_interior.json",
 };
 
 function buildActPayloadForPlayer(room, socketId) {

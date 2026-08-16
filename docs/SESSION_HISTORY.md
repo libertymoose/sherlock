@@ -1230,3 +1230,84 @@ Root now just has `README.md` and the two Act 3 script docs
 (`ACT_3_DIALOGUE_SCRIPT.md`, `ACT_3_PORTRAIT_PROMPTS.md`), left where
 they were since they're reference material you actively use, not
 session history.
+
+
+---
+
+# v117 delivery notes
+
+## Also in this delivery, from the screenshot round
+
+A few fixes made before your maze file arrived, not yet packaged until
+now:
+
+- **The bedroom chest** - added the real 2-tile chest sprite from the
+  dungeon asset pack at Ashgate's Travelling Chest position, which had
+  no visual sprite at all before.
+- **The vote's "does nothing" bug** - a real one: the UI marked your
+  pick as chosen the instant you clicked, before the server had a
+  chance to reject it. When it did reject (no board support yet), the
+  card was left looking picked with no visible sign anything failed.
+  Fixed the reset, and made the rejection message itself impossible to
+  miss (was a quiet text swap; now bold and holds for 3 seconds).
+- **Chapel entry point** - moved out from the doorway to the walkway in
+  front of it.
+- **Guild Hall's upper floor landing spot** - the stairs-up teleport
+  technically landed you in a connected part of the room (I checked -
+  100% of the floor is reachable from there), but it's a 3-tile-wide
+  alcove near the map's edge where most of the camera frame shows
+  nothing but void. Moved the landing point to open floor nearer the
+  room's center instead.
+- **The maze** - I'd checked for genuinely floating/bugged collision
+  (solid cells with no matching wall art nearby) across the whole map
+  and found none, which is why I held off touching it and asked for
+  the exact spot instead - see below for what actually turned out to
+  be needed.
+
+## The maze - fixed properly, from your source file
+
+Used the `PLAN OFFSET 32` layer from `DUNGEON_MAZE_finished.tmj` as the
+sole source of truth, exactly as instructed: rebuilt `dungeon_area_5`'s
+entire collision grid from that layer plus the map's own outer edge as
+a hard boundary, nothing else contributing. Only 6 cells actually
+differed from what was already there, which explains why my earlier
+"floating collision" analysis came up empty - the existing data was
+already almost entirely correct, just not byte-identical to your
+authored plan. It's an exact match now. Reachability re-confirmed
+clean afterward.
+
+## Herbalist's Hut - both issues
+
+**Map not hooked up.** Found the actual cause: `ALL_ZONE_MAPS` in
+`server.js` (used for any zone transition that isn't the current act's
+own starting zone, plus the host skip-tool) was missing both
+`herbalist_hut_exterior` and `herbalist_interior` entries entirely -
+every other sub-zone in the game (barn, dock, both manor floors, both
+guild hall floors) had one, these two never did. Added both. The
+exterior map itself loads fine via the act's own `mapUrl`, but walking
+from the exterior into the interior - a different zone - was going
+through this table and coming back empty.
+
+**The maid was implied to be at the hut in person, and there was no
+handoff scene.** You're right on both counts, and they're the same
+underlying gap: nothing ever staged the moment where she rejoins the
+party with the goblet. Built it as a new cutscene, "The Maid Returns" -
+staged at the Guild Hall right after the vote, before Corwin leads the
+party to the swamp, following the exact same `staged_scene` pattern as
+"Out of the Sewers" (actor walks in, two lines of dialogue, fades into
+the next act). She hands over the goblet and the guard's report there,
+in person, at the Guild Hall - not at the hut. Rewrote the report's
+own text to stop implying she was still standing right there when you
+reread it ("slipped you back at the Guild Hall," not "presses into
+your hands").
+
+Story sequence is now 14 acts. The new one sits between "Means and
+Opportunity" and "The Herbalist's Hut."
+
+## Validation run before packaging
+
+- JSON-parsed all 36 files under `content/` and `public/assets/maps/`
+- `node --check` on `server.js`, `client.js`
+- BFS reachability, spawn to every object, across every map in the
+  project, including the rebuilt maze - only flagged object is the
+  tavern's sealed 2nd floor, expected

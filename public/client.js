@@ -2058,14 +2058,23 @@ socket.on("vote:state", (state) => {
 });
 
 socket.on("vote:rejected", ({ reason }) => {
+  // myVotePick was set optimistically the instant the button was clicked,
+  // before the server had a chance to say no - if we don't clear it here
+  // and re-render, the card is left looking "picked" (and its button
+  // gone, per renderVoteSuspects' iVoted/myVotePick branches) with no
+  // vote actually cast and no visible sign anything went wrong. This is
+  // what made a rejected vote read as the button "doing nothing."
+  myVotePick = null;
+  renderVoteSuspects();
   if (reason === "no_support") {
-    // Same lightweight inline-feedback approach used elsewhere in the UI
-    // for a rejected action, rather than a full modal/alert for something
-    // this minor.
     const progress = document.getElementById("vote-progress");
     const original = progress.textContent;
     progress.textContent = "Needs at least one card on the board against them first.";
-    setTimeout(() => { progress.textContent = original; }, 2500);
+    progress.classList.add("vote-progress-warning");
+    setTimeout(() => {
+      progress.textContent = original;
+      progress.classList.remove("vote-progress-warning");
+    }, 3000);
   }
 });
 
