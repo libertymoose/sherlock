@@ -387,6 +387,14 @@ socket.on("act:show", (act) => {
     document.getElementById("cutscene-fade-overlay").classList.remove("visible");
   }
 
+  // Same reasoning again: any dialogue/document panel left open from
+  // whatever the player was doing in the previous act or zone has no
+  // business surviving into the new one - close it here, unconditionally,
+  // on every single act transition, rather than relying on whatever
+  // triggered the transition to have remembered to close it itself.
+  document.getElementById("vn-panel").classList.add("hidden");
+  document.getElementById("vn-dialogue-set").classList.add("hidden");
+
   // Same "one guaranteed place, every transition" reasoning as the fade
   // overlay above - the board button's visibility just tracks whatever
   // the current act says, on every single act change, so it can never be
@@ -806,6 +814,10 @@ async function enterExplore(act) {
   const zoneId = act.zone || "estate";
   ZONE_MAPS[zoneId] = act.mapUrl;
   document.getElementById("explore-title").textContent = act.title;
+  const eyebrow = document.getElementById("explore-eyebrow");
+  if (eyebrow) {
+    eyebrow.textContent = act.chapter ? `Act ${toRoman(act.chapter)} \u00b7 Now Exploring` : "Now Exploring";
+  }
   document.getElementById("explore-progress-count").textContent = "0";
   // This little counter only means anything for the Estate's own
   // evidence-gated completion. Acts that finish some other way (the
@@ -837,12 +849,23 @@ async function enterExplore(act) {
     onNearbyChange: (obj) => {
       isNearInteractable = !!obj;
       currentNearbyObj = obj;
-      const panelOpen = !document.getElementById("vn-panel").classList.contains("hidden");
+      let panelOpen = !document.getElementById("vn-panel").classList.contains("hidden");
+      // Proximity-close: if a dialogue is open and tied to a specific
+      // object, and the player has walked far enough that this object
+      // is no longer the nearby one (or nothing is nearby at all
+      // anymore), close it - previously this only ever closed via the
+      // explicit close button or finishing pagination, so walking away
+      // mid-conversation just left it hanging open indefinitely.
+      if (panelOpen && activeVnObjId && (!obj || obj.id !== activeVnObjId)) {
+        closeVnPanel();
+        panelOpen = false;
+      }
       const btn = document.getElementById("btn-interact");
       btn.classList.toggle("hidden", !obj || panelOpen);
       refreshInteractButtonLabel();
     },
     onInteract: (obj) => handleObjectInteract(obj),
+    onBlockedInteract: () => advanceVnPageOrClose(),
     onPlateEnter: (plate) => {
       socket.emit("plate:enter", {
         zone: Overworld.getZone(),
@@ -1185,6 +1208,11 @@ async function handleObjectInteract(obj) {
     const mapUrl = ZONE_MAPS[targetZone];
     if (!mapUrl) return;
     document.getElementById("btn-interact").classList.add("hidden");
+    // Same reasoning as the act:show handler - a dialogue/document panel
+    // left open from the room just left has no business surviving into
+    // the new one.
+    document.getElementById("vn-panel").classList.add("hidden");
+    document.getElementById("vn-dialogue-set").classList.add("hidden");
     try {
       await Overworld.changeZone(targetZone, mapUrl, obj.interaction.targetX, obj.interaction.targetY);
     } catch (err) {
@@ -1433,7 +1461,7 @@ function setupPagination(containerId, lines, className) {
   showVnPage(0);
 }
 
-document.getElementById("vn-continue-indicator").addEventListener("click", () => {
+function advanceVnPageOrClose() {
   if (inScriptedDialogue) {
     advanceScriptedDialogue();
     return;
@@ -1441,8 +1469,16 @@ document.getElementById("vn-continue-indicator").addEventListener("click", () =>
   if (vnPageIndex < vnPages.length - 1) {
     vnPageIndex += 1;
     showVnPage(vnPageIndex);
+  } else {
+    // Already on the last page - the interact key/button reaching here
+    // (rather than being free to open something new) means "I'm done
+    // reading", so close it rather than doing nothing.
+    const panelOpen = !document.getElementById("vn-panel").classList.contains("hidden");
+    if (panelOpen) closeVnPanel();
   }
-});
+}
+
+document.getElementById("vn-continue-indicator").addEventListener("click", advanceVnPageOrClose);
 
 // --- Scripted multi-speaker dialogue (staged scenes) ---
 // Reuses the same VN panel as ordinary NPC dialogue, but each page can
@@ -1502,11 +1538,14 @@ function advanceScriptedDialogue() {
   showScriptedDialoguePage(scriptedDialogueIndex);
 }
 
+let activeVnObjId = null;
+
 function openDialogueModal(title, lines, obj) {
   document.getElementById("vn-dialogue-set").classList.remove("hidden");
   document.getElementById("vn-document-set").classList.add("hidden");
   document.getElementById("vn-continue-indicator").classList.add("hidden");
   setVnPortrait(obj);
+  activeVnObjId = obj ? obj.id : null;
 
   document.getElementById("dialogue-title").textContent = title;
   document.getElementById("vn-panel").classList.remove("hidden");
@@ -1520,9 +1559,32 @@ function openDialogueModal(title, lines, obj) {
 function closeVnPanel() {
   document.getElementById("vn-panel").classList.add("hidden");
   document.getElementById("btn-interact").classList.toggle("hidden", !isNearInteractable);
+  activeVnObjId = null;
 }
 
 document.getElementById("btn-close-vn").addEventListener("click", closeVnPanel);
+
+// Keep Overworld's interact-key gate in sync with the panel's actual
+// visibility, whichever of the many places in this file opened or closed
+// it - a MutationObserver here means every show/hide site doesn't need
+// its own explicit call to stay correct.
+new MutationObserver(() => {
+  if (typeof Overworld === "undefined" || !Overworld.setInteractBlocked) return;
+  const isOpen = !document.getElementById("vn-panel").classList.contains("hidden");
+  Overworld.setInteractBlocked(isOpen);
+}).observe(document.getElementById("vn-panel"), { attributes: true, attributeFilter: ["class"] });
+
+// Click anywhere outside the dialogue box closes it, same intent as the
+// explicit close button - checks the click target isn't inside the panel
+// itself (or the floating interact button, which shouldn't count as
+// "elsewhere") before closing.
+document.addEventListener("click", (e) => {
+  const panel = document.getElementById("vn-panel");
+  if (panel.classList.contains("hidden")) return;
+  if (panel.contains(e.target)) return;
+  if (e.target.closest && e.target.closest("#btn-interact")) return;
+  closeVnPanel();
+});
 
 socket.on("explore:dialogue", (data) => {
   openDialogueModal(data.title, data.lines);
@@ -1680,14 +1742,20 @@ function renderInventoryGrid() {
 
 // Icons for each evidence item, falling back to a plain star for anything
 // without a good thematic match in the icon packs.
+// All exhibits use the scroll icon now, per Elle's request - the letter
+// slots (Exhibit A, B, C...) aren't fixed to specific items since they're
+// assigned in whatever order a given party actually picks things up in,
+// so this maps every item to the same icon rather than trying to
+// preserve a per-item distinction that letter position can't reliably
+// reference across different playthroughs.
 const EVIDENCE_ICONS = {
-  ledger_ashby: "/assets/ui/icons/evidence/ledger.png",
-  satchel_voss: "/assets/ui/icons/evidence/satchel.png",
-  manifests_kestrel: "/assets/ui/icons/evidence/bundle.png",
-  blueprint_marrow: "/assets/ui/icons/evidence/blueprint.png",
-  letter_ashgate: "/assets/ui/icons/evidence/letter.png",
+  ledger_ashby: "/assets/ui/icons/evidence/scroll.png",
+  satchel_voss: "/assets/ui/icons/evidence/scroll.png",
+  manifests_kestrel: "/assets/ui/icons/evidence/scroll.png",
+  blueprint_marrow: "/assets/ui/icons/evidence/scroll.png",
+  letter_ashgate: "/assets/ui/icons/evidence/scroll.png",
   rota_reyes: "/assets/ui/icons/evidence/scroll.png",
-  diary_maid: "/assets/ui/icons/evidence/diary.png",
+  diary_maid: "/assets/ui/icons/evidence/scroll.png",
 };
 
 function buildItemCard(item, opts) {
@@ -1696,7 +1764,7 @@ function buildItemCard(item, opts) {
   const icon = document.createElement("div");
   icon.className = "item-card-icon";
   const img = document.createElement("img");
-  img.src = EVIDENCE_ICONS[item.itemId] || "/assets/ui/icons/star.png";
+  img.src = EVIDENCE_ICONS[item.itemId] || "/assets/ui/icons/evidence/scroll.png";
   img.alt = "";
   img.className = "item-card-icon-img";
   icon.appendChild(img);
@@ -2101,6 +2169,23 @@ socket.on("vote:result", (result) => {
   // shows either way.
   document.getElementById("vote-result-title").textContent = entry ? entry.speaker : "";
   document.getElementById("vote-result-lines").innerHTML = entry ? entry.lines.map((l) => `<p>${l}</p>`).join("") : "";
+
+  // An explicit, unambiguous status line above Corwin's in-character
+  // reaction - his own dialogue confirms it either way, but relying on a
+  // player to correctly read the *tone* of a line of dialogue as "we got
+  // it" isn't the same as just saying so directly.
+  const statusEl = document.getElementById("vote-result-status");
+  if (result.outcome === "correct") {
+    statusEl.textContent = "Correct - Ashgate is the one.";
+    statusEl.className = "feedback correct";
+  } else if (result.outcome === "tie") {
+    statusEl.textContent = "Tied vote - nobody's cleared, vote again.";
+    statusEl.className = "feedback incorrect";
+  } else {
+    const finalist = boardFinalists.find((f) => f.key === result.clearedSuspect);
+    statusEl.textContent = `Not them - ${finalist ? finalist.name : "that suspect"} is cleared.`;
+    statusEl.className = "feedback incorrect";
+  }
 
   document.getElementById("vote-result-panel").classList.remove("hidden");
   renderVoteSuspects();

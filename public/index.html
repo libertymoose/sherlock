@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>The Ashgate Inheritance</title>
+<title>A Study in Boralus</title>
 <meta name="description" content="A real-time multiplayer murder mystery for your own Sherlock Night. Investigate, gather evidence, and name the killer." />
 <meta name="theme-color" content="#50a978" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -99,7 +99,7 @@
     <div class="explore-frame hidden" id="explore-frame">
       <div class="explore-hud">
         <div>
-          <p class="eyebrow" style="text-align:left;margin:0">Now Exploring</p>
+          <p class="eyebrow" id="explore-eyebrow" style="text-align:left;margin:0">Now Exploring</p>
           <h2 class="explore-title" id="explore-title"></h2>
           <p class="zone-label" id="explore-zone-label"></p>
         </div>
@@ -245,6 +245,7 @@
 
       <div id="vote-result-panel" class="vote-result-panel hidden">
         <div id="vote-reveal-row" class="vote-reveal-row"></div>
+        <p id="vote-result-status" class="feedback"></p>
         <div class="vn-body" style="padding:0">
           <h3 id="vote-result-title" class="vn-name"></h3>
           <div id="vote-result-lines" class="vn-page-content"></div>

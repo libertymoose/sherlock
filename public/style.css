@@ -553,8 +553,21 @@ input[type="text"]:focus {
   margin-top: 10px;
   min-height: 18px;
 }
-.feedback.correct { color: var(--success); }
-.feedback.incorrect { color: var(--blood); }
+/* This sits on the wood-textured desk background (evidence_desk_wood.png),
+   not a plain dark screen - the original --blood/--success tones are
+   close enough in brightness to that mid-toned wood that contrast was
+   weak regardless of hue. Lighter variants plus a dark outline (the same
+   stroke-then-fill technique the overworld name labels use, done here
+   with text-shadow since this is plain CSS text) keeps both colours
+   readable wherever they land on the texture. */
+.feedback.correct {
+  color: #6ee7a0;
+  text-shadow: 0 0 2px #14251b, 0 1px 1px #14251b, 0 -1px 1px #14251b, 1px 0 1px #14251b, -1px 0 1px #14251b;
+}
+.feedback.incorrect {
+  color: #ff8a75;
+  text-shadow: 0 0 2px #2a120c, 0 1px 1px #2a120c, 0 -1px 1px #2a120c, 1px 0 1px #2a120c, -1px 0 1px #2a120c;
+}
 
 .sync-banner {
   background: rgba(var(--candle-rgb),0.12);
@@ -824,8 +837,21 @@ input[type="text"]:focus {
 
 .vn-panel {
   position: absolute;
-  left: 0;
-  right: 0;
+  /* Was left:0;right:0 with justify-content:center - that centers the
+     panel's *children* within the full viewport width, so the whole
+     assembly's total footprint (and therefore its own centerpoint)
+     shifted depending on whether a portrait was present or not: with a
+     portrait, centering ~861px of content; without one, centering just
+     the ~700px text frame. That's what made the box - and the "click to
+     continue" indicator inside it - visibly jump left/right depending on
+     which NPC you'd just talked to. Fixed width on the panel itself,
+     centered as one constant-size unit; the text frame below fills
+     whatever's left after the portrait, rather than the portrait adding
+     to the total. */
+  width: 861px;
+  max-width: calc(100% - 28px);
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 14px;
   z-index: 10;
   display: flex;
@@ -833,6 +859,7 @@ input[type="text"]:focus {
   align-items: flex-end;
   gap: 5px;
   padding: 0 14px;
+  box-sizing: border-box;
 }
 
 /* One fixed dialogue-box height, used everywhere - illustrated portraits,
@@ -868,9 +895,11 @@ input[type="text"]:focus {
 
 .vn-text-frame {
   position: relative;
-  flex: 1 1 700px;
+  /* No more hardcoded 700px cap - the panel above is now the fixed-size
+     element; this just fills whatever's left of it (full width with no
+     portrait, width-minus-portrait when one's shown). */
+  flex: 1 1 auto;
   min-width: 0;
-  max-width: 700px;
   height: 170px;
   box-sizing: border-box;
   padding: 8px 14px;
@@ -878,6 +907,12 @@ input[type="text"]:focus {
   display: flex;
   flex-direction: column;
 }
+
+
+/* vn-compact is toggled from JS for portrait-less dialogue (server
+   narration, the Skip Step notice, etc). No special sizing needed here
+   anymore - the base .vn-text-frame rule above already fills the fixed
+   panel width correctly whether or not a portrait is present. */
 
 /* Every illustrated-portrait dialogue box is 210px, every walking-sprite
    one is 130px - two sizes, each internally consistent, not the old
@@ -930,7 +965,7 @@ input[type="text"]:focus {
   font-family: 'Inter', -apple-system, sans-serif;
   font-size: 20px;
   color: var(--candle-bright);
-  margin: 0 0 8px;
+  margin: 0 0 4px;
 }
 
 .vn-prompt {
@@ -943,15 +978,15 @@ input[type="text"]:focus {
 .vn-puzzle-footer {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 6px;
+  margin-top: 2px;
 }
 .vn-puzzle-footer .btn {
   width: auto;
   margin-top: 0;
-  padding: 8px 22px;
+  padding: 6px 20px;
   font-size: 14px;
 }
 
@@ -1059,7 +1094,8 @@ input[type="text"]:focus {
 
 .pixel-panel-popup .pixel-panel-title,
 .pixel-panel-popup .hint-text,
-.pixel-panel-popup .section-label {
+.pixel-panel-popup .section-label,
+.pixel-panel-popup .vn-name {
   color: #3a2a1c;
 }
 

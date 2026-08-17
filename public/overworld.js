@@ -643,13 +643,24 @@ window.Overworld = (function () {
   // zone instead.
   let frozen = false;
   let mapReady = true; // false while a zone transition is loading - gates render(), see changeZone()
+  // True whenever a dialogue/document panel is open client-side. Doesn't
+  // freeze movement (frozen above already covers that for cutscenes) -
+  // just stops the interact key/button from firing a brand new
+  // interaction (which could re-open or restart the same dialogue) while
+  // one is already up. The client tells us to route the same key press
+  // to "advance the page" instead via onBlockedInteract.
+  let interactBlocked = false;
 
   function handleKeyDown(e) {
     const k = e.key.toLowerCase();
     keys[k] = true;
-    if (k === " " && !e.repeat) {
+    if ((k === " " || k === "f") && !e.repeat) {
       e.preventDefault();
-      triggerInteract();
+      if (interactBlocked) {
+        if (callbacks.onBlockedInteract) callbacks.onBlockedInteract();
+      } else {
+        triggerInteract();
+      }
     }
   }
   function handleKeyUp(e) {
@@ -657,7 +668,7 @@ window.Overworld = (function () {
   }
 
   function triggerInteract() {
-    if (zoneChangeInProgress || frozen) return;
+    if (zoneChangeInProgress || frozen || interactBlocked) return;
     if (nearbyObject && callbacks.onInteract) {
       callbacks.onInteract(nearbyObject);
     }
@@ -1082,7 +1093,9 @@ window.Overworld = (function () {
     ctx.lineWidth = 3;
     ctx.strokeStyle = "#2e222f";
     ctx.fillStyle = "#ffffff";
-    const labelY = spriteTopY - 6;
+    // Was -6, which read as floating well above the head rather than
+    // sitting close to it - tightened the gap.
+    const labelY = spriteTopY - 2;
     ctx.strokeText(name, centerX, labelY);
     ctx.fillText(name, centerX, labelY);
     ctx.restore();
@@ -1310,6 +1323,12 @@ window.Overworld = (function () {
       } else if (o.interaction && o.interaction.kind === "lever" && !o.showMarker) {
         // A lever is already obviously a lever - the generic marker on top
         // reads as a bug, not an invitation. Opt back in via showMarker.
+      } else if ((mapData.spriteCutouts || []).some((c) => c.objectId === o.id) && !o.showMarker) {
+        // Baked-tile NPCs (market patrons, tavern regulars, etc.) already
+        // render as a visible character sprite via the cutout system -
+        // same reasoning as the type==="npc" branch above, which never
+        // gets a marker either. These just don't share that code path
+        // since they're composited live rather than drawn from a look.
       } else {
         drawList.push({ y: o.y * TILE + TILE, draw: () => drawObjectMarker(o, camX, camY, worldScale) });
       }
@@ -1892,7 +1911,18 @@ window.Overworld = (function () {
     },
 
     triggerInteractFromButton() {
-      triggerInteract();
+      // Same gating as the keyboard path - the on-screen button shouldn't
+      // be able to re-fire an interaction while a dialogue is already
+      // open either, it should advance the page instead.
+      if (interactBlocked) {
+        if (callbacks.onBlockedInteract) callbacks.onBlockedInteract();
+      } else {
+        triggerInteract();
+      }
+    },
+
+    setInteractBlocked(v) {
+      interactBlocked = !!v;
     },
 
     freeze() {

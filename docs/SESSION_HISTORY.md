@@ -1416,3 +1416,29 @@ this rather than shipping a guess.
 - `node --check` on `overworld.js`
 - BFS reachability, spawn to every object - only flagged object is the
   tavern's sealed 2nd floor, expected
+
+
+---
+
+# v120 delivery notes
+
+## Cauldron smoke, replaced
+
+Confirmed the row before touching anything: cropped row 9 from the
+full sheet (`Free_Smoke_Fx__Pixel_06.png`, 64px-tall rows, row 9 =
+y512-576) and compared it directly against the partial crop you'd
+already started - matches exactly, including the bit of row 10 bleeding
+into the bottom of your crop.
+
+Extracted all 12 frames (768px wide / 64px each), built a new animated
+GIF from them with proper transparency (indexed-palette with a
+transparent index, not plain RGBA - GIF alpha doesn't animate reliably
+otherwise), and swapped it in at
+`public/assets/ui/cauldron/smoke/smoke.gif`, the same path the cauldron
+overlay already points to, so no other wiring was needed. Verified by
+reading the saved GIF back out frame by frame against a solid
+background to confirm transparency survived the save.
+
+12 frames at 90ms each, looping - a touch slower than the old asset's
+60ms since this one has a real grow-then-dissolve arc to read, not just
+a fast wisp.

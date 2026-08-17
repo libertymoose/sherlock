@@ -191,8 +191,24 @@ const ALL_ZONE_MAPS = {
   manor_upper: "/assets/maps/manor_upper.json",
   guild_hall_ground: "/assets/maps/guild_hall_ground.json",
   guild_hall_upper: "/assets/maps/guild_hall_upper.json",
+  guild_hall_exterior: "/assets/maps/guild_hall_exterior.json",
   herbalist_hut_exterior: "/assets/maps/herbalist_hut_exterior.json",
   herbalist_interior: "/assets/maps/herbalist_interior.json",
+  // The rest of the Act 3 town, added together after finding they were
+  // all missing at once - any transition between these that wasn't the
+  // current act's own starting zone (moving between tavern floors,
+  // entering the blacksmith/chapel/glass workshop, moving between mage
+  // tower floors) was silently resolving to an undefined mapUrl.
+  town_exterior: "/assets/maps/town_exterior.json",
+  training_ground: "/assets/maps/training_ground.json",
+  tavern_1st_floor: "/assets/maps/tavern_1st_floor.json",
+  tavern_2nd_floor: "/assets/maps/tavern_2nd_floor.json",
+  blacksmith_interior: "/assets/maps/blacksmith_interior.json",
+  chapel_interior: "/assets/maps/chapel_interior.json",
+  glass_workshop: "/assets/maps/glass_workshop.json",
+  mage_tower_basement: "/assets/maps/mage_tower_basement.json",
+  mage_tower_1st_floor: "/assets/maps/mage_tower_1st_floor.json",
+  mage_tower_2nd_floor: "/assets/maps/mage_tower_2nd_floor.json",
 };
 
 function buildActPayloadForPlayer(room, socketId) {
@@ -413,6 +429,16 @@ function advanceAct(code) {
   room.actIndex += 1;
   if (room.actIndex >= STORY.acts.length) {
     room.actIndex = STORY.acts.length - 1;
+  }
+  // Personal inventory is scoped to the act it was gathered in (plant
+  // specimens, quotes, keys) - unlike the Evidence Table, which is a
+  // separate, explicitly cross-act mechanic, nothing in a player's own
+  // inventory is meant to carry forward once an act ends. Clearing here
+  // means it can never be forgotten for a future act the way it was
+  // before - every act boundary goes through this one function.
+  room.inventories = {};
+  for (const socketId of Object.keys(room.players)) {
+    io.to(socketId).emit("inventory:state", []);
   }
   sendActToRoom(code);
   broadcastRoomState(code);
