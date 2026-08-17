@@ -140,7 +140,7 @@
                 <h3 id="document-title" class="vn-name"></h3>
                 <div id="document-intro" class="vn-page-content"></div>
                 <div class="vn-puzzle-footer">
-                  <button id="btn-document-take" class="btn btn-primary">Pick up</button>
+                  <button id="btn-document-take" class="btn btn-primary hidden">Pick up</button>
                 </div>
               </div>
               <div id="vn-continue-indicator" class="vn-continue-indicator hidden" aria-label="Click to continue">
@@ -162,7 +162,10 @@
 
       <div class="sync-banner">Shared with your whole party</div>
 
-      <button id="btn-review-evidence" class="btn btn-secondary" style="margin-bottom:14px">Review the Evidence</button>
+      <div class="board-review-row">
+        <button id="btn-review-attendees" class="btn btn-secondary">Review the Attendees</button>
+        <button id="btn-review-evidence" class="btn btn-secondary">Review the Evidence</button>
+      </div>
 
       <div class="board-columns">
         <div class="board-column">
@@ -256,6 +259,19 @@
   </div>
 
   <!-- Evidence table (shared, synced across the whole party) -->
+  <!-- A simple who's-who reference: one line per attendee, no evidence or
+       suspect status attached. Exists so the party can keep track of who's
+       who ("the maid works for the house") without the list itself doing
+       any of the deduction for them. -->
+  <div id="modal-attendees" class="modal-overlay hidden">
+    <div class="pixel-panel pixel-panel-popup modal-box modal-box-wide">
+      <button id="btn-close-attendees" class="pixel-close-btn" aria-label="Close"></button>
+      <h3 class="pixel-panel-title">The Attendees</h3>
+      <div id="attendees-list" class="attendees-list"></div>
+      <button id="btn-close-attendees-2" class="btn btn-secondary" style="margin-top:10px">Close</button>
+    </div>
+  </div>
+
   <div id="modal-table" class="modal-overlay hidden">
     <div class="pixel-panel pixel-panel-popup modal-box modal-box-wide">
       <button id="btn-close-table" class="pixel-close-btn" aria-label="Close"></button>
@@ -311,7 +327,7 @@
       <button id="btn-close-thorne" class="pixel-close-btn" aria-label="Close"></button>
       <h3 class="pixel-panel-title">Captain Thorne</h3>
       <p class="hint-text" id="thorne-message-text" style="margin-top:0"></p>
-      <button id="btn-thorne-ready" class="btn btn-primary">I'm Ready. Continue</button>
+      <button id="btn-thorne-ready" class="btn btn-primary js-continue-btn">I'm Ready. Continue</button>
       <p class="hint-text" id="thorne-ready-progress"></p>
     </div>
   </div>
@@ -324,7 +340,7 @@
       <button id="btn-close-ready-check" class="pixel-close-btn" aria-label="Close"></button>
       <h3 class="pixel-panel-title">Lord Duskmere's Desk</h3>
       <p class="hint-text" style="margin-top:0">Everything you've found is here. Ready to go through it properly with the rest of the table?</p>
-      <button id="btn-ready-check" class="btn btn-primary">I'm Ready. Continue</button>
+      <button id="btn-ready-check" class="btn btn-primary js-continue-btn">I'm Ready. Continue</button>
       <p class="hint-text" id="ready-check-progress"></p>
     </div>
   </div>

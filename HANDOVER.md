@@ -1,250 +1,240 @@
-# Handover — A Study in Boralus, picking up after v122
+# Handover — A Study in Boralus, picking up after v123
 
-This replaces the earlier handover from a few sessions back. Paste this
-as the first message in a new chat, then attach the v122 zip.
+This replaces the earlier handover from v122. Paste this as the first
+message in a new chat, then attach the v123 zip.
 
 ## Where things actually stand
 
-- **v122 is packaged and validated** (JSON-parsed everything under
+- **v123 is packaged and validated** (JSON-parsed everything under
   `content/` and `public/assets/maps/`, `node --check` on all three JS
-  files, CSS brace-balance check, full project-wide BFS reachability
-  sweep) but has **not been confirmed live by Elle yet**.
-- Elle's deploy history has shown v119 as the most recently confirmed
-  *deployed* version. Everything from v120 onward (including all of
-  this handover's content) was built in-chat and delivered as zips but
-  not yet confirmed pushed/live. When new bug reports come in, check
-  which version they're actually testing before assuming something is
-  a fresh regression - this has caused real confusion more than once in
-  this project's history.
-- A lot of ground was covered this session in one long sitting rather
-  than shipped incrementally. Keep incrementing normally (v123 next)
-  from here.
+  files, em-dash grep clean) but has **not been confirmed live by Elle
+  yet**.
+- This was a very large bug-fix pass covering Acts 1 through 4, spanning
+  several sessions worth of reports all resolved together. Keep
+  incrementing normally (v124 next) from here.
 
 ## What's fixed and validated in this handover's scope
 
-### Dialogue/interaction system overhaul
-- **Proximity auto-close** - dialogue now closes automatically when the
-  player walks far enough from whatever NPC/object opened it. Tracks
-  the object that opened the current dialogue (`activeVnObjId`) and
-  closes on `onNearbyChange` if that object is no longer the nearby one.
-- **Click outside to close** - a click anywhere outside the dialogue box
-  (and not on the floating interact button) closes it.
-- **Interact key/button gating** - this was a real, previously-unnoticed
-  bug: pressing the interact key/button while a dialogue was already
-  open just re-fired the interaction instead of advancing the page.
-  Built a proper gate (`Overworld.setInteractBlocked`, synced via a
-  MutationObserver watching the panel's own visibility so every
-  show/hide site stays correct without needing individual edits) so the
-  interact key/button now advances the current page while blocked, and
-  can't open a new interaction until the dialogue is actually closed.
-  On the last page, pressing interact closes it (read as "done
-  reading").
-- **"F" key was never actually wired** as an interact key at all,
-  despite the game's own on-screen text telling players to press it -
-  only spacebar worked. Fixed; both keys now behave identically.
-- **Fixed-width dialogue box** - the panel used to center its *children*
-  in the viewport, so its total footprint (and therefore its own
-  center point) shifted depending on whether a portrait was present
-  (~861px with one, ~700px without). Made the panel itself a fixed
-  width; the text frame fills whatever's left of it rather than adding
-  to it. This was explicitly re-confirmed to still be a hard "always
-  the same size" rule after an earlier attempt (giving document/button
-  dialogues a taller box) was correctly called out and reverted - if
-  a "needs more room for text" report comes back, the fix has to come
-  from tightening internal spacing (title margin, footer margin, etc.),
-  not from varying the box's own height.
-- **Pick Up button position** - the document modal's footer button was
-  centered, now right-aligned per request.
+### Act 1
+- The document modal's "Pick Up" button now only appears once every page
+  of the item's intro text has actually been read (was previously always
+  visible, overlapping the pagination text).
+- The three unnamed "A Gala Guest" NPCs are now named (Baron Rutger
+  Vayne, Old Salt Pemberton, Lady Prudence Harcourt) consistently across
+  the map object, dialogue title, and suspect board pool.
+- Added a "Review the Attendees" button next to "Review the Evidence" on
+  the Suspect Board - opens a new reference modal with one line per
+  named character (12 entries), purely descriptive, no suspect/evidence
+  information attached, so the party can keep track of who's who without
+  it doing any of the deduction for them.
+- Thorne's hint text on the Suspect Board now shrinks to fit on a single
+  line via a small `fitTextToOneLine` helper, instead of wrapping.
+- Manor upstairs chest/movement/cutscene-framing fixes from the previous
+  session (chest repositioned from a broken (4,13) to the real (3,5) per
+  Elle's TMX, the map's dead top 2 rows trimmed, cutscene actor/camera
+  coordinates shifted to match) are confirmed still intact.
 
-### The maze - actually fixed (see prior handover for the deeper root
-cause: a Tiled `offsety` field that was being ignored). Confirmed intact
-this session, no further changes needed.
+### Act 2 (The Dungeons)
+- Kennels: the urn's interact point moved 1 row down, and the hub's
+  entry point into the Kennels moved 3 rows north, closer to the return
+  door.
+- Lower Stores corridor: a 2x2 decorative prop wrongly marked as
+  collision-blocking (just above the stairs down to the maze) cleared.
+- Maze collision confirmed still correct, no changes needed.
+- The sewer exit cutscene ("Out of the Sewers") now has real water idle
+  animation - translated the actual Tiled animation data from the
+  sibling underground map (`dungeon_finale.json`, which uses the same
+  source sheet in a darker palette variant) rather than guessing at a
+  frame pattern.
 
-### Guild Hall - all three floors rebuilt from source, confirmed intact.
+### Act 3 (Means and Opportunity)
+- Reveal text reformatted to Elle's exact requested line breaks,
+  including the added "He winks at you" beat.
+- **Guild Hall interior "no map" bug found and fixed.** Both
+  `guild_hall_ground.json` and `guild_hall_upper.json` had a broken
+  phantom tileset entry (`x500.png`, `firstgid:1, lastgid:0`) pointing
+  at a file that's never existed in the project. Confirmed via Elle's
+  real asset pack that the Floor layer's actual gids resolve to genuine
+  wood-plank/rug art in `Walls_interior.png` - the renderer was already
+  silently falling through to that correct art past the broken entry,
+  so removing the dead stub was a safe, verified cleanup.
+- Blacksmith: interact point moved to (11,11), matching where the
+  smith's own sprite cutout actually renders (was 2+ tiles off at
+  (13,11)). Forge glow and the smith's hammering animation both now use
+  real frame data extracted directly from Elle's Tiled source
+  (`Blacksmith_house_interior.tmx` / `Blackmith_character.tmx`) - my
+  first-pass inferred versions of both turned out to match this real
+  data exactly, so no changes were needed there once the source arrived,
+  but the torch animation (which I'd left unwired, since the sheet has
+  multiple torch instances at different offsets I couldn't confidently
+  separate without the source) is now wired for real using the actual
+  extracted `<tile><animation>` blocks - 21 placed torch tiles all have
+  correct frame data now.
+- **Dragon wing clipping fixed for real, not guessed.** Root cause: the
+  Wing layer's tiles form one continuous 8-row vertical run in every
+  column, and the engine's "tall object" sort rule (correctly used for
+  trees/columns) collapses a whole run to one shared sort key equal to
+  its bottommost row. For a sprawling wing, that meant even the topmost
+  wingtip tile behaved as if it sat at the wing's base, hiding the
+  player anywhere near it. Reclassified Wing from `sorted` to `floor`
+  kind and removed it from the dragon's `layerGroups` entry - it's
+  decorative background art draped over open ground, not something a
+  player legitimately walks behind, so it never needed to participate in
+  Y-sorting at all. Confirmed the grass underneath the whole wing is
+  walkable.
+- **Grass border clipping (systemic, "everywhere in Act 3") found and
+  fixed.** A layer named `details` (small ground decoration - grass
+  tufts, flowers, pebbles) was marked `sorted` in both
+  `training_ground.json` and `town_exterior.json`, the two main outdoor
+  Act 3 maps, with runs up to 35 tiles tall in a single column - the
+  same bug class as the wing. 87% of its tiles sit on plain walkable
+  ground, confirming it's ambient decoration. Reclassified to `floor` in
+  both maps. Also explicitly checked the `trees` layer in
+  `town_exterior.json` as the other obvious suspect: every single tree
+  tile sits on real collision (100%), so trees are genuinely solid and
+  correctly excluded from this fix. Scanned every other Act 3 map for
+  the same tall-run pattern; the only other hits were archery target
+  poles and blacksmith walls, both of which should legitimately occlude
+  the player, so left alone.
+- Mage tower, warlock floor (1st floor):
+  - Fixed the actual root cause of the "random NPC near the warlock"
+    report: any object with `type: "npc"` was unconditionally drawn via
+    the look-based `drawNpc()` fallback (defaulting to a generic
+    "citizen1" sprite) even when that same object also had a
+    spriteCutout entry meant to be its *only* rendering path. This
+    produced a second, unintended character at the object's raw tile
+    position alongside the real cutout art - a project-wide rendering
+    bug, not specific to the warlock, now fixed for every cutout NPC.
+    Added proper name-label support directly to the cutout draw loop so
+    this fix doesn't regress the warlock's own name tag.
+  - Row 7 (x5-9) made fully walkable so the player can walk behind the
+    demon rather than being blocked.
+  - Head warlock interact point moved to (7,6) (left of (8,6), matching
+    where the cutout actually renders), and that tile's collision
+    cleared.
+  - Stairs down moved to (10,9), stairs up moved to (10,8), both now
+    show a visible green marker dot.
+  - **Demon summon/despawn animation rebuilt using the real sprite
+    sheet, not a generic fade.** Inspected `Demon.png` directly - it's a
+    5x4 grid of frame-blocks: 5 frames of smoke swirling into the demon
+    (summon), 10 idle frames, 3 frames of it dissolving into scattered
+    dust (despawn). The map's animation data already had this exact
+    18-frame sequence wired as a simple loop. Rebuilt each of the 17
+    demon base gids' frame arrays into: summon (5 frames, unchanged) +
+    idle held for ~3s (the real 10-frame idle block repeated twice) +
+    despawn (3 frames, unchanged) + a 1-second gap using a `gid: 0`
+    frame, which the renderer already treats as "draw nothing." Full
+    cycle is 5.2s, looping forever, entirely real authored art with no
+    opacity tricks. (An earlier pass had layered a generic engine-level
+    opacity fade on top of this same animation instead of using the real
+    frames - that `fadeInLayers` config has been removed from this map
+    now that it's unnecessary; the generic capability is still available
+    in `overworld.js` if some other object genuinely needs a plain
+    fade-in with no authored transition art of its own.)
+- Mage tower, mage floor (2nd floor):
+  - Head mage interact point moved to (7,6), matching the cutout's real
+    render position (was at (6,4), well off from the sprite).
+  - Stairs down now shows a visible green marker dot.
+- Mage tower, basement (ground floor):
+  - Stairs up now shows a visible green marker dot (was already at the
+    correct (12,7) position, just not visibly marked).
+  - Fixed the return-landing spot when coming back down from the 1st
+    floor: now lands at (12,6), matching Elle's request, with that
+    tile's collision cleared.
+- The dragon riddle at the training ground statue now forces a genuine
+  page break between the setup line and the riddle itself. Added a new
+  "triple newline forces a new page" convention to the pagination
+  engine (`\n\n\n`), distinct from the existing `\n\n` paragraph-break
+  convention, since the existing auto-fit pagination would happily pack
+  both onto one page if there was room.
+- **Herbalist's Hut exterior (still chapter 4's opening zone) had 19
+  tiles with unstripped Tiled flip-bit gids** (raw values over 2 billion
+  instead of the actual tile id) in the grass, grass-details,
+  small-flowers, and birds layers - these were rendering as invisible
+  gaps. Stripped with the project's own documented `gid & 0x1FFFFFFF`
+  convention.
 
-### The big tavern investigation - confirmed intact
-The two real root causes behind "the tavern is totally fucked" (a
-Y-sort bug affecting every cutout NPC project-wide, and 12 NPCs across
-5 maps with corrupted animation data making them render as invisible
-most of the time) are both still fixed as of this handover. See the
-prior handover for the full technical writeup if this needs revisiting.
-
-### This session's fixes
-- **Exhibit icons** - all 7 evidence items (and the fallback for
-  anything unlisted) now use the scroll icon
-  (`/assets/ui/icons/evidence/scroll.png`), matching a screenshot Elle
-  sent of what she wanted. **Worth double-checking with Elle that this
-  was actually the right call** - her original ask referenced "exhibit
-  C, E, F" as if those were fixed items, but exhibit letters are
-  assigned by pickup order and aren't fixed to specific items across
-  playthroughs, so there was never a valid way to identify "the icons
-  used for C, E, F" specifically. Applying the one icon she did screenshot
-  (from an "Exhibit A" case) to everything was the most defensible
-  interpretation available, not a confirmed-correct one.
-- **"The Ashgate Inheritance" removed** - was only ever the browser tab
-  `<title>`, changed to "A Study in Boralus".
-- **Blade portrait removed** - was a `portrait` field on one narration
-  line in the Frame-Up cutscene (`content/story.json`), set to `null`
-  to match every other narration line in the game.
-- **Herbalist renamed** - "The Herbalist's Hut" reveal and "What Killed
-  Him" explore act are now both titled "The Herbalist", bumped from
-  chapter 3 to chapter 4. The Finale and ending were also bumped to
-  chapter 5 to keep the numbering consistent, since they now come after
-  a chapter-4 act - **this was a judgment call, not something Elle
-  explicitly asked for**, worth confirming she's fine with it.
-- **Act number added to the "Now Exploring" header** - e.g. "Act III ·
-  Now Exploring", via a new `#explore-eyebrow` element id and
-  `toRoman()` (which already existed in the codebase).
-- **Point the Finger vote mechanics answered, not changed** - confirmed
-  via the actual resolution code that it's a plurality vote (most votes
-  wins, not a strict >50% majority), and a tied top spot already results
-  in nobody being cleared and a full re-vote, which correctly handles
-  the even-player-count case Elle asked about. No code change was
-  needed here, just confirmation.
-- **Explicit vote outcome confirmation added** - previously a correct
-  vote only showed Corwin's in-character reaction dialogue with nothing
-  that unambiguously said "you got it." Added a status line above his
-  dialogue (`#vote-result-status`, reusing the `.feedback`
-  correct/incorrect styling) that states the outcome directly: "Correct
-  - Ashgate is the one," "Tied vote - nobody's cleared, vote again," or
-  "Not them - [suspect] is cleared."
-- **Suspect Board feedback color** - this went through two rounds.
-  First pass removed the red/green color-coding entirely (Elle's
-  original ask, "use the default colour"). Second pass **restored** the
-  colors after Elle clarified she liked having red/green, the actual
-  problem was contrast against the wood-textured desk background the
-  board sits on, not the color choice itself. Now uses lighter tones
-  (`#6ee7a0` green, `#ff8a75` coral) plus a dark text-shadow outline for
-  guaranteed legibility regardless of where on the texture it lands.
-  This same fix covers "Thorne's red text" (the Suspect Board hint text
-  IS this same element) and the vote panel's Corwin name/title color,
-  which had the same underlying bug (falling outside a
-  `.pixel-panel-popup` dark-text override that its siblings already
-  had) - all three were the same root issue, confirmed resolved
-  together.
-- **Maid cutscene rewritten** per Elle's provided script, with
-  line-by-line "click to continue" breaks exactly where she marked
-  them with `\`. Grammar/spelling fixes made along the way (flagged
-  individually to her at the time): "that gala" → "the gala", a comma
-  splice around "This was his goblet," a double space, missing
-  sentence-break punctuation around "she chuckles," a stray comma
-  before "scrap of paper," and "east road" → "west road" per her
-  explicit change. Deliberately left "that don't look like wine
-  stains" alone as the maid's established informal voice rather than
-  correcting to "doesn't" - flagged this choice to Elle, not yet
-  confirmed either way.
-- **Two more invisible-wall bugs found and fixed**, same pattern as
-  several others this project has hit repeatedly: a small decorative
-  floor prop (not real furniture) was blocking movement. One in the
-  Kennels (a bone-pile/floor decoration in the room's center), one
-  right by the Lower Stores entrance (a small stray prop). Both
-  confirmed still fixed as of this handover.
-- **Sub-room camera framing fix, three rooms** (Kennels, Ossuary, Lower
-  Stores) - the camera can never scroll above row 0 (hard-clamped in
-  `overworld.js`), so a door sitting right at a small map's top edge had
-  nowhere for the camera to frame it, cutting off its top visually.
-  Shifted all three maps down 3 rows (full layer data, collision,
-  objects, spawn) and updated the hub map's own entry-target coordinates
-  to match. Confirmed still intact as of this handover.
-- **Act 1→3 inventory carryover, traced and confirmed already fixed** -
-  every path that can advance the story (`host:advanceAct` and the
-  single shared `fadeAndAdvanceAct` every automatic completion funnels
-  through) goes through one `advanceAct` function that clears
-  `room.inventories = {}`. There's a separate `prefillInventoryFromEvidence`
-  flag that deliberately repopulates inventory, but it's scoped via
-  `story.json` to only "The Dungeons" act specifically (the "you still
-  have everything you were carrying when arrested" beat) - confirmed
-  it doesn't leak into any other act, including Means and Opportunity.
-  If this report comes back again, it's very likely someone testing a
-  pre-v121 build, not a real regression.
-- **Ashgate's board coverage confirmed** - she has 4 Means cards
-  (glassblower surface/reveal, "seemed anxious," shopkeeper
-  corroboration) and 2 Opportunity cards (the goblin's "wouldn't share
-  a drop," the monk's alibi - which is meant to be a lie per the
-  "nuns/monks always lie" mechanic, but is still correctly filed as an
-  Opportunity-category clue regardless of truth value). Nothing missing
-  here, no code change was needed.
+### Act 4 (The Herbalist) - the actual "no working map" bug
+**Root cause found: `herbalist_interior.json` (the room with the actual
+cauldron puzzle) was missing `"dense": true` on every single layer** -
+confirmed by comparing against every other map in the project, which all
+set this flag. Without it, the layer-resolving code fell into the
+sparse-cell code path and tried to call `.forEach()` on a `cells` array
+that was never populated (this map only ever had the flat `data` array),
+throwing on nearly every non-floor layer: the lantern, both racks, the
+table, both box/sack layers, the dried greens. This is exactly why the
+room looked broken - most of its furniture layers were failing to render
+the moment the zone loaded. Set `dense: true` on all 18 layers and
+confirmed every layer's data length still matches the map's 32x32
+dimensions, so nothing else is corrupted underneath.
 
 ## Investigated, not resolved - still needs more info
 
-- **Mage tower doors "endless loop."** Could not locate any door/window
-  animation content anywhere in the mage tower interior floors or its
-  town_exterior building footprint. Genuinely unclear what this refers
-  to - needs a screenshot showing exactly which door.
-- **Mage tower dragon wing clipping into the ground.** The `layerGroups`
-  entry for this dragon already exists and groups
-  body/wing/tail/platform/tower under one shared sort key - the
-  standard fix for this class of bug is already in place. Whatever's
-  still causing the clip is more subtle than a missing group and needs
-  live visual testing to pin down.
-- **"Act 3 still uses portraits."** Traced the entire portrait rendering
-  path exhaustively across two separate sessions now - no live
-  reference to illustrated portraits found anywhere in Act 3 map data,
-  dialogue content, or the suspect board (the suspect board's
-  "portrait-card" CSS class name is just naming, it actually draws from
-  each character's walking sprite). Orphaned portrait image files still
-  exist in `public/assets/npcs/portraits/` but nothing in the current
-  code loads them. Cannot find this bug from code alone - needs a
-  screenshot of the exact moment/NPC it happens with, or it may already
-  be resolved and the report predates a fix (portraits were removed
-  project-wide in an earlier session, per this project's documented
-  history).
-- **Bread seller dialogue "makes no sense."** Content matches the
-  established design spec (the market-stalls-shuttered-early trigger
-  fact for Marrow's alibi) word for word. Could not identify what
-  specifically reads wrong without more detail - worth asking Elle to
-  quote the exact line that bothers her.
-- **"NPCs outside the inn are still broken."** No tavern-exterior-
-  specific patron objects exist distinctly from the general market cast
-  in `town_exterior.json` - the Y-sort and animation fixes that resolved
-  the interior tavern chaos apply to them via the same shared code, so
-  this is presumed already addressed, but was never specifically
-  re-screenshotted to confirm.
+- **"The maid should not be in the herbalist area at all."** Traced
+  every reference to the maid actor/sprite across the whole project -
+  `content/story.json`, every map file, `server.js`, `client.js` - and
+  found nothing that places her in `herbalist_hut_exterior.json` or
+  `herbalist_interior.json`. Both maps' own object lists were checked by
+  hand; neither contains a maid object, a `citizen6` look reference, or
+  a spriteCutout referencing her. The staged-scene cleanup code
+  (`Overworld.stop()` clearing `stagedScene = null`) also looks correct
+  and runs before every zone transition. Given the `herbalist_interior`
+  `dense` bug above was serious enough to break most of that room's
+  rendering, it's possible this report was actually a symptom of that
+  same crash (a stale previous zone's contents still showing through
+  when the new one fails to render) rather than a genuine maid-placement
+  bug - worth re-testing after this fix before digging further. If she's
+  still showing up, the next thing to ask for is exactly what's being
+  seen (her sprite standing there, her dialogue firing, her name showing
+  up somewhere) since that determines whether this is visual, data, or
+  dialogue-related.
 
 ## Key technical patterns worth remembering (carried forward + new)
 
-- **`server.js`'s `ALL_ZONE_MAPS` needs an entry for every zone file**,
-  not just an act's own starting zone. Bitten this project twice
-  already (herbalist hut, then a whole Act 3 town sweep). Check this
-  table first for any "can't enter/can't transition" report.
-- **Tiled layers can carry `offsetx`/`offsety` fields** that must be
-  applied when converting to this game's flat collision-grid format -
-  don't assume raw grid position equals true position.
-- **A spriteCutout NPC with 100% of its tiles registered in the
-  `animations` dict is not automatically correct** - verify actual
-  rendered frame content before trusting it.
-- **Moving an object's own x/y does not move a spriteCutout's actual
-  baked tile art.** These are separate things. If the goal is to change
-  where a character visually appears, moving the object entry alone
-  just creates a new proximity mismatch. Made this exact mistake once
-  and caught it mid-fix earlier in this project's history - worth
-  remembering.
-- **Decorative-object-incorrectly-blocking-movement is a recurring
-  pattern** (a hanging chain, a flower vase, a bone-pile floor
-  decoration, assorted small stray props) - when a reachability check
-  or a bug report flags a blocked tile, check whether it's genuinely
-  solid furniture or just decorative art before deciding whether to
-  carve a path around it or just make it walkable outright. Elle has
-  said she'd rather have decorative-only obstacles just made walkable
-  than routed around.
-- **The camera can never scroll above row 0** (`Math.max(0, ...)`
-  clamp in `overworld.js`) - any door or focal point sitting right at a
-  small map's top edge will have its top visually cut off with nowhere
-  for the camera to frame it. The fix is shifting the room's content
-  down, not adjusting the camera.
-- **CSS color overrides scoped to a wrapper class (`.pixel-panel-popup`,
-  `.pixel-panel-dialogue`) are easy to have gaps in** - three separate
-  "this text is the wrong/too-bright color" reports (Thorne's hint
-  text, Silas's vote-panel name, general Suspect Board feedback) turned
-  out to be variations on the same root cause: an element using a
-  shared class (`.vn-name`, `.feedback`) that wasn't included in the
-  wrapper's own override list, so it fell back to a raw accent color
-  never meant to be read against that particular background. Worth
-  checking this pattern first for any future "hard to read" report.
-- **Exhibit/evidence icons cannot be reliably referenced by their
-  letter slot** (Exhibit A, B, C...) since letters are assigned by
-  pickup order, not fixed per item. Any future icon request needs to
-  reference the actual item name, not a letter.
+- **A layer's `dense: true` flag is not optional and has no safe
+  default** - every other map in the project sets it, and one map
+  (`herbalist_interior.json`) silently didn't, which broke nearly every
+  furniture layer in that room. Worth a quick project-wide grep for any
+  other map missing this flag before it causes a second "no working
+  map" report somewhere else.
+- **A `sorted` layer with long vertical runs in a single column silently
+  hides the player near the top of that run**, because the "tall
+  object" sort rule (needed for trees/columns to stay visually intact)
+  collapses the *entire* run to one shared sort key equal to its bottom
+  row. This is now a confirmed, recurring bug class (the dragon wing,
+  the `details` ground-decoration layer in two separate maps) - any
+  future "player disappears near X" report should check whether X is a
+  wide/tall decorative layer that never needed real Y-sorting in the
+  first place, versus genuinely solid terrain like trees (which are
+  correctly excluded - checked via 100% collision overlap).
+- **A `type: "npc"` object with a spriteCutout entry still fell through
+  to the generic look-based fallback sprite** unless explicitly
+  excluded - this was a project-wide rendering bug (fixed now), not
+  specific to any one NPC. Any *new* cutout-based NPC added in the
+  future needs to go through this same exclusion path automatically, so
+  this shouldn't recur, but worth remembering if a similar "phantom
+  extra character" report comes up for a map added later.
+- **Before spending time inferring animation frame data from grid
+  layout alone, check whether the actual Tiled source or asset pack is
+  available first** - the torch animation guess was correctly withheld
+  pending the real source, and the demon "fade" turned out to be
+  actively wrong because the real summon/despawn art was already present
+  in the map's own animation data the whole time, just being played as
+  a simple loop instead of a scripted sequence with proper hold/pause
+  timing.
+- **A `\n\n\n` (triple newline) now forces a hard page break** in the
+  shared VN/document pagination engine (`paginateIntoContainer` in
+  `client.js`), distinct from the existing `\n\n` paragraph-break
+  convention which only breaks pages when content actually overflows.
+  Use this for any two-part reveal (like the dragon riddle) that needs
+  to land as two separate beats regardless of how much room is left on
+  the first page.
+- **Raw gid values encode flip bits in the top 3 bits** - strip with
+  `gid & 0x1FFFFFFF` before lookup. Found a second real instance of this
+  in `herbalist_hut_exterior.json` (19 tiles) - worth a project-wide
+  sweep for any other map with gids above the theoretical max (compare
+  against the highest declared tileset `lastgid`) before assuming a
+  "missing decoration" report is content-related rather than this.
 
 ## Standing project rules (unchanged, still apply)
 
@@ -254,11 +244,12 @@ prior handover for the full technical writeup if this needs revisiting.
   spawn to every object, every map touched, before packaging.
 - Full validation pipeline before every delivery: JSON-parse everything
   under `content/` and `public/assets/maps/`, `node --check` on
-  `server.js`/`client.js`/`overworld.js`, CSS brace-balance check.
-- Source files (Elle's own Tiled exports) are authoritative over
-  whatever's already converted - rebuild from a fresh export rather
-  than patching, and diff against the old version to understand what
-  genuinely changed.
+  `server.js`/`client.js`/`overworld.js`, CSS brace-balance check,
+  em-dash grep.
+- Source files (Elle's own Tiled exports and real asset packs) are
+  authoritative over whatever's already converted or inferred - when a
+  real source arrives after a guessed fix, always re-verify (or replace)
+  the guess against it rather than assuming the guess was close enough.
 - Elle always tests the latest deployed build - if something reported
   as broken looks correct in the current data, ask which exact version
   she's testing rather than assuming the report is wrong or that the
@@ -266,8 +257,7 @@ prior handover for the full technical writeup if this needs revisiting.
 - Discuss significant design/scope decisions before building; Elle's
   corrective feedback is direct and authoritative over whatever was
   previously implemented. When a fix requires a judgment call in the
-  absence of an explicit instruction (chapter renumbering, the icon
-  interpretation above), make the call, ship it, but flag it clearly
-  rather than presenting it as confirmed-correct.
+  absence of an explicit instruction, make the call, ship it, but flag
+  it clearly rather than presenting it as confirmed-correct.
 - All of Act 3 is currently flagged P1 by Elle - treat bug reports from
   this act with urgency.

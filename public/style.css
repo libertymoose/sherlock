@@ -636,6 +636,43 @@ input[type="text"]:focus {
   margin-bottom: 4px;
 }
 
+.board-review-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.board-review-row .btn {
+  flex: 1;
+}
+
+.attendees-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.attendee-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.2);
+  border-radius: var(--radius);
+}
+
+.attendee-name {
+  font-weight: bold;
+}
+
+.attendee-blurb {
+  font-size: 0.9em;
+  opacity: 0.85;
+}
+
 .board-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;

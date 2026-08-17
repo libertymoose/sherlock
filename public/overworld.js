@@ -58,6 +58,10 @@ window.Overworld = (function () {
   let canvasResizeObserver = null;
   let socket = null;
   let mapData = null;
+  // Timestamp of the most recent successful zone load - drives the "summon"
+  // fade-in for any layer listed in mapData.fadeInLayers (see changeZone()
+  // below and the draw-list loop that reads this).
+  let zoneEnterTime = 0;
   let images = {};
 
   // Player character system: a base body (male/female) tinted a solid colour,
@@ -1218,7 +1222,34 @@ window.Overworld = (function () {
     // and one standing in front of it correctly draws on top.
     const drawList = [];
 
+    // Some baked scenery is meant to feel "summoned" rather than always
+    // present (the warlock's demon) - listed by name in mapData.fadeInLayers.
+    // Rather than a one-shot fade-in, this now runs a full repeating cycle:
+    // fade up, hold visible for a few seconds of its own idle animation,
+    // fade down, sit invisible for a beat, then summon again - so leaving it
+    // running never leaves it either permanently on or permanently off.
+    // Purely an opacity ramp on the existing (already-animated) art, no
+    // separate summon/despawn sprite frames needed - the idle blink these
+    // tiles already carry keeps playing underneath it the whole time.
+    const FADE_MS = 700;
+    const HOLD_MS = 3500; // "a few seconds of idle blinking" before despawning
+    const GONE_MS = 1000; // pause before resummoning
+    const CYCLE_MS = FADE_MS + HOLD_MS + FADE_MS + GONE_MS;
+    const fadeInLayerNames = mapData.fadeInLayers || [];
+    const cycleT = (performance.now() - zoneEnterTime) % CYCLE_MS;
+    let fadeAlpha;
+    if (cycleT < FADE_MS) {
+      fadeAlpha = cycleT / FADE_MS; // summoning
+    } else if (cycleT < FADE_MS + HOLD_MS) {
+      fadeAlpha = 1; // fully present, idle animation plays normally
+    } else if (cycleT < FADE_MS + HOLD_MS + FADE_MS) {
+      fadeAlpha = 1 - (cycleT - FADE_MS - HOLD_MS) / FADE_MS; // despawning
+    } else {
+      fadeAlpha = 0; // gone, waiting to resummon
+    }
+
     for (const layer of resolvedLayers) {
+      const layerFadesIn = fadeInLayerNames.includes(layer.name) && fadeAlpha < 1;
       for (const cell of layer.cells) {
         if (cell.x < startCol - 2 || cell.x > endCol + 2 || cell.y < startRow - 2 || cell.y > endRow + 2) continue;
         const dx = Math.round(cell.x * scaledTile - camX);
@@ -1230,13 +1261,29 @@ window.Overworld = (function () {
               const curGid = currentGidFor(cell.gid, cell.layer, cell.index);
               const r = resolveGid(curGid);
               if (!r) return;
-              drawTile(ctx, getImg(r.src), r.sx, r.sy, TILE, dx, dy, scaledTile, cell.hFlip, cell.vFlip);
+              if (layerFadesIn) {
+                ctx.save();
+                ctx.globalAlpha = fadeAlpha;
+                drawTile(ctx, getImg(r.src), r.sx, r.sy, TILE, dx, dy, scaledTile, cell.hFlip, cell.vFlip);
+                ctx.restore();
+              } else {
+                drawTile(ctx, getImg(r.src), r.sx, r.sy, TILE, dx, dy, scaledTile, cell.hFlip, cell.vFlip);
+              }
             },
           });
         } else {
           drawList.push({
             y: cell.sortRow * TILE + TILE,
-            draw: () => drawTile(ctx, cell.img, cell.sx, cell.sy, TILE, dx, dy, scaledTile, cell.hFlip, cell.vFlip),
+            draw: () => {
+              if (layerFadesIn) {
+                ctx.save();
+                ctx.globalAlpha = fadeAlpha;
+                drawTile(ctx, cell.img, cell.sx, cell.sy, TILE, dx, dy, scaledTile, cell.hFlip, cell.vFlip);
+                ctx.restore();
+              } else {
+                drawTile(ctx, cell.img, cell.sx, cell.sy, TILE, dx, dy, scaledTile, cell.hFlip, cell.vFlip);
+              }
+            },
           });
         }
       }
@@ -1244,6 +1291,17 @@ window.Overworld = (function () {
 
     mapData.objects.forEach((o) => {
       if (o.type === "npc") {
+        // Cutout-based NPCs (baked directly into a tile layer, composited
+        // live via the spriteCutouts loop further down) are a different
+        // rendering path from ordinary look-based NPCs, but both can share
+        // type "npc" on the object itself. Without this check, an NPC that's
+        // meant to be cutout-only still fell through to drawNpc()'s default
+        // "citizen1" fallback (since it has no npcStates/look entry of its
+        // own), drawing a second, unintended character at the object's raw
+        // tile position alongside the real cutout art - this is what showed
+        // up as a stray extra NPC model near the warlock.
+        const isCutout = (mapData.spriteCutouts || []).some((c) => c.objectId === o.id);
+        if (isCutout) return;
         drawList.push({
           y: o.y * TILE + TILE,
           draw: () => {
@@ -1485,6 +1543,17 @@ window.Overworld = (function () {
           ctx.imageSmoothingEnabled = false;
           ctx.drawImage(buf, dx, dy, drawW, drawH);
           ctx.restore();
+
+          // NPCs authored as cutouts (like the Head Warlock) still want
+          // their name tag - this was previously only happening by
+          // accident, piggybacking on a stray fallback sprite draw
+          // elsewhere that has since been removed. Position it the same
+          // way drawNameLabel is used everywhere else: centered above the
+          // character's own drawn art, not the object's raw tile position.
+          const cutoutObj = mapData.objects.find((o) => o.id === cutout.objectId);
+          if (cutoutObj && cutoutObj.type === "npc" && cutoutObj.name) {
+            drawNameLabel(cutoutObj.name, dx + drawW / 2, dy);
+          }
         },
       });
     });
@@ -1848,6 +1917,7 @@ window.Overworld = (function () {
       try {
         await loadMap(mapUrl);
         currentZone = zoneId;
+        zoneEnterTime = performance.now();
       } catch (err) {
         console.error(`changeZone(${zoneId}) failed:`, err);
         throw err;

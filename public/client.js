@@ -492,7 +492,7 @@ function renderReveal(container, act) {
   }
 
   const btn = document.createElement("button");
-  btn.className = "btn btn-primary";
+  btn.className = "btn btn-primary js-continue-btn";
   btn.textContent = "I'm Ready. Continue";
   btn.addEventListener("click", () => {
     btn.disabled = true;
@@ -527,7 +527,7 @@ function renderCutscene(container, act) {
   container.appendChild(box);
 
   const advanceBtn = document.createElement("button");
-  advanceBtn.className = "btn btn-primary";
+  advanceBtn.className = "btn btn-primary js-continue-btn";
   container.appendChild(advanceBtn);
 
   function showPage(i) {
@@ -596,7 +596,7 @@ function renderSinglePageCutscene(container, act, pages) {
   container.appendChild(box);
 
   const advanceBtn = document.createElement("button");
-  advanceBtn.className = "btn btn-primary";
+  advanceBtn.className = "btn btn-primary js-continue-btn";
   container.appendChild(advanceBtn);
 
   function showContinueButton() {
@@ -1028,7 +1028,7 @@ function showStagedSceneReadyButton(nextActEyebrow, nextActTitle) {
   }
   const btn = document.createElement("button");
   btn.id = "staged-scene-ready-btn";
-  btn.className = "btn btn-primary cutscene-continue-btn";
+  btn.className = "btn btn-primary cutscene-continue-btn js-continue-btn";
   btn.textContent = "I'm Ready. Continue";
   btn.onclick = () => {
     btn.disabled = true;
@@ -1426,22 +1426,33 @@ function paginateIntoContainer(containerId, lines, className) {
   // every entry's internal paragraph breaks first, then further split any
   // individual paragraph that's still too tall on its own (see splitToFit),
   // so pagination always has real, individually-sized units to work with.
-  const paragraphs = lines.flatMap((line) => String(line).split(/\n\s*\n/));
-  const elements = paragraphs.flatMap((line) => splitToFit(container, line, className));
-
+  //
+  // A triple newline ("\n\n\n") is a stronger signal than a paragraph break:
+  // it forces a genuine new page at that point, regardless of whether the
+  // surrounding content would otherwise fit together (e.g. a two-part
+  // riddle that's meant to land as two separate reveals, not just two
+  // paragraphs that happen to both fit on screen at once).
   const pages = [];
-  let currentPage = [];
-  elements.forEach((el) => {
-    container.appendChild(el);
-    currentPage.push(el);
-    if (container.scrollHeight > container.clientHeight + 1 && currentPage.length > 1) {
-      container.removeChild(el);
-      pages.push(currentPage.slice(0, -1));
-      currentPage = [el];
-      container.appendChild(el);
-    }
+  lines.forEach((line) => {
+    const forcedSegments = String(line).split(/\n{3,}/);
+    forcedSegments.forEach((segment) => {
+      const paragraphs = segment.split(/\n\s*\n/);
+      const elements = paragraphs.flatMap((p) => splitToFit(container, p, className));
+
+      let currentPage = [];
+      elements.forEach((el) => {
+        container.appendChild(el);
+        currentPage.push(el);
+        if (container.scrollHeight > container.clientHeight + 1 && currentPage.length > 1) {
+          container.removeChild(el);
+          pages.push(currentPage.slice(0, -1));
+          currentPage = [el];
+          container.appendChild(el);
+        }
+      });
+      pages.push(currentPage);
+    });
   });
-  pages.push(currentPage);
 
   container.innerHTML = "";
   return pages;
@@ -1451,7 +1462,15 @@ function showVnPage(index) {
   const container = document.getElementById(vnPageContainerId);
   container.innerHTML = "";
   vnPages[index].forEach((el) => container.appendChild(el));
-  document.getElementById("vn-continue-indicator").classList.toggle("hidden", index >= vnPages.length - 1);
+  const onLastPage = index >= vnPages.length - 1;
+  document.getElementById("vn-continue-indicator").classList.toggle("hidden", onLastPage);
+  // The document modal's "Pick up" button is the end-of-reading action, not
+  // a persistent footer button - it should only appear once every page of
+  // the intro text has actually been read, same as the continue indicator
+  // disappearing signals "nothing left to click through". Harmless to
+  // toggle even during ordinary dialogue pagination, since the button lives
+  // inside #vn-document-set, which stays hidden for plain dialogue anyway.
+  document.getElementById("btn-document-take").classList.toggle("hidden", !onLastPage);
 }
 
 function setupPagination(containerId, lines, className) {
@@ -1479,6 +1498,31 @@ function advanceVnPageOrClose() {
 }
 
 document.getElementById("vn-continue-indicator").addEventListener("click", advanceVnPageOrClose);
+
+// Spacebar for "click to continue" - the VN dialogue box already gets this
+// via Overworld's own keydown handler (only active while a zone is
+// running), but every other "click to continue"/"I'm Ready" button in the
+// app (reveal acts, cutscene pagination, staged-scene ready prompts, the
+// desk ready-check) lives outside Overworld entirely and never had a
+// keyboard binding at all - spacebar did nothing on those screens. One
+// shared class plus one global listener covers all of them without
+// needing to remember to wire each button individually.
+window.addEventListener("keydown", (e) => {
+  if (e.key !== " " || e.repeat) return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA") return; // don't hijack typing (e.g. the Finale's answer box)
+  // The VN panel's own advance already runs through Overworld's handler
+  // when it's active; avoid double-firing by skipping here while it's open.
+  const vnOpen = !document.getElementById("vn-panel").classList.contains("hidden");
+  if (vnOpen) return;
+  const btn = Array.from(document.querySelectorAll(".js-continue-btn")).find(
+    (b) => !b.disabled && b.offsetParent !== null
+  );
+  if (btn) {
+    e.preventDefault();
+    btn.click();
+  }
+});
 
 // --- Scripted multi-speaker dialogue (staged scenes) ---
 // Reuses the same VN panel as ordinary NPC dialogue, but each page can
@@ -2263,6 +2307,34 @@ function closeTableModal() {
 document.getElementById("btn-close-table").addEventListener("click", closeTableModal);
 document.getElementById("btn-close-table-2").addEventListener("click", closeTableModal);
 
+// --- The Attendees reference: who's who, no evidence or suspect status
+// attached. Loaded once from interactions.json, same as the vote data above.
+let attendeeBiosData = null;
+(async () => {
+  const data = await getInteractions();
+  attendeeBiosData = data.attendeeBios || [];
+})();
+
+function openAttendeesModal() {
+  const list = document.getElementById("attendees-list");
+  list.innerHTML = "";
+  (attendeeBiosData || []).forEach((person) => {
+    const row = document.createElement("div");
+    row.className = "attendee-row";
+    row.innerHTML = `<span class="attendee-name">${person.name}</span><span class="attendee-blurb">${person.blurb}</span>`;
+    list.appendChild(row);
+  });
+  document.getElementById("modal-attendees").classList.remove("hidden");
+}
+
+function closeAttendeesModal() {
+  document.getElementById("modal-attendees").classList.add("hidden");
+}
+
+document.getElementById("btn-review-attendees").addEventListener("click", openAttendeesModal);
+document.getElementById("btn-close-attendees").addEventListener("click", closeAttendeesModal);
+document.getElementById("btn-close-attendees-2").addEventListener("click", closeAttendeesModal);
+
 // --- The ready-check at the desk, once everything's been found ---
 function openReadyCheckModal() {
   document.getElementById("ready-check-progress").textContent = "";
@@ -2598,8 +2670,25 @@ socket.on("board:submitProgress", ({ ready, total }) => {
   if (ready === 0) resetBoardSubmitButton();
 });
 
+// Thorne's hint text reads as a single spoken line, so it should never
+// visually wrap mid-sentence the way a paragraph would - it should stay on
+// one line even if that means shrinking to fit the board panel. Rather than
+// pick one font-size that happens to fit today's longest line and breaks
+// the next time a longer one is written, this steps the size down until it
+// actually fits the available width, then stops.
+function fitTextToOneLine(el, maxPx = 14, minPx = 9) {
+  el.style.whiteSpace = "nowrap";
+  let size = maxPx;
+  el.style.fontSize = `${size}px`;
+  while (el.scrollWidth > el.clientWidth && size > minPx) {
+    size -= 1;
+    el.style.fontSize = `${size}px`;
+  }
+}
+
 socket.on("board:result", (data) => {
   const fb = document.getElementById("board-feedback");
+  fb.style.fontSize = "";
   if (data.correct) {
     fb.className = "feedback correct";
     fb.textContent = "\"...Yes. That's it. Good work.\"";
@@ -2609,4 +2698,5 @@ socket.on("board:result", (data) => {
     resetBoardSubmitButton();
     document.getElementById("board-submit-progress").textContent = "";
   }
+  fitTextToOneLine(fb);
 });
