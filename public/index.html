@@ -27,24 +27,48 @@
     <p class="hint-text" style="text-align:center;margin-top:20px">Rejoining your case...</p>
   </section>
 
+  <!-- SCREEN: Invitation (shown only when arriving via a shared invite
+       link, i.e. ?code=XXXX in the URL. Skipped entirely for the host's
+       own Host/Join entry point and for anyone resuming a saved session.) -->
+  <section id="screen-invite" class="screen">
+    <div class="seal">&#9993;</div>
+    <div class="card invite-card">
+      <p class="eyebrow">House Duskmere</p>
+      <h2>You Are Cordially Invited</h2>
+      <p>
+        requests the pleasure of your company at a gala celebrating the
+        completion of the latest repairs to Tiragarde Sound.
+      </p>
+      <p class="invite-italic">
+        Tonight, at the Duskmere Estate.<br />
+        Champions of Azeroth are cordially invited.
+      </p>
+      <button id="btn-accept-invite" class="btn btn-primary">Accept Invitation</button>
+    </div>
+  </section>
+
   <!-- SCREEN: Landing -->
   <section id="screen-landing" class="screen active">
     <div class="seal">&#9993;</div>
 
-    <div class="landing-bento">
+    <div class="landing-bento" id="landing-bento">
       <div class="card card-wide">
         <h2>Create Your Champion</h2>
-        <label>Your name</label>
-        <input id="input-name" type="text" maxlength="24" placeholder="Detective Nightingale" />
+        <div class="character-card-body">
+          <div class="character-options">
+            <label>Your name</label>
+            <input id="input-name" type="text" maxlength="24" placeholder="Detective Nightingale" />
 
-        <label>Model</label>
-        <div class="height-toggle" id="gender-row"></div>
+            <label>Model</label>
+            <div class="height-toggle" id="gender-row"></div>
 
-        <label>Colour</label>
-        <div class="swatch-row" id="preset-row"></div>
+            <label>Colour</label>
+            <div class="swatch-row" id="preset-row"></div>
+          </div>
 
-        <div class="avatar-preview-wrap">
-          <canvas id="avatar-preview" width="160" height="213"></canvas>
+          <div class="avatar-preview-wrap">
+            <canvas id="avatar-preview" width="160" height="213"></canvas>
+          </div>
         </div>
       </div>
 
@@ -63,20 +87,43 @@
         </div>
       </div>
     </div>
+
+    <!-- Shown instead of the Host/Join cards above when arriving via a
+         shared invite link - the code travels in the URL, so there's
+         nothing to type. -->
+    <div class="card invite-join-card hidden" id="landing-invite-action">
+      <h2>Join the Gala</h2>
+      <p>Your invitation is confirmed. Step through when you're ready.</p>
+      <div id="invite-join-error" class="error-text"></div>
+      <button id="btn-join-invite" class="btn btn-primary">Enter the Estate</button>
+    </div>
   </section>
 
-  <!-- SCREEN: Lobby -->
+  <!-- SCREEN: Lobby (the gala's waiting room) -->
   <section id="screen-lobby" class="screen">
-    <p class="eyebrow">Case Code</p>
-    <div class="room-code" id="room-code-display">-----</div>
-    <p class="hint-text">Share this code with your table. Everyone joins from the same link.</p>
+    <div class="seal">&#9993;</div>
+    <p class="eyebrow">House Duskmere</p>
+    <p class="subtitle">The gala is gathering.</p>
+    <p class="hint-text" id="guest-count-text">Guests arrived: 0</p>
+
+    <div class="lobby-pen-wrap">
+      <canvas id="lobby-pen-canvas"></canvas>
+    </div>
+    <p class="hint-text">Walk around with WASD or the arrow keys while you wait.</p>
 
     <div class="player-roster" id="player-roster"></div>
 
     <div id="host-controls" class="host-controls hidden">
-      <button id="btn-start" class="btn btn-primary">Begin the Case</button>
+      <button id="btn-start" class="btn btn-primary">Begin the Gala</button>
     </div>
-    <p id="waiting-text" class="hint-text">Waiting for the host to begin...</p>
+    <p id="waiting-text" class="hint-text">The evening is about to begin...</p>
+
+    <details class="lobby-code-details">
+      <summary>Case code (for reference)</summary>
+      <div class="room-code" id="room-code-display">-----</div>
+      <p class="hint-text">Share this code, or the invite link that already contains it, with anyone still joining.</p>
+    </details>
+
     <button id="btn-leave-lobby" class="btn btn-secondary" style="margin-top:16px">Not you? Leave this game</button>
   </section>
 

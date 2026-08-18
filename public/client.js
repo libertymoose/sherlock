@@ -31,6 +31,10 @@ let state = {
   hostId: null,
   myGender: "male",
   myColor: "red",
+  // Set when the page is opened via a shared invite link (?code=XXXX).
+  // The code travels in the URL so an invited guest never has to type or
+  // even see it - see boot() below.
+  inviteCode: null,
 };
 
 // --- Session persistence across disconnects/refreshes ---
@@ -138,6 +142,14 @@ function showScreen(id) {
     // container size just changed; let the canvas catch up once the browser has laid it out
     requestAnimationFrame(() => Overworld.resize());
   }
+  if (id === "screen-lobby") {
+    // Same reasoning as the Overworld.resize() call above - the canvas
+    // needs the browser to have actually laid out the now-visible screen
+    // before measuring its size.
+    requestAnimationFrame(() => LobbyPen.start());
+  } else {
+    LobbyPen.stop();
+  }
 }
 
 // --- Character creation (shared by host + joining players) ---
@@ -190,6 +202,267 @@ loadBaseManifest().then(() => {
   refreshPreview();
 });
 
+// --- Waiting room pen ---
+// No map, no collision, just an open area for characters to walk around
+// in before the host begins - deliberately a small standalone system
+// rather than pulling in the full Overworld tile engine, which needs an
+// actual Tiled map, tilesets, and collision data none of which exist for
+// this yet. Reuses the same character sprite sheets/manifest convention
+// (cell/cols/rows, direction rows down/left/right/up) as overworld.js's
+// drawFrame/drawPlayer, just with its own small drawing/update loop and
+// no world scale, since there's no tile grid to scale against here - the
+// canvas's own pixel bounds ARE the boundary, nothing beyond it exists.
+const LobbyPen = (() => {
+  const PLAYER_DIR_ROW = { down: 0, left: 1, right: 2, up: 3 };
+  const MOVE_SPEED = 200; // px/sec, plain canvas pixel space
+  const WALK_FPS = 9;
+  const DRAW_SIZE = 84;
+
+  let canvas = null;
+  let ctx = null;
+  let running = false;
+  let rafId = null;
+  let lastTime = null;
+  const keys = {};
+  const imgCache = {};
+
+  const me = { x: 0, y: 0, dir: "down", moving: false, frame: 0, animTimer: 0 };
+  let lastSent = null;
+  let lastSentAt = 0;
+
+  // socketId -> { x, y, dispX, dispY, dir, moving, frame, animTimer }.
+  // dispX/dispY are the eased values actually drawn each frame, x/y are
+  // the latest position received over the network (sent at most every
+  // 80ms, same throttle as the real overworld) - without easing, remote
+  // players would visibly hitch between updates instead of gliding.
+  const remote = {};
+
+  function getImg(src) {
+    if (!imgCache[src]) {
+      const img = new Image();
+      img.src = src;
+      imgCache[src] = img;
+    }
+    return imgCache[src];
+  }
+
+  function clampToBounds(x, y) {
+    const margin = DRAW_SIZE / 2;
+    return {
+      x: Math.min(Math.max(x, margin), Math.max(margin, canvas.width - margin)),
+      y: Math.min(Math.max(y, margin), Math.max(margin, canvas.height - margin)),
+    };
+  }
+
+  function resize() {
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    if (canvas.width !== rect.width || canvas.height !== rect.height) {
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      const clamped = clampToBounds(me.x, me.y);
+      me.x = clamped.x;
+      me.y = clamped.y;
+    }
+  }
+
+  function defaultSpot(index) {
+    if (!canvas || canvas.width <= 0) return { x: 60, y: 60 };
+    const cols = Math.max(1, Math.floor((canvas.width - 40) / 90));
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    return {
+      x: Math.min(canvas.width - DRAW_SIZE / 2, 50 + col * 90),
+      y: Math.min(canvas.height - DRAW_SIZE / 2, 50 + row * 70),
+    };
+  }
+
+  function handleKeyDown(e) {
+    keys[e.key.toLowerCase()] = true;
+  }
+  function handleKeyUp(e) {
+    keys[e.key.toLowerCase()] = false;
+  }
+
+  function sendPosition() {
+    const now = performance.now();
+    const changed = !lastSent ||
+      Math.abs(lastSent.x - me.x) > 0.5 ||
+      Math.abs(lastSent.y - me.y) > 0.5 ||
+      lastSent.dir !== me.dir ||
+      lastSent.moving !== me.moving;
+    if (changed && now - lastSentAt > 80) {
+      lastSentAt = now;
+      lastSent = { x: me.x, y: me.y, dir: me.dir, moving: me.moving };
+      socket.emit("lobby:move", lastSent);
+    }
+  }
+
+  function update(dt) {
+    let dx = 0, dy = 0;
+    if (keys["arrowup"] || keys["w"]) dy -= 1;
+    if (keys["arrowdown"] || keys["s"]) dy += 1;
+    if (keys["arrowleft"] || keys["a"]) dx -= 1;
+    if (keys["arrowright"] || keys["d"]) dx += 1;
+
+    const moving = dx !== 0 || dy !== 0;
+    if (moving) {
+      const len = Math.sqrt(dx * dx + dy * dy);
+      const stepX = (dx / len) * MOVE_SPEED * dt;
+      const stepY = (dy / len) * MOVE_SPEED * dt;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        me.dir = dx > 0 ? "right" : "left";
+      } else if (dy !== 0) {
+        me.dir = dy > 0 ? "down" : "up";
+      }
+      const clamped = clampToBounds(me.x + stepX, me.y + stepY);
+      me.x = clamped.x;
+      me.y = clamped.y;
+    }
+    me.moving = moving;
+
+    me.animTimer += dt;
+    if (moving) {
+      if (me.animTimer > 1 / WALK_FPS) {
+        me.animTimer = 0;
+        me.frame++;
+      }
+    } else {
+      me.frame = 0;
+      me.animTimer = 0;
+    }
+
+    Object.values(remote).forEach((r) => {
+      r.dispX += (r.x - r.dispX) * Math.min(1, dt * 10);
+      r.dispY += (r.y - r.dispY) * Math.min(1, dt * 10);
+      r.animTimer += dt;
+      if (r.moving) {
+        if (r.animTimer > 1 / WALK_FPS) {
+          r.animTimer = 0;
+          r.frame++;
+        }
+      } else {
+        r.frame = 0;
+        r.animTimer = 0;
+      }
+    });
+
+    sendPosition();
+  }
+
+  function drawCharacter(gender, color, x, y, dir, moving, frame) {
+    if (!BASE_MANIFEST) return;
+    const genderManifest = BASE_MANIFEST[gender] || BASE_MANIFEST.male;
+    const entry = genderManifest[color] || genderManifest.red;
+    if (!entry) return;
+    const frameSet = moving ? entry.walk : entry.idle;
+    const img = getImg(frameSet.src);
+    if (!img.complete || !img.naturalWidth) return;
+    const cell = frameSet.cell;
+    const cols = frameSet.cols;
+    const col = (moving ? frame : 0) % cols;
+    const row = Math.min(PLAYER_DIR_ROW[dir] ?? 0, (frameSet.rows || 1) - 1);
+    ctx.drawImage(
+      img, col * cell, row * cell, cell, cell,
+      Math.round(x - DRAW_SIZE / 2), Math.round(y - DRAW_SIZE), DRAW_SIZE, DRAW_SIZE
+    );
+  }
+
+  function render() {
+    if (!canvas || !ctx) return;
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = "#2e222f";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const entries = [{ isMe: true, x: me.x, y: me.y, dir: me.dir, moving: me.moving, frame: me.frame }];
+    (currentPlayers || []).forEach((p) => {
+      if (p.id === state.myId || !p.connected) return;
+      const r = remote[p.id];
+      if (!r) return;
+      entries.push({
+        isMe: false, x: r.dispX, y: r.dispY, dir: r.dir, moving: r.moving, frame: r.frame,
+        gender: p.gender, color: p.color,
+      });
+    });
+    entries.sort((a, b) => a.y - b.y);
+    entries.forEach((e) => {
+      if (e.isMe) drawCharacter(state.myGender, state.myColor, e.x, e.y, e.dir, e.moving, e.frame);
+      else drawCharacter(e.gender || "male", e.color || "red", e.x, e.y, e.dir, e.moving, e.frame);
+    });
+  }
+
+  function loop(ts) {
+    if (!running) return;
+    if (lastTime == null) lastTime = ts;
+    const dt = Math.min(0.1, (ts - lastTime) / 1000);
+    lastTime = ts;
+    update(dt);
+    render();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  return {
+    start() {
+      canvas = document.getElementById("lobby-pen-canvas");
+      if (!canvas) return;
+      ctx = canvas.getContext("2d");
+      resize();
+      if (me.x === 0 && me.y === 0 && canvas.width > 0) {
+        me.x = canvas.width / 2;
+        me.y = canvas.height / 2;
+      }
+      if (!running) {
+        window.addEventListener("resize", resize);
+        window.addEventListener("keydown", handleKeyDown);
+        window.addEventListener("keyup", handleKeyUp);
+      }
+      running = true;
+      lastTime = null;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(loop);
+    },
+    stop() {
+      running = false;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      for (const k in keys) keys[k] = false;
+    },
+    // Called from the room:update handler - seeds a starting spot for any
+    // newly-seen player (server's last-known position if there is one,
+    // otherwise a deterministic scattered spot so nobody stacks exactly
+    // on top of anybody else) and drops anyone no longer connected.
+    onRoomUpdate(players, positions) {
+      (players || []).forEach((p, i) => {
+        if (p.id === state.myId || !p.connected) return;
+        if (!remote[p.id]) {
+          const known = positions && positions[p.id];
+          const spot = known || defaultSpot(i);
+          remote[p.id] = {
+            x: spot.x, y: spot.y, dispX: spot.x, dispY: spot.y,
+            dir: (known && known.dir) || "down", moving: false, frame: 0, animTimer: 0,
+          };
+        }
+      });
+      Object.keys(remote).forEach((id) => {
+        if (!(players || []).some((p) => p.id === id && p.connected)) delete remote[id];
+      });
+    },
+    onRemoteMove(data) {
+      if (!data || !data.id || data.id === state.myId) return;
+      const r = remote[data.id];
+      if (!r) return; // not seeded yet - the next room:update will pick it up
+      r.x = data.x;
+      r.y = data.y;
+      r.dir = data.dir || "down";
+      r.moving = !!data.moving;
+    },
+  };
+})();
+
 // --- Landing screen ---
 document.getElementById("btn-host").addEventListener("click", () => {
   const name = document.getElementById("input-name").value.trim() || "Detective";
@@ -205,11 +478,13 @@ document.getElementById("btn-host").addEventListener("click", () => {
   });
 });
 
-document.getElementById("btn-join").addEventListener("click", () => {
-  const name = document.getElementById("input-name").value.trim() || "Detective";
-  const code = document.getElementById("input-code").value.trim().toUpperCase();
-  const errorEl = document.getElementById("join-error");
+// Shared by the manual "Join a Case" card and the invite-link "Join the
+// Gala" button below - same server call, same success/failure handling,
+// just a different source for the code and a different place to show an
+// error.
+function joinRoomWithCode(code, errorEl) {
   errorEl.textContent = "";
+  const name = document.getElementById("input-name").value.trim() || "Detective";
 
   if (!code) {
     errorEl.textContent = "Enter the case code your host shared.";
@@ -234,12 +509,48 @@ document.getElementById("btn-join").addEventListener("click", () => {
     // race against it.
     if (!res.started) showScreen("screen-lobby");
   });
+}
+
+document.getElementById("btn-join").addEventListener("click", () => {
+  const code = document.getElementById("input-code").value.trim().toUpperCase();
+  joinRoomWithCode(code, document.getElementById("join-error"));
+});
+
+// --- Invitation screen (arrivals via a shared ?code=XXXX link) ---
+document.getElementById("btn-accept-invite").addEventListener("click", () => {
+  document.getElementById("landing-bento").classList.add("invite-mode");
+  document.getElementById("landing-invite-action").classList.remove("hidden");
+  showScreen("screen-landing");
+});
+
+document.getElementById("btn-join-invite").addEventListener("click", () => {
+  joinRoomWithCode(state.inviteCode, document.getElementById("invite-join-error"));
 });
 
 // --- Lobby / room updates ---
 let currentPlayers = [];
 
-attemptResume();
+// A saved session (returning player, refreshed tab) always wins over an
+// invite link in the URL - attemptResume() handles that path exactly as
+// before. Only when there's no session to resume do we check whether this
+// is a fresh arrival from a shared invite link (?code=XXXX) and route to
+// the invitation screen instead of the plain Host/Join landing screen.
+// Anyone opening the site with no session and no code param (i.e. the
+// host, going to the site directly) sees the landing screen unchanged.
+function boot() {
+  const urlCode = new URLSearchParams(location.search).get("code");
+  if (urlCode) state.inviteCode = urlCode.toUpperCase().trim();
+
+  const session = loadSession();
+  if (session && session.code && session.token) {
+    attemptResume();
+    return;
+  }
+  if (state.inviteCode) {
+    showScreen("screen-invite");
+  }
+}
+boot();
 
 socket.on("room:update", (data) => {
   state.myId = socket.id;
@@ -259,6 +570,8 @@ socket.on("room:update", (data) => {
   }
 
   document.getElementById("room-code-display").textContent = data.code;
+  document.getElementById("guest-count-text").textContent = `Guests arrived: ${data.players.length}`;
+  LobbyPen.onRoomUpdate(data.players, data.lobbyPositions);
 
   if (typeof Overworld !== "undefined" && Overworld.setRoster) {
     Overworld.setRoster(data.players, socket.id);
@@ -298,6 +611,8 @@ socket.on("room:update", (data) => {
 document.getElementById("btn-start").addEventListener("click", () => {
   socket.emit("host:startGame");
 });
+
+socket.on("lobby:move", (data) => LobbyPen.onRemoteMove(data));
 
 function leaveGame() {
   socket.emit("player:leave");

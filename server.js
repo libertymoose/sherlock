@@ -127,6 +127,7 @@ function broadcastRoomState(code) {
     started: room.started,
     players: publicPlayerList(room),
     storyTitle: STORY.title,
+    lobbyPositions: room.lobbyPositions || {},
   });
 }
 
@@ -655,6 +656,7 @@ function remapSocketId(room, oldId, newId) {
   rekey(room.players);
   if (room.players[newId]) room.players[newId].id = newId;
   rekey(room.inventories);
+  rekey(room.lobbyPositions);
   if (room.actState) {
     rekey(room.actState.solvedBy);
     rekey(room.actState.ackBy);
@@ -839,6 +841,13 @@ io.on("connection", (socket) => {
       // puzzle type is behind a given barrier, it just adds a second,
       // always-open layer on top. Same resync-on-entry pattern as the rest.
       zoneForcedOpenBarriers: {},
+      // socketId -> { x, y, dir, moving }. Live positions for the
+      // pre-game waiting room's walkable pen (no map, no collision, just
+      // an open area for characters to mill around in before the host
+      // begins). Only meaningful while room.started is false - see
+      // lobby:move below. Not persisted anywhere beyond the room's own
+      // lifetime, same as everything else here.
+      lobbyPositions: {},
     };
     const room = rooms[code];
     const token = genToken();
@@ -973,6 +982,23 @@ io.on("connection", (socket) => {
     room.actIndex = 0;
     sendActToRoom(code);
     broadcastRoomState(code);
+  });
+
+  // Pre-game waiting room only: no map, no collision, just live position
+  // broadcast so guests see each other milling around the pen before the
+  // host begins. Deliberately a no-op once the game has actually started -
+  // that's the overworld engine's job from there, this is just the lobby.
+  socket.on("lobby:move", (data) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || room.started || !room.players[socket.id]) return;
+    const x = Number(data && data.x);
+    const y = Number(data && data.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const dir = ["down", "left", "right", "up"].includes(data && data.dir) ? data.dir : "down";
+    const moving = !!(data && data.moving);
+    room.lobbyPositions[socket.id] = { x, y, dir, moving };
+    socket.to(code).emit("lobby:move", { id: socket.id, x, y, dir, moving });
   });
 
   socket.on("host:advanceAct", () => {
@@ -2008,6 +2034,7 @@ io.on("connection", (socket) => {
     const zone = room.players[socket.id].zone || "estate";
     delete room.players[socket.id];
     delete room.inventories[socket.id];
+    delete room.lobbyPositions[socket.id];
     if (room.actState) {
       delete room.actState.solvedBy[socket.id];
       delete room.actState.ackBy[socket.id];

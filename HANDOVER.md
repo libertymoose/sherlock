@@ -1,17 +1,168 @@
-# Handover — A Study in Boralus, picking up after v123
+# Handover — A Study in Boralus, picking up after v125
 
-This replaces the earlier handover from v122. Paste this as the first
-message in a new chat, then attach the v123 zip.
+This replaces the earlier handover from v122 (v123's own testing pass
+hadn't happened yet when this was written). Paste this as the first
+message in a new chat, then attach the v125 zip.
 
 ## Where things actually stand
 
-- **v123 is packaged and validated** (JSON-parsed everything under
-  `content/` and `public/assets/maps/`, `node --check` on all three JS
-  files, em-dash grep clean) but has **not been confirmed live by Elle
-  yet**.
-- This was a very large bug-fix pass covering Acts 1 through 4, spanning
-  several sessions worth of reports all resolved together. Keep
-  incrementing normally (v124 next) from here.
+- **v123's Act 1-4 bug-fix pass is still not confirmed live by Elle.**
+  Everything in the "v123" section below is unchanged from that handover
+  and still needs her test pass before it's trusted.
+- **v124 added the invite-link + waiting room flow.** v125 reworks the
+  character-creation layout and replaces the static waiting room with a
+  walkable pen. See "v125" below for what's new; the v124 section right
+  after it is unchanged except where v125 explicitly touches it.
+- Packaged and validated (JSON parse, `node --check` on all three JS
+  files, CSS brace balance, em-dash grep, all clean). **Not yet tested
+  live.** No collision/map changes in this delivery (the pen has no
+  collision by design), so no BFS reachability check applies.
+- Keep incrementing normally (v126 next) from here.
+
+## v125: Character creation layout + walkable waiting room
+
+### Character creation layout
+- `.card-wide`'s contents split into `.character-options` (name/model/
+  colour) and the existing `.avatar-preview-wrap`, both inside a new
+  `.character-card-body` wrapper. IDs unchanged (`input-name`,
+  `gender-row`, `preset-row`, `avatar-preview`), so nothing downstream in
+  `client.js` needed touching.
+- **Host mode (unchanged look):** `.character-card-body` stays `display:
+  block`, same stacked layout as before - it sits in one half of a
+  two-column bento next to Host/Join, not enough width for a side-by-side
+  split there.
+- **Invite mode (new layout):** once the Host/Join cards are hidden
+  (`.landing-bento.invite-mode`), the card gets the full page width.
+  `.character-card-body` becomes a centered flex row: customization
+  options on the left, the avatar/character panel on the right, both
+  wrapped and centered as one ~560px-wide composition. The "Join the
+  Gala" button (`#landing-invite-action`) sits centered below the whole
+  card, unchanged in function, just visually now reads as "bottom
+  center" beneath the two-column layout above it.
+
+### Walkable waiting room
+Replaces v124's static roster-only lobby with a small walkable pen above
+the roster. Deliberately **not** built on the Overworld tile engine - no
+map exists for this yet, and the ask was explicitly "no collision needed,
+just a boundary the size of the game window," so this is a standalone,
+much smaller system:
+
+- **New `LobbyPen` module in `client.js`.** Reuses the same character
+  sprite manifest (`BASE_MANIFEST`, already loaded for the avatar
+  preview) and the same direction-row/frame-grid convention as
+  `overworld.js`'s `drawFrame`/`drawPlayer` (down/left/right/up rows,
+  walk vs idle frame sets), but with its own tiny update/render loop
+  running on `#lobby-pen-canvas`. No tiles, no collision grid - the
+  canvas's own pixel bounds are the boundary, movement is just clamped to
+  stay inside them.
+- **Movement:** WASD/arrow keys, same key-handling and diagonal-movement
+  math as `overworld.js`'s `update()` (horizontal wins ties), at 200px/sec
+  in plain canvas pixel space (no world-scale concept here).
+- **Multiplayer sync, server side (`server.js`):** new
+  `room.lobbyPositions` (socketId -> {x,y,dir,moving}), following the
+  exact same lifecycle pattern as `room.inventories` - initialized in
+  `host:createRoom`, remapped on reconnect in `remapSocketId`, cleaned up
+  in `player:leave`, included in every `broadcastRoomState` payload as a
+  snapshot. New `lobby:move` handler relays a player's position to
+  everyone else in the room; deliberately a no-op once `room.started` is
+  true, since gameplay movement is the Overworld engine's job from there.
+- **Multiplayer sync, client side:** `LobbyPen.onRoomUpdate()` seeds a
+  starting spot for any newly-seen player (the server's last-known
+  position if there is one, otherwise a deterministic scattered spot so
+  nobody stacks exactly on top of anybody else) and drops anyone no
+  longer connected. `LobbyPen.onRemoteMove()` updates a remote player's
+  network-target position on every `lobby:move` event; a per-frame ease
+  (`dispX`/`dispY` chasing `x`/`y`) smooths the visible motion between the
+  ~80ms-throttled updates instead of visibly hitching.
+- **Lifecycle:** `LobbyPen.start()`/`stop()` are wired into `showScreen()`
+  itself - starts whenever `screen-lobby` becomes active, stops on every
+  other screen transition (game start, leaving the lobby, reconnecting,
+  etc). No screen-specific handler elsewhere needed to remember this.
+- **Own colour/gender always read live** from `state.myGender`/
+  `state.myColor` at draw time rather than being baked in on start, so a
+  player still adjusting their look while standing in the pen (entirely
+  possible, character creation and the pen are the same screen-adjacent
+  flow) sees it update immediately, same as the existing avatar-preview
+  canvas already does.
+
+**Not yet tested live:** the whole pen, especially with more than 2-3
+simultaneous connections (untested at real 6-10 player scale), and the
+character-creation layout on an actual narrow/mobile viewport (checked
+the CSS logically but not in a real browser at small widths).
+
+**Explicitly still deferred:** a real Tiled-authored waiting-room map
+(courtyard, actual art) replacing this blank pen - this was the
+walkable-map option from the original discussion, intentionally not
+built yet. Whenever that map exists, swapping it in would mean either
+extending `LobbyPen` with real tile/collision data or migrating this
+whole feature onto the Overworld engine properly - worth deciding which
+at that point rather than assuming.
+
+---
+
+## v124: Invite link and waiting room (superseded in part by v125 above -
+## the invite-link mechanism below is unchanged, the "waiting room" it
+## refers to is the earlier static version, now replaced)
+
+Picks up the concept discussed in an earlier chat: guests should arrive
+through an invitation, not a Host/Join screen, with a "waiting room" for
+character creation before the gala begins. Implemented as a lighter-touch
+version of that original plan, chosen deliberately over a bigger rebuild:
+
+- **No server changes.** `host:createRoom` / `player:joinRoom` / the
+  reconnect-token system are untouched. The host still clicks "Host a New
+  Game" and gets a code exactly like before - the only difference is she
+  now shares a link with the code baked in (`?code=F4K2Q`) instead of
+  reading the code aloud. Chosen over building a persistent pre-created
+  session system, since the existing room/token flow already does
+  everything needed here with zero risk of regressing something that
+  currently works.
+- **New `#screen-invite` screen** (`index.html`): a House Duskmere
+  invitation card, styled entirely with existing classes (`.card`,
+  `.seal`, `.eyebrow`, `.btn-primary`), added to the Nyx out-of-game
+  palette scope alongside landing/lobby. One button, "Accept Invitation."
+- **Boot logic** (`client.js`, `boot()`): checks `?code=` in the URL on
+  load. A saved session (returning player, refreshed tab) always wins and
+  goes through the existing `attemptResume()` path unchanged. Only a
+  fresh arrival with no session and a code param gets routed to
+  `screen-invite`. Anyone opening the site directly with no code param
+  (the host) sees the plain landing screen exactly as before.
+- **Landing screen, invite mode:** "Accept Invitation" doesn't skip
+  character creation - it reveals the same name/gender/colour card
+  already used by both Host and Join, just hides the Host/Join cards
+  (`.landing-bento.invite-mode` collapses to one column) and swaps in a
+  single "Join the Gala" card that joins using the code from the URL, no
+  typing required.
+- **`joinRoomWithCode()` helper:** the manual "Join a Case" button's
+  original logic was extracted into a shared function so the invite-flow
+  join button reuses the exact same success/error handling rather than
+  duplicating it.
+- **Waiting room reskin** (`screen-lobby`): reused as-is functionally
+  (same roster sync, same host "Begin" gating), reworded to gala framing
+  ("The gala is gathering," "Guests arrived: N" live count, "Begin the
+  Gala"). The case code moved behind a `<details>` toggle, kept for the
+  host's own reference rather than removed outright, but no longer
+  front-and-center for guests who don't need to see or share it.
+
+**Explicitly deferred, per Elle's decision this session:** a walkable
+waiting-room map (players see each other's characters arriving in a
+courtyard before the gala starts) instead of this static screen. Elle may
+build a Tiled map for this later; picking it up would mean teaching the
+overworld engine to run a zone with no puzzle/act attached and a
+host-only "Begin" trigger, real new scope, not a small add-on to what
+shipped here.
+
+**Not yet tested live:** the whole flow above, especially the boot-order
+interaction between a saved session and a `?code=` URL param, and the
+`joinRoomWithCode` extraction (behavior should be identical to the old
+inline `btn-join` handler, but worth confirming the manual Join card
+still works exactly as before now that the code moved into a shared
+function).
+
+---
+
+## v123 (still unconfirmed - everything below is unchanged from the
+## previous handover)
 
 ## What's fixed and validated in this handover's scope
 
