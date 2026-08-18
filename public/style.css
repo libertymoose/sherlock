@@ -665,6 +665,61 @@ input[type="text"]:focus {
   text-shadow: 0 0 2px #2a120c, 0 1px 1px #2a120c, 0 -1px 1px #2a120c, 1px 0 1px #2a120c, -1px 0 1px #2a120c;
 }
 
+/* The Finale's accusation puzzle - a narrated passage (reuses
+   .fragment-card, hence the italic default) with word-bank blanks below
+   it. Unfilled blanks read as a dim placeholder; filled ones flip to
+   upright, bright text so the chosen words visually pop out of the
+   surrounding italic narration. */
+.finale-passage p {
+  text-align: left;
+  font-size: 17px;
+}
+.finale-blank-fill {
+  font-style: normal;
+  color: var(--parchment-dim);
+}
+.finale-blank-fill.filled {
+  color: var(--candle-bright);
+  font-weight: 600;
+}
+
+.finale-tray-wrap {
+  margin-top: 22px;
+}
+.finale-tray-section {
+  margin-bottom: 18px;
+}
+.finale-tray-label {
+  color: var(--candle);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 12px;
+  margin: 0 0 8px;
+  text-align: center;
+}
+.finale-tray-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.finale-chip {
+  padding: 8px 14px;
+  background: var(--ink);
+  border: 1px solid rgba(var(--parchment-rgb),0.25);
+  color: var(--parchment);
+  border-radius: var(--radius);
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: center;
+}
+.finale-chip.active {
+  border-color: var(--candle);
+  color: var(--candle-bright);
+  background: rgba(var(--candle-rgb),0.1);
+}
+
 .sync-banner {
   background: rgba(var(--candle-rgb),0.12);
   border: 1px solid rgba(var(--candle-rgb),0.4);

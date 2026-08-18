@@ -788,6 +788,8 @@ socket.on("act:show", (act) => {
     renderSplitPuzzle(container, act);
   } else if (act.type === "final") {
     renderFinal(act);
+  } else if (act.type === "finale_accusation") {
+    renderFinaleAccusation(container, act);
   }
 });
 
@@ -945,6 +947,128 @@ function renderGroupPuzzle(container, act) {
   p.innerHTML = `<p>${act.prompt}</p>`;
   container.appendChild(p);
   container.appendChild(buildAnswerRow("act:submitGroup", act.hint));
+}
+
+// The Finale's accusation puzzle: a passage with 4 word-bank blanks
+// (WHO/PLANT/MOTIVE/OPPORTUNITY), filled in collaboratively by the whole
+// party (any player can set any blank, same shared-state pattern as the
+// Suspect Board), then presented together with one submit. WHO wrong gets
+// that suspect's own defense line from the server; anything else wrong
+// gets Hook's vague count, never which ones specifically.
+let finaleState = { act: null, selections: {} };
+
+function renderFinaleAccusation(container, act) {
+  finaleState.act = act;
+  finaleState.selections = act.selections || {};
+
+  if (act.introThorne) {
+    const intro = document.createElement("div");
+    intro.className = "act-body";
+    intro.innerHTML = String(act.introThorne)
+      .split("\n")
+      .filter((l) => l.trim().length)
+      .map((l) => `<p>${l}</p>`)
+      .join("");
+    container.appendChild(intro);
+  }
+
+  const passageBox = document.createElement("div");
+  passageBox.className = "fragment-card finale-passage";
+  passageBox.id = "finale-passage";
+  container.appendChild(passageBox);
+
+  const trayWrap = document.createElement("div");
+  trayWrap.className = "finale-tray-wrap";
+  trayWrap.id = "finale-tray-wrap";
+  container.appendChild(trayWrap);
+
+  const submitBtn = document.createElement("button");
+  submitBtn.className = "btn btn-primary";
+  submitBtn.id = "finale-submit-btn";
+  submitBtn.textContent = "Present Your Case";
+  submitBtn.onclick = () => socket.emit("finale:submit");
+  container.appendChild(submitBtn);
+
+  const progress = document.createElement("p");
+  progress.className = "progress-text";
+  progress.id = "finale-progress";
+  container.appendChild(progress);
+
+  const feedback = document.createElement("p");
+  feedback.className = "feedback";
+  feedback.id = "finale-feedback";
+  container.appendChild(feedback);
+
+  renderFinaleTray();
+  renderFinalePassage();
+}
+
+function renderFinalePassage() {
+  const act = finaleState.act;
+  const box = document.getElementById("finale-passage");
+  if (!box || !act) return;
+  let text = act.passageTemplate || "";
+  (act.blankOrder || []).forEach((blankKey) => {
+    const blankDef = act.blanks && act.blanks[blankKey];
+    const chosenId = finaleState.selections[blankKey];
+    const chosenOption = blankDef && (blankDef.options || []).find((o) => o.id === chosenId);
+    const filled = !!chosenOption;
+    const display = filled ? chosenOption.text : "_____";
+    text = text.split(`{${blankKey}}`).join(
+      `<span class="finale-blank-fill${filled ? " filled" : ""}">${display}</span>`
+    );
+  });
+  box.innerHTML = text
+    .split("\n")
+    .filter((l) => l.trim().length)
+    .map((l) => `<p>${l}</p>`)
+    .join("");
+}
+
+function renderFinaleTray() {
+  const act = finaleState.act;
+  const wrap = document.getElementById("finale-tray-wrap");
+  if (!wrap || !act) return;
+  wrap.innerHTML = "";
+
+  (act.blankOrder || []).forEach((blankKey) => {
+    const blankDef = act.blanks && act.blanks[blankKey];
+    if (!blankDef) return;
+
+    const section = document.createElement("div");
+    section.className = "finale-tray-section";
+
+    const label = document.createElement("p");
+    label.className = "finale-tray-label";
+    label.textContent = blankDef.label || blankKey;
+    section.appendChild(label);
+
+    const row = document.createElement("div");
+    row.className = "finale-tray-row";
+
+    (blankDef.options || []).forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "finale-chip";
+      if (finaleState.selections[blankKey] === opt.id) btn.classList.add("active");
+      btn.textContent = opt.text;
+      btn.onclick = () => socket.emit("finale:select", { blank: blankKey, optionId: opt.id });
+      row.appendChild(btn);
+    });
+
+    section.appendChild(row);
+    wrap.appendChild(section);
+  });
+
+  updateFinaleSubmitEnabled();
+}
+
+function updateFinaleSubmitEnabled() {
+  const act = finaleState.act;
+  const btn = document.getElementById("finale-submit-btn");
+  if (!btn || !act) return;
+  const allChosen = (act.blankOrder || []).every((b) => !!finaleState.selections[b]);
+  btn.disabled = !allChosen;
 }
 
 function renderIndividualPuzzle(container, act) {
@@ -3014,4 +3138,48 @@ socket.on("board:result", (data) => {
     document.getElementById("board-submit-progress").textContent = "";
   }
   fitTextToOneLine(fb);
+});
+
+socket.on("finale:state", ({ selections }) => {
+  finaleState.selections = selections || {};
+  renderFinaleTray();
+  renderFinalePassage();
+  const feedback = document.getElementById("finale-feedback");
+  if (feedback) {
+    feedback.textContent = "";
+    feedback.className = "feedback";
+  }
+});
+
+socket.on("finale:submitProgress", ({ ready, total }) => {
+  const progress = document.getElementById("finale-progress");
+  const btn = document.getElementById("finale-submit-btn");
+  if (progress) progress.textContent = ready > 0 ? `${ready} / ${total} ready to present` : "";
+  if (btn && ready > 0) {
+    btn.disabled = true;
+    btn.textContent = "Waiting for the rest of the table...";
+  } else if (btn && ready === 0) {
+    updateFinaleSubmitEnabled();
+    btn.textContent = "Present Your Case";
+  }
+});
+
+socket.on("finale:result", ({ correct, text }) => {
+  const feedback = document.getElementById("finale-feedback");
+  const btn = document.getElementById("finale-submit-btn");
+  const progress = document.getElementById("finale-progress");
+  if (progress) progress.textContent = "";
+  if (feedback) {
+    feedback.textContent = text || "";
+    feedback.className = correct ? "feedback correct" : "feedback incorrect";
+  }
+  if (btn) {
+    if (correct) {
+      btn.disabled = true;
+      btn.textContent = "Case closed...";
+    } else {
+      btn.textContent = "Present Your Case";
+      updateFinaleSubmitEnabled();
+    }
+  }
 });

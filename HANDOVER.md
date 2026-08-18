@@ -1,23 +1,116 @@
-# Handover — A Study in Boralus, picking up after v125
+# Handover — A Study in Boralus, picking up after v126
 
 This replaces the earlier handover from v122 (v123's own testing pass
 hadn't happened yet when this was written). Paste this as the first
-message in a new chat, then attach the v125 zip.
+message in a new chat, then attach the v126 zip.
 
 ## Where things actually stand
 
 - **v123's Act 1-4 bug-fix pass is still not confirmed live by Elle.**
   Everything in the "v123" section below is unchanged from that handover
   and still needs her test pass before it's trusted.
-- **v124 added the invite-link + waiting room flow.** v125 reworks the
-  character-creation layout and replaces the static waiting room with a
-  walkable pen. See "v125" below for what's new; the v124 section right
-  after it is unchanged except where v125 explicitly touches it.
+- **v124/v125 added the invite link, character creation layout, and
+  walkable waiting room.** Also still unconfirmed live. The courtyard-map
+  follow-up was explicitly decided against, not deferred - don't
+  resurface it.
+- **v126 builds the real Chapter 5 Finale** - the accusation puzzle,
+  replacing the old typed-answer stopgap entirely. See "v126" below.
 - Packaged and validated (JSON parse, `node --check` on all three JS
   files, CSS brace balance, em-dash grep, all clean). **Not yet tested
-  live.** No collision/map changes in this delivery (the pen has no
-  collision by design), so no BFS reachability check applies.
-- Keep incrementing normally (v126 next) from here.
+  live**, this is genuinely new game logic (new act type, new socket
+  events, new client UI) that's never been run end to end.
+- Keep incrementing normally (v127 next) from here.
+
+## v126: The Finale - accusation puzzle, epilogue, and the tunnel
+
+### New act type: `finale_accusation`
+Replaces the old `puzzle_group` stopgap (single typed answer, "ashgate")
+entirely - that placeholder act, and its `answer`/`hint` fields, are gone
+from `story.json`. In their place, chapter 5 is now three acts:
+
+1. **`reveal` - "The Tunnel Back"** (`content/story.json`). Corwin's
+   north-then-east smuggler's-route line, text only. **No map exists
+   yet** - this is explicitly a placeholder bridge so the transition
+   reads sensibly, flagged in its own body text as `[PLACEHOLDER]`.
+   Once Elle delivers a Tiled export (Cave pack, confirmed unused
+   project-wide via a full hash check against every asset already in the
+   project, short corridor, no puzzles, matching the "Out of the Sewers"
+   pattern), this should become a real `explore` or `staged_scene` act
+   instead.
+2. **`finale_accusation` - "The Finale"** (new act type, this is the
+   actual puzzle). All its content, the passage template, the 4 blanks'
+   word-bank options, the suspect defense lines, Hook's pushback lines,
+   lives in `content/interactions.json` under a new `finaleAccusation`
+   key - same "story.json just says which act, interactions.json holds
+   the real content" pattern the Suspect Board already uses for
+   `suspectBoard.pool`.
+3. **`final` - "Case Closed... Or Is It?"** - same act as before, body
+   rewritten with the actual epilogue (was a `[PLACEHOLDER]` bracket
+   before). See "Epilogue" below.
+
+### The accusation puzzle itself
+- **Passage:** "Lord Duskmere was murdered by {WHO}. He was poisoned
+  with {PLANT}, which the herbalist can verify. They wanted him dead
+  because {MOTIVE}. On the night of the gala, {OPPORTUNITY}." Fully
+  gender-neutral by design (no suspect names or pronouns in any option
+  text except the WHO blank itself) - the murderer's identity isn't
+  telegraphed by elimination anywhere in the word banks.
+- **4 blanks, 5 options each**, matching the 5 suspects one-to-one for
+  WHO/MOTIVE/OPPORTUNITY. PLANT deliberately does *not* map to
+  suspects (nobody else is characterized as having considered a
+  different poison) - its 5 options are the Herbalist's Hut's 5 real
+  non-harmless specimens (monkshood correct, foxglove/nightshade/
+  oleander/hemlock as decoys), confirmed against the actual cauldron
+  puzzle data rather than assumed.
+- **The old "THE LIE" blank (the Monk's false alibi) was cut entirely**,
+  per Elle's decision - the Monk (already gender-neutral in the shipped
+  content; "nun" was stale terminology from an old planning doc, not
+  what's actually in `interactions.json`) only has a planted lie for 3
+  of the 5 suspects, and inventing lore for the other 2 to force a 5th
+  option would have contradicted what's already built.
+- **Check order, server-side, in `evaluateFinaleSubmit` (`server.js`):
+  WHO checked first, in total isolation.** Wrong WHO returns that
+  suspect's own defense line and nothing else - the rest of the
+  selections aren't even evaluated that attempt. Right WHO moves to
+  checking PLANT/MOTIVE/OPPORTUNITY together, returning only a count of
+  how many are wrong (1/2/3), never which ones - same "vague pushback,
+  no specifics" principle the Suspect Board already uses for its own
+  wrong-answer messages.
+- **Shared, party-wide state**, not per-player: any player can set any
+  blank (`finale:select`), everyone sees the same passage fill in live
+  (`finale:state` broadcast). Submission is a unanimous ack
+  (`finale:submit`), same pattern as the Suspect Board's `board:submit` -
+  editing any blank after an agreement clears everyone's ack and
+  requires re-confirming, also matching the board's existing behavior.
+- **Answer keys never reach the client.** `buildActPayloadForPlayer`
+  strips each blank's `correct` field before sending - the Suspect Board
+  already does this (never sends `correctSet`), the first draft of this
+  feature didn't match that convention and got caught and fixed before
+  shipping.
+- UI reuses existing classes throughout (`.fragment-card` for the
+  passage, `.feedback`/`.progress-text` for status text, a new
+  `.finale-chip`/`.finale-tray-*` set styled to match `.height-btn`'s
+  existing look) rather than introducing a new visual language for one
+  screen.
+
+### Epilogue (the `final` act's body)
+Ashgate's actual confrontation dialogue is written now (was bracketed
+placeholder before): admits it without denying, delivers the "I wasn't
+owed nothing, I was owed everything" line, then turns on Corwin exactly
+as previously drafted. Added two small new beats around the existing
+Corwin/Ashgate exchange (Thorne noting Corwin's gone quiet, twice) so the
+Discord reveal about Corwin and Alaric's marriage lands as a pattern in
+hindsight rather than one isolated moment. The Discord-side reveal text
+itself (Hook and Alaric's secret marriage) lives outside this codebase,
+in whatever delivers the Discord bot command - drafted in chat, not part
+of this zip.
+
+**Not yet tested live:** the entire accusation puzzle end to end - the
+shared-selection sync, the WHO-then-count check order, the ack/submit
+flow, and the UI itself on an actual screen. This is new game logic with
+zero prior play history, treat it accordingly.
+
+---
 
 ## v125: Character creation layout + walkable waiting room
 
@@ -90,13 +183,10 @@ simultaneous connections (untested at real 6-10 player scale), and the
 character-creation layout on an actual narrow/mobile viewport (checked
 the CSS logically but not in a real browser at small widths).
 
-**Explicitly still deferred:** a real Tiled-authored waiting-room map
-(courtyard, actual art) replacing this blank pen - this was the
-walkable-map option from the original discussion, intentionally not
-built yet. Whenever that map exists, swapping it in would mean either
-extending `LobbyPen` with real tile/collision data or migrating this
-whole feature onto the Overworld engine properly - worth deciding which
-at that point rather than assuming.
+**Decided against, not deferred:** a real Tiled-authored courtyard map for
+the waiting room. Elle confirmed the blank pen is the intended final
+version of this feature, not a placeholder waiting on a map - don't
+resurface this as an open item.
 
 ---
 

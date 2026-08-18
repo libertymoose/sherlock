@@ -327,6 +327,30 @@ function buildActPayloadForPlayer(room, socketId) {
     };
   }
 
+  if (act.type === "finale_accusation") {
+    // All the actual content (the passage, word-bank options, defense/
+    // pushback lines) lives in interactions.json under finaleAccusation,
+    // same pattern as evidence_room pulling suspectBoard.pool from there -
+    // story.json only needs to say which act this is.
+    const fa = INTERACTIONS.finaleAccusation || {};
+    // Same reasoning as the Suspect Board never sending correctSet to the
+    // client: strip each blank's `correct` key before it goes out, so the
+    // answer isn't sitting in a devtools-readable payload. Checking still
+    // happens server-side only, in evaluateFinaleSubmit.
+    const clientBlanks = {};
+    for (const [key, def] of Object.entries(fa.blanks || {})) {
+      clientBlanks[key] = { label: def.label, options: def.options };
+    }
+    return {
+      ...base,
+      introThorne: fa.introThorne || null,
+      passageTemplate: fa.passageTemplate || "",
+      blankOrder: fa.blankOrder || [],
+      blanks: clientBlanks,
+      selections: room.actState.finaleSelections || {},
+    };
+  }
+
   return base;
 }
 
@@ -341,6 +365,10 @@ function sendActToRoom(code) {
     ackBy: {},
     solvedClues: {},
     boardZone: [],
+    // Shared, party-wide picks for the finale accusation's word-bank
+    // blanks (WHO/PLANT/MOTIVE/OPPORTUNITY) - same "everyone edits one
+    // shared answer" pattern as boardZone above, not per-player.
+    finaleSelections: {},
   };
   // The Herbalist's Hut cauldron puzzle - one attempt live at a time,
   // reset by the "Try Again" flow. Scoped per-act like everything else
@@ -596,6 +624,45 @@ function evaluateBoardSubmit(room, code) {
   }
 }
 
+// WHO is checked in total isolation first - naming the wrong suspect
+// makes the rest of the accusation moot, and gets that suspect's own
+// in-character defense line rather than being folded into Hook's vague
+// pushback below. Once WHO is right, PLANT/MOTIVE/OPPORTUNITY are checked
+// together and only ever return a count of how many are wrong, never
+// which ones - same "vague pushback, no specifics" principle as the
+// Suspect Board's own wrong-answer messages.
+function evaluateFinaleSubmit(room, code) {
+  const fa = INTERACTIONS.finaleAccusation || {};
+  const sel = room.actState.finaleSelections || {};
+
+  const whoBlank = fa.blanks && fa.blanks.WHO;
+  if (whoBlank && sel.WHO !== whoBlank.correct) {
+    room.actState.ackBy = {};
+    const defenseLine = (fa.suspectDefenses && fa.suspectDefenses[sel.WHO])
+      || "\"That's not who did it,\" comes the flat reply.";
+    io.to(code).emit("finale:result", { correct: false, kind: "wrongWho", text: defenseLine });
+    return;
+  }
+
+  const otherBlanks = (fa.blankOrder || []).filter((b) => b !== "WHO");
+  const wrongCount = otherBlanks.filter((b) => {
+    const def = fa.blanks[b];
+    return def && sel[b] !== def.correct;
+  }).length;
+
+  if (wrongCount > 0) {
+    room.actState.ackBy = {};
+    const pushback = (fa.hookPushback && fa.hookPushback[String(wrongCount)])
+      || (fa.hookPushback && fa.hookPushback["3"])
+      || "Something here isn't right.";
+    io.to(code).emit("finale:result", { correct: false, kind: "wrongOther", text: pushback });
+    return;
+  }
+
+  io.to(code).emit("finale:result", { correct: true, text: fa.correctResult || "" });
+  setTimeout(() => advanceAct(code), 3500);
+}
+
 // A dropped connection changes the denominator every group-progress gate
 // checks against (see connectedPlayerCount). If the remaining connected
 // players had already all clicked through and the one holdout was the
@@ -630,6 +697,15 @@ function recheckGroupThreshold(room, code) {
     if (ackCount > 0 && ackCount >= totalPlayers) {
       io.to(code).emit("board:submitProgress", { ready: ackCount, total: totalPlayers });
       evaluateBoardSubmit(room, code);
+    }
+  } else if (act.type === "finale_accusation") {
+    const fa = INTERACTIONS.finaleAccusation || {};
+    const sel = room.actState.finaleSelections || {};
+    const allChosen = (fa.blankOrder || []).every((b) => !!sel[b]);
+    const ackCount = Object.keys(room.actState.ackBy || {}).length;
+    if (allChosen && ackCount > 0 && ackCount >= totalPlayers) {
+      io.to(code).emit("finale:submitProgress", { ready: ackCount, total: totalPlayers });
+      evaluateFinaleSubmit(room, code);
     }
   }
 }
@@ -2021,6 +2097,56 @@ io.on("connection", (socket) => {
     if (ackCount < totalPlayers) return;
 
     evaluateBoardSubmit(room, code);
+  });
+
+  // Shared, party-wide word-bank picks for the finale accusation - any
+  // player can set any blank, everyone sees the same live passage build
+  // up, same "shared board, anyone can edit" pattern as board:move.
+  socket.on("finale:select", ({ blank, optionId }) => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room) return;
+    const act = STORY.acts[room.actIndex];
+    if (!act || act.type !== "finale_accusation") return;
+
+    const fa = INTERACTIONS.finaleAccusation || {};
+    const blankDef = fa.blanks && fa.blanks[blank];
+    if (!blankDef || !blankDef.options.some((o) => o.id === optionId)) return;
+
+    room.actState.finaleSelections[blank] = optionId;
+
+    // Same reasoning as board:move - editing after an agreement to submit
+    // means that agreement no longer reflects what's actually being
+    // presented, so it's cleared and everyone needs to re-confirm.
+    if (Object.keys(room.actState.ackBy).length) {
+      room.actState.ackBy = {};
+      io.to(code).emit("finale:submitProgress", { ready: 0, total: connectedPlayerCount(room) });
+    }
+
+    io.to(code).emit("finale:state", { selections: room.actState.finaleSelections });
+  });
+
+  // "Present Your Case" - same ack-counting agreement pattern as
+  // board:submit. Everyone has to agree the case as currently filled in
+  // is ready before it's actually evaluated.
+  socket.on("finale:submit", () => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room) return;
+    const act = STORY.acts[room.actIndex];
+    if (!act || act.type !== "finale_accusation") return;
+
+    const fa = INTERACTIONS.finaleAccusation || {};
+    const sel = room.actState.finaleSelections || {};
+    if ((fa.blankOrder || []).some((b) => !sel[b])) return; // not every blank chosen yet
+
+    room.actState.ackBy[socket.id] = true;
+    const totalPlayers = connectedPlayerCount(room);
+    const ackCount = Object.keys(room.actState.ackBy).length;
+    io.to(code).emit("finale:submitProgress", { ready: ackCount, total: totalPlayers });
+    if (ackCount < totalPlayers) return;
+
+    evaluateFinaleSubmit(room, code);
   });
 
   // A deliberate "not you" / "start a different game" click, distinct from
