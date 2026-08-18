@@ -96,9 +96,15 @@ html, body {
   box-shadow: 0 0 24px rgba(var(--candle-rgb),0.25);
 }
 
+/* Sits directly on the dark screen background, not inside a light .card -
+   parchment-dim is tuned for dark text on the light card surface (see
+   .card above), so it was nearly invisible here. Same contrast bug
+   already fixed for #screen-lobby .hint-text below; this is the same
+   fix for the one other place text sits straight on the dark background. */
 .subtitle {
   text-align: center;
-  color: var(--parchment-dim);
+  color: var(--parchment);
+  opacity: 0.75;
   font-style: italic;
   margin: 0 0 40px;
 }
@@ -285,35 +291,98 @@ html, body {
   color: var(--parchment-dim);
 }
 
-.lobby-code-details {
-  text-align: center;
-  margin: 8px 0 20px;
+/* The lobby: pen on the left, all game info (roster, host controls,
+   invite tools) on the right. Height is capped to the viewport rather
+   than left to grow with content, so a long roster or extra copy can't
+   push the whole screen into a vertical scroll the way the earlier
+   stacked-single-column version did. */
+.lobby-layout {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 28px;
+  align-items: stretch;
+  height: calc(100vh - 140px);
+  min-height: 420px;
+  max-height: 760px;
 }
-.lobby-code-details summary {
-  cursor: pointer;
-  color: var(--parchment-dim);
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.lobby-code-details[open] summary {
-  color: var(--candle-bright);
+
+.lobby-pen-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .lobby-pen-wrap {
-  max-width: 640px;
-  margin: 20px auto 0;
+  flex: 1;
+  min-height: 0;
 }
 
 #lobby-pen-canvas {
   width: 100%;
-  height: 300px;
+  height: 100%;
   display: block;
   background: var(--ink);
   border-radius: var(--radius);
   border: 1px solid rgba(var(--candle-rgb),0.15);
   image-rendering: pixelated;
   touch-action: none;
+}
+
+.lobby-info-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+/* Everything above used to size itself for a single centered column
+   filling most of the page - shrink the vertical margins now that it's
+   sharing a fixed-height sidebar instead. */
+.lobby-info-col .seal { margin-bottom: 8px; }
+.lobby-info-col .subtitle { margin-bottom: 12px; }
+.lobby-info-col .player-roster { margin: 14px 0; max-width: 100%; }
+.lobby-info-col .host-controls { margin-top: 12px; }
+.lobby-info-col #btn-leave-lobby { margin-top: auto; }
+
+.lobby-invite-box {
+  width: 100%;
+  background: var(--ink-surface);
+  border: 1px solid rgba(var(--candle-rgb),0.18);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 16px 0;
+  text-align: center;
+}
+.lobby-invite-label {
+  color: var(--parchment-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  margin: 0 0 6px;
+}
+.lobby-invite-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.lobby-invite-actions .btn {
+  margin-top: 0;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+@media (max-width: 760px) {
+  /* Not enough width for a real two-column layout - stack instead,
+     same as every other bento on this site collapses at narrow widths. */
+  .lobby-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    max-height: none;
+  }
+  .lobby-pen-wrap { height: 260px; flex: none; }
+  .lobby-info-col { overflow-y: visible; }
 }
 
 .landing-bento-right .card {
@@ -581,9 +650,14 @@ input[type="text"]:focus {
   z-index: 550;
 }
 
+/* Was pinned near the very top (64px) while the button sits at 62% down
+   the screen - on a plain black fade, that read as two disconnected
+   messages rather than one moment. Anchored just above the button now
+   (same 62% reference point, offset up) so title and button compose
+   together, closer to a "pause screen" than a page header. */
 .staged-scene-next-act-header {
   position: fixed;
-  top: 64px;
+  top: calc(62% - 110px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 600;
@@ -1059,12 +1133,17 @@ input[type="text"]:focus {
    middle ground between the old 210 and 130, tall enough that a 180px
    illustrated portrait still reads fine slightly cropped, short enough that
    sprite/cutout portraits aren't swimming in empty space. */
+/* Bumped from 170px - even modest one-sentence intro text (the common
+   case for on-map document popups) was triggering pagination's word-by-
+   word fallback split and leaving most of the visible panel empty below
+   just one short line. 260px gives real multi-line room before anything
+   needs to paginate at all. */
 .vn-portrait-frame {
   flex-shrink: 0;
   padding: 3px;
   background: transparent;
   box-sizing: border-box;
-  height: 170px;
+  height: 260px;
 }
 
 #vn-portrait {
@@ -1088,7 +1167,7 @@ input[type="text"]:focus {
      portrait, width-minus-portrait when one's shown). */
   flex: 1 1 auto;
   min-width: 0;
-  height: 170px;
+  height: 260px;
   box-sizing: border-box;
   padding: 8px 14px;
   background: transparent;

@@ -1,25 +1,441 @@
-# Handover — A Study in Boralus, picking up after v126
+# Handover — A Study in Boralus, picking up after v133
 
 This replaces the earlier handover from v122 (v123's own testing pass
 hadn't happened yet when this was written). Paste this as the first
-message in a new chat, then attach the v126 zip.
+message in a new chat, then attach the v133 zip.
 
 ## Where things actually stand
 
-- **v123's Act 1-4 bug-fix pass is still not confirmed live by Elle.**
-  Everything in the "v123" section below is unchanged from that handover
-  and still needs her test pass before it's trusted.
-- **v124/v125 added the invite link, character creation layout, and
-  walkable waiting room.** Also still unconfirmed live. The courtyard-map
-  follow-up was explicitly decided against, not deferred - don't
-  resurface it.
-- **v126 builds the real Chapter 5 Finale** - the accusation puzzle,
-  replacing the old typed-answer stopgap entirely. See "v126" below.
-- Packaged and validated (JSON parse, `node --check` on all three JS
-  files, CSS brace balance, em-dash grep, all clean). **Not yet tested
-  live**, this is genuinely new game logic (new act type, new socket
-  events, new client UI) that's never been run end to end.
-- Keep incrementing normally (v127 next) from here.
+- **v133 fixes a real, disclosed-as-a-judgment-call scale bug** on the
+  two "stands behind a counter" NPCs (the tavern bartender, the glass
+  workshop's shopkeeper) - see "v133" below. Also confirmed the card-
+  game group merge from v132 renders at the correct size, no further
+  splitting needed.
+- v123 through v132 remain otherwise as documented.
+- Packaged and validated (JSON parse, `node --check`, CSS braces,
+  em-dash grep, all clean). No collision touched this round.
+- Keep incrementing normally (v134 next) from here.
+
+## v133: Bust-only NPCs were rendering as giant floating heads
+
+### Card game group size, confirmed correct
+Elle asked to double-check the merged card-game cutout (drow + orc)
+from v132 wasn't accidentally shrunk by the merge, the same way the
+Glass Workshop's glassblower bug had been. Rendered it at the true
+in-game draw size next to two ordinary single-person NPCs with their
+top/bottom edges aligned: both people in the group reach the exact same
+66px height band as everyone else. The extra width (78px vs ~51-55px
+for a lone NPC) is expected and already how every other multi-person
+cutout in the game works (`flavor_tavern_drinkers`, the seated
+adventurers bench) - not a bug. No split needed.
+
+### The real bug: two "behind the counter" NPCs rendering as giant heads
+Elle flagged the bartender specifically: his cutout is *only* his face
+and beard (his body is behind the bar counter by design), but the
+renderer scales every cutout's content to the same fixed 66px height
+regardless of how much of a body that content represents. A 22px-tall
+face crop stretched to fill the same slot as a 29px-tall full standing
+body comes out roughly 3x too large - a giant disembodied head.
+
+Checked whether this was bartender-specific or systemic: the Glass
+Workshop's shopkeeper (also stationed behind her own counter, per
+earlier notes) has nearly identical content dimensions (15x21 vs the
+bartender's 17x22) - same bug, same cause, just never flagged yet
+because there was nothing to visually compare her against directly
+before.
+
+**Fix, disclosed as a visual judgment call, not extracted data** (there's
+no real "full body" reference for either of these characters to derive
+an exact ratio from - both packs only ever drew them as a bust): measured
+a real full-body character in the same art style (the tavern's lute
+player) to see what fraction of total height a head actually occupies in
+this style - roughly 40-45%. Rendered the bartender at several candidate
+`drawScale` values (0.45, 0.5, 0.6) against that reference before
+picking one. Landed on **`drawScale: 0.5`** for both `npc_bartender_tavern`
+and `npc_shopkeeper_glass` - rendered the final result next to the lute
+player to confirm it reads as a proportionate head, not a giant face.
+This is the same kind of disclosed, reversible scale call as the
+Blacksmith's earlier (now-removed) override, not treated as definitively
+"correct" the way real extracted animation/collision data is - flag it
+if it still looks off once seen live.
+
+**Worth checking for elsewhere:** any other NPC standing behind a fixed
+counter/desk with only their upper body visible (the Guild Hall's
+Guildmaster, if similarly posed, hasn't been checked) may have the same
+issue. Not audited this round - only the two already-confirmed cases
+were fixed.
+
+## v132: Tavern verified against real source - one real bug found, layering confirmed fine
+
+Elle sent the actual Tiled export for the tavern's ground floor
+specifically to check the Y-sorting/layering complaint. Did a full
+tile-by-tile diff between that source and the shipped
+`tavern_1st_floor.json`:
+
+- **Every non-character layer matches the source exactly** - `floor`,
+  `Walls`, `Stairs`, `Walls_top1`/`2`, `Furniture1`/`2`/`3`,
+  `Stuff_on_tables`. Zero mismatches across 700+ tiles. No native Tiled
+  `<group>` elements exist in the source either (checked directly), so
+  there's no authored grouping relationship this project's `layerGroups`
+  mechanism could even be restoring - confirming last round's instinct
+  not to add speculative layer-grouping was correct. The furniture
+  layering complaint doesn't appear to be a real Y-sort bug.
+- **A genuinely empty scratch layer** (`Tile Layer 13`, 0 tiles) exists
+  in the source and was correctly left out of the conversion - not a
+  missed-content bug.
+- **Found a real bug the diff surfaced: `flavor_tavern_sleeping_drunk`
+  had two different characters baked into one cutout.** Its 12 tiles
+  were actually a clean 4-tile sleeping figure (`Animation_sleep_guy2.png`)
+  plus 8 tiles of a completely separate orc character
+  (`Animation_orc_player.png`) sitting with dice, wrongly swept in
+  together. Rendered both halves separately to confirm: the orc is
+  holding dice, and the existing (separate) `flavor_tavern_card_game`
+  cutout already showed a drow holding cards - same table, two players,
+  meant to be one group scene. Split them correctly: sleeping drunk is
+  now just its own 4 tiles, and `flavor_tavern_card_game` now contains
+  both the drow and the orc (14 tiles total), rendered and confirmed as
+  one coherent card-game scene. Swept every other cutout on this map
+  afterward for the same "mixed tileset in one cutout" signature -
+  nothing else has it.
+- **Both objects' marker positions corrected** to their real source feet
+  positions (`flavor_tavern_sleeping_drunk` to (21,10),
+  `flavor_tavern_card_game` to (19,13)) - they'd previously been sharing
+  one identical position, a symptom of the same merge.
+- Cross-checked every NPC's object-marker position against the real
+  source using a feet-anchor conversion (bottom-center of the Tiled
+  object's bounding box, matching how this project already anchors
+  every character) - 8 of 12 matched exactly, the rest were off by at
+  most 1 tile, well within normal variance for hand-placed markers.
+
+**Not yet checked:** the same real-source diff for `tavern_2nd_floor.json`
+or any other Act 3 map - only the file Elle actually sent this round got
+the full treatment. If the same class of bug (two characters merged into
+one cutout) is suspected elsewhere, the same technique applies.
+
+## v131: Real animation data for both interiors
+
+Confirmed via the source `.tmx` files that both rooms' existing tileset
+`firstgid` values in `glass_workshop.json`/`blacksmith_interior.json`
+already match these packs exactly - these are genuinely the same source
+data the maps were built from, just never had their animation blocks
+extracted.
+
+- **Glass Workshop went from 0 animated tiles to 38.** Previously
+  nothing in this room animated at all - not the forge, not the light
+  effect, not either NPC. Extracted every `<animation>` block from
+  `Interior.tmx`, scoped down to only the gids actually placed or used
+  in this map (105 animated tiles exist in the source pack overall,
+  38 are relevant here), and confirmed directly: the glassblower's 4
+  tiles now each carry a real 33-frame idle animation, the shopkeeper's
+  4 tiles a real 12-frame one. Forge, light, and door/window ambient
+  animation are all wired too.
+- **Blacksmith's two frozen ambient elements fixed**, same method: the
+  "Floor_light" glow effect (21 frames) and the water trough (6 frames)
+  were placed in the room but had zero animation data, unlike the torch
+  and forge fire which were already working. Extracted from
+  `Blacksmith_house_interior.tmx`, same firstgid match confirmed.
+  Animation count for this map went from 42 to 69. The blacksmith
+  character himself and the torch/forge fire were already correct and
+  untouched.
+- Both extractions only pulled in animation entries for gids actually
+  present in that specific map (checked against every tile layer plus
+  the sprite-cutout tile lists) rather than dumping the whole pack's
+  animation set in wholesale - keeps the `animations` dict scoped to
+  what's real for each room, matching how every other map in the
+  project already does this.
+
+**Not yet checked:** whether either pack's `Characters.tmx` (glass) or
+`Blackmith_character.tmx` (blacksmith) contains additional idle-pose
+variety beyond what's already placed in these two interior maps - out of
+scope for this round, flagging only in case a richer idle cycle is
+wanted later.
+
+## v130: NPC size audit - Glass Workshop and Blacksmith fixed
+
+Computed the actual final rendered pixel height of every cutout NPC in
+the game (all of Act 3 plus the Blacksmith): **every one of them was
+already rendering at a uniform 66px tall, except two** - confirming the
+"some tiny, some huge" problem from earlier rounds really was fixed by
+the sprite-cutout work, with two real exceptions found on direct audit:
+
+- **The Glass Workshop's "teeny tiny" glassblower, root-caused.** His
+  cutout wasn't a sizing bug at all - it was scooping up **20 tiles**
+  (a 4x5 block) instead of the 4 tiles that are actually him, sweeping
+  in his own table and a second side-table with two bottles on it.
+  Since every cutout gets force-scaled to the same fixed height
+  regardless of its content box, cramming furniture into that box
+  shrank his actual character down to a fraction of the frame - while
+  the Shopkeeper, whose crop was already correctly tight, filled her
+  frame properly and read as comparatively huge by contrast. Rendered
+  the full over-broad crop to see exactly what was in it, identified the
+  real character tiles by eye against a labeled grid, rebuilt his cutout
+  tight (4 tiles, not 20), and **restored the 16 furniture tiles that
+  had been incorrectly zeroed out of the map along with him** - the
+  table and the side-table with its bottles were completely missing
+  from the room until this fix, not just misjudged in size.
+- **The Blacksmith's `drawScale: 1.6` override removed.** Verified
+  directly rather than taking the old justification on faith: both
+  `blacksmith_interior.json` and `training_ground.json` use identical
+  16x16 native tile art, and the blacksmith's own crop is already tight
+  and correct (his fused-into-anvil pose is deliberate, not a stray
+  furniture sweep like the glassblower's was). With no technical
+  difference found anywhere, Elle's direct read ("nothing about it is
+  any different, it shouldn't be bigger or smaller") is correct - the
+  override was a subjective call from an earlier session that doesn't
+  hold up under a real side-by-side check. Removed it; he now renders at
+  the same 66px as everyone else.
+- **Swept every map's `spriteCutouts` afterward** for the same class of
+  bug (`drawScale` overrides, unusually large content boxes relative to
+  tile-count) - nothing else in the project has either issue.
+
+### The separate, bigger question: NPCs vs. the player
+Every NPC in the game (not just Act 3 - Act 1's fixed sprites, Act 2,
+staged-scene actors, all of it) renders at 66px tall via one shared
+constant (`WORLD_CHAR_SIZE` in `overworld.js`), while the player renders
+at 150px (`PLAYER_DRAW_SIZE`). This is a real, confirmed, project-wide
+gap, not an Act 3 inconsistency - it's been true since before this
+project's own handoff notes existed. Flagged to Elle as a genuinely
+separate, much bigger decision (rescaling every NPC in the entire game
+at once) from the "some were tiny, some were huge" bug that's now fixed
+- **not yet actioned, waiting on her call.**
+
+## v129: Chapel and Tavern fixes
+
+### Chapel - root cause found and fixed
+Confirmed exactly what last round's investigation predicted:
+`chapel_interior.json` had **zero** `spriteCutouts` entries despite 11
+Parishioner sheets and 4 Monk sheets baked into its tile layers - it
+never got the sprite-cutout treatment every other Act 3 room already
+has. Built real cutout data for all 8 baked NPCs (the Priest, 4 Monks,
+3 Parishioners) using the established technique: detected each
+character's own tile blob by cross-referencing object position against
+the tile data, then computed a genuinely alpha-trimmed bounding box from
+the real source PNGs (unioned across all 12 animation frames per
+character, not just the resting frame, so a praying animation doesn't
+clip). Every crop was rendered and visually checked before being written
+- all 8 came out as clean, complete figures. This should resolve the
+"floating NPC models" report; what was actually happening is these 8
+characters were rendering at native tile-block scale and position
+instead of being cut out and re-composited like every other Act 3 NPC,
+which reads as things being scattered/misplaced.
+
+### Tavern - two real, separate bugs found (not a missing-asset problem)
+The map's own `_incomplete` note claims 19 of 21 tileset images were
+never uploaded - **checked directly, and this is stale.** All 21 files
+now exist in `public/assets/mapsrc/tavern_1st_floor/`, added in some
+later session without the note being updated. Don't trust that note
+going forward; the real bugs were these two:
+
+1. **`flavor_tavern_drinkers`'s entire cutout was invisible.** All 4 of
+   its tiles had a raw Tiled horizontal-flip bit still baked into their
+   stored `gid` (`2147485520` instead of the real `1872`, etc) -
+   `resolveGid()` in `overworld.js` does a direct range comparison
+   against tileset firstgid/lastgid with no flip-bit masking, so these
+   simply never matched anything and silently failed to draw. This
+   wasn't a case of stripping the flip and moving on, though - the flip
+   was genuine, deliberate Tiled data (one of the pair authored facing
+   the other), so **added real horizontal-flip support to the sprite-
+   cutout renderer** (`overworld.js`, a per-tile `flip` field, mirrored
+   via canvas `scale(-1,1)` when compositing) rather than just erasing
+   the mirroring. Rebuilt this cutout's data with clean gids, the `flip`
+   flag preserved, and a flip-aware alpha bbox (the source tile's alpha
+   region gets mirrored before measuring). Rendered and visually
+   confirmed - a complete character now, correctly facing the other way.
+   Swept every other map's `spriteCutouts` for the same contamination -
+   nothing else affected, this was the only occurrence project-wide.
+   This new flip capability is also exactly what's needed for the still-
+   open outdoor tavern-NPC flip request from v128 - ready to use the
+   moment Elle confirms which NPC (dude or lady) needs it.
+2. **30 NPCs across 5 maps had no name tag at all**, including every
+   single named character on both tavern floors. The cutout renderer
+   only draws a name label when the object's own `type` is exactly
+   `"npc"` - `blacksmith_interior.json` (1), `tavern_1st_floor.json`
+   (12, all of them), `tavern_2nd_floor.json` (1), `town_exterior.json`
+   (11), and `training_ground.json` (5) were all missing this despite
+   already having real `name` fields. Set `type: "npc"` on all 30. This
+   alone probably explains a good chunk of "the tavern reads as broken"
+   - a room full of nameless characters looks wrong even when everything
+   else about them is correct.
+
+Both of these were genuinely provable from data (a malformed gid,
+missing type fields), not guessed. The tavern's furniture-layer Y-
+sorting (`layerGroups`) wasn't touched - nothing in the data pointed at
+a real bug there, and I didn't want to add speculative layer-grouping
+without something concrete backing it up. If Elle still sees layering
+oddities after this, that's the next thing to chase with a fresh
+screenshot.
+
+---
+
+## v128: Bug-fix pass from Elle's first live test
+
+### Fixed and verified against real data
+- **Ashgate's chest** was at (3,5), visually sitting in wall art. Moved
+  to (3,7) per Elle's direct instruction, confirmed walkable and
+  reachable.
+- **Manor upper floor, rows 12 and 13** are now fully walkable (both set
+  to all-zero collision, per Elle's explicit ask) - these previously had
+  several blocking segments splitting the rows into separate walkable
+  pockets.
+- **Three whole maps were missing `dense: true` on every layer** -
+  `guild_hall_ground.json`, `guild_hall_upper.json`, and
+  `herbalist_hut_exterior.json`. This is the exact same bug already
+  fixed once for `herbalist_interior.json` (v123), just never applied to
+  these three. `overworld.js`'s floor renderer skips any layer without
+  this flag entirely (`if (!layer || !layer.dense) return;`), so all
+  three rendered as a completely blank canvas - which explains **four**
+  separate reports at once: no guild hall interior map, the maid
+  cutscene's blank map, the blank "Board's Verdict" screen (all three
+  use `guild_hall_ground.json`), and no herbalist map. Swept every map
+  in the project afterward and confirmed nothing else has this issue.
+- **The "running quotation marks" bug throughout Act 3.** Root cause
+  found and reproduced exactly: the dialogue pagination's sentence-
+  splitting regex (`splitToFit` in `client.js`) didn't treat a closing
+  quote mark right after a period as part of that sentence, so any line
+  like `...redo it." She chuckles. "We all knew...` got split with the
+  closing quote torn off into its own stray fragment - reproduced the
+  precise broken output Elle screenshotted (`["\" She chuckles.", "\""]`)
+  before the fix and confirmed clean output after, then regression-
+  tested against several other real dialogue lines from the project to
+  confirm nothing else broke.
+- **Suspect board now sorts both columns alphabetically** by full
+  display name.
+- **Act 1 evidence no longer carries into Act 2's inventory** - removed
+  `prefillInventoryFromEvidence` from the Dungeons act in `story.json`
+  per Elle's explicit instruction (this reverses the original "you're
+  still carrying what you had when arrested" design intent from an
+  earlier session - noting the change of direction here in case anyone
+  wonders why that flag disappeared).
+- **The Finale's grammar bug**, confirmed and fixed: "On the night of the
+  gala, was buried in paperwork..." was missing a subject entirely. The
+  passage template now includes "they" before the `{OPPORTUNITY}` blank,
+  and the affected option texts were corrected for verb agreement
+  (`was` -> `were`) to match.
+- **The Finale no longer auto-advances to Case Closed on a timer.**
+  Replaced the `setTimeout(3500)` with a proper party-wide manual
+  "Continue" button (`finale:acknowledgeResult` on the server, gated the
+  same ack-counted way every other reveal/cutscene "I'm Ready" button
+  already works) - the party can sit with a correct result for as long
+  as they want before moving on.
+- **Maid cutscene fade-in** was already `fadeIn: true` in `story.json` -
+  almost certainly just looked broken because the underlying map was
+  blank (see the `dense: true` fix above). No change needed once that's
+  fixed, but flagging so nobody "fixes" this again unnecessarily.
+- **Dialogue/document panel height** increased from 170px to 260px
+  (`.vn-portrait-frame`/`.vn-text-frame`). Even a single modest sentence
+  (confirmed: `doc_marrow`'s intro is one ~150-character sentence) was
+  triggering pagination's word-by-word fallback split, leaving most of
+  the visible panel empty below just one line - this is the exact
+  "small red box vs the space actually available" Elle screenshotted.
+- **The end-of-cutscene "I'm Ready" transition screen** - the next-act
+  title was pinned near the very top of the screen (64px) while the
+  button sat at 62% down, reading as two disconnected messages on a
+  plain black fade. Moved the title to sit just above the button instead
+  (`calc(62% - 110px)`), so they compose as one "pause screen" moment.
+
+### Investigated, root cause identified, needs Elle's input before fixing
+- **Chapel's floating/misplaced NPCs.** Confirmed root cause via data:
+  `chapel_interior.json` has **zero** `spriteCutouts` entries despite
+  having 11 Parishioner sheets and 4 Monk sheets baked into its tile
+  layers - meaning it never got the sprite-cutout treatment that
+  Training Ground, the Blacksmith, the Mage Tower, and the Market all
+  already have. This was explicitly predicted as a likely future report
+  in an earlier handoff ("if a similar baked-NPC report comes in for
+  Chapel, Tavern, or Glass Workshop, this is the established technique
+  to reuse") - it's now actually happened. Building the real cutout data
+  (each NPC's exact tile positions, anchor point, content bounds) is a
+  real per-NPC data-authoring task, doable with the established
+  technique, just needs doing for the 7 chapel NPCs (4 monks, 3
+  parishioners) - didn't want to do this blind without confirming
+  whether the actual symptom is "too large" (the Blacksmith-style issue)
+  or something else "floating" might imply (a Y-sort/anchor issue), since
+  those would need different fixes.
+- **Glass Workshop sizing "AGAIN".** Unlike the chapel, this map
+  *already has* spriteCutout data for both NPCs (the Glassmaker,
+  the Shopkeeper) - so this isn't the "never got the treatment" bug,
+  it's more likely the same "this room's furniture reads larger than
+  the base scale" issue the Blacksmith needed a `drawScale` override
+  for. Didn't want to guess a scale multiplier blind - a corrected
+  screenshot or an explicit "make it N% bigger/smaller" would let this
+  get fixed precisely rather than guessed.
+- **The flipped tavern-exterior adventurer.** Found both candidates in
+  `town_exterior.json` (`npc_market_adventurer_dude` at (39,17) and
+  `npc_market_adventurer_lady` at (37,17), the two "Drinking" NPCs
+  outside the Tavern) - neither has an actual Tiled flip-bit set on its
+  tiles, and the sprite-cutout renderer has no flip/mirror capability at
+  all right now, so this isn't a data toggle, it's real new code (adding
+  a horizontal-flip option to the cutout draw call). Didn't want to
+  build that and guess which of the two NPCs to apply it to blind -
+  confirming which one (dude or lady) is the grey-haired one needing the
+  flip would let this land correctly the first time.
+
+### Not yet investigated this round
+- **The tavern interior "entirely broken"** (missing animations, wrong
+  layering, characters out of place) - this reads as a real multi-part
+  rebuild (`tavern_1st_floor.json`/`tavern_2nd_floor.json`), not a single
+  fix, and there wasn't room left in this pass to do it justice. Next
+  thing to pick up.
+- **Player character occasionally disappearing** - no repro steps yet,
+  need more detail (which act/zone, does it come back, does moving fix
+  it) before this is chaseable.
+- **The Case Closed screen's wall of text, and whether NIGHTSHADE stays
+  the Discord word or the epilogue becomes a puzzle command instead** -
+  this is a real design question, not a bug, flagged for discussion
+  rather than something to unilaterally redesign.
+
+---
+
+## v127: Lobby layout rework, from a live screenshot
+
+Elle's screenshot of v125's lobby showed two real problems: the single
+stacked column was too tall and scrolled, and `.subtitle` ("The gala is
+gathering.") was nearly illegible.
+
+- **Contrast bug, found via the screenshot, not guessed:** `.subtitle`
+  used `--parchment-dim`, which in the Nyx (out-of-game) palette is a
+  dark maroon (`#522747`) - correct for text sitting on the light
+  `.card` surface (`--ink-surface: #e7e1e5`), completely wrong for text
+  sitting directly on the dark screen background (`--ink: #34202f`),
+  which is what `.subtitle` actually does. `#screen-lobby .hint-text`
+  had already hit this exact same bug and been fixed before; `.subtitle`
+  hadn't. Fixed the same way: `var(--parchment)` at reduced opacity
+  instead. `.subtitle` is only used in this one place, so this couldn't
+  regress anything else.
+- **Two-column layout** (`.lobby-layout`, `index.html`/`style.css`): pen
+  on the left, everything else (header, roster, host controls, the new
+  invite box, leave button) in a right-hand sidebar. Height is capped to
+  the viewport (`calc(100vh - 140px)`, `max-height: 760px`) instead of
+  growing with content, and the sidebar itself scrolls internally
+  (`overflow-y: auto`) if a big roster ever runs long, rather than the
+  whole page scrolling. Collapses back to a single stacked column under
+  760px, matching how every other bento-style layout on the site already
+  handles narrow screens.
+- **Invite link generator, new:** a `.lobby-invite-box` with "Copy Code"
+  and "Copy Invite Link" buttons (`currentInviteLink()` builds
+  `location.origin + location.pathname + ?code=...`), using the
+  Clipboard API with a manual `execCommand("copy")` fallback for contexts
+  where that API isn't available. The case code itself is shown directly
+  now, no longer tucked behind the `<details>` toggle from v124/v125 -
+  that de-emphasis made sense when the code was just "in case you need
+  it," it doesn't once generating/sharing the link is a first-class
+  sidebar feature.
+- **Player names above heads in the pen** (`LobbyPen.drawNameLabel` in
+  `client.js`), copied stroke-for-stroke from `overworld.js`'s own
+  `drawNameLabel` so a name reads identically here and in the actual
+  game, not as a visually distinct lookalike. Own name is looked up from
+  `currentPlayers` by `state.myId` rather than tracked separately -
+  that list already includes the caller's own entry (confirmed via
+  `publicPlayerList` in `server.js`), so there was no need for new
+  client state just to know your own name.
+
+**Not yet tested live**, same as v124-126. This was built directly off
+one screenshot rather than a full playthrough, so it's worth a fresh
+screenshot (or better, an actual live look) to confirm the height math
+holds up on Elle's actual screen size before assuming it's fixed for
+good - viewport-relative sizing like this is exactly the kind of thing
+that can look right on one monitor and wrong on another.
+
+---
 
 ## v126: The Finale - accusation puzzle, epilogue, and the tunnel
 

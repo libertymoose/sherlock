@@ -369,6 +369,7 @@ function sendActToRoom(code) {
     // blanks (WHO/PLANT/MOTIVE/OPPORTUNITY) - same "everyone edits one
     // shared answer" pattern as boardZone above, not per-player.
     finaleSelections: {},
+    finaleAwaitingContinue: false,
   };
   // The Herbalist's Hut cauldron puzzle - one attempt live at a time,
   // reset by the "Try Again" flow. Scoped per-act like everything else
@@ -659,8 +660,15 @@ function evaluateFinaleSubmit(room, code) {
     return;
   }
 
+  // Correct. Unlike the Suspect Board (a short setTimeout is fine there,
+  // the result message is one line), this is the game's actual climax -
+  // the party should get to sit with "you got it" for as long as they
+  // want, not have Case Closed yanked up automatically a few seconds
+  // later. Wait for an explicit party-wide acknowledgment instead (same
+  // ackBy pattern as reveal/cutscene acts) before ever advancing.
+  room.actState.ackBy = {};
+  room.actState.finaleAwaitingContinue = true;
   io.to(code).emit("finale:result", { correct: true, text: fa.correctResult || "" });
-  setTimeout(() => advanceAct(code), 3500);
 }
 
 // A dropped connection changes the denominator every group-progress gate
@@ -699,10 +707,20 @@ function recheckGroupThreshold(room, code) {
       evaluateBoardSubmit(room, code);
     }
   } else if (act.type === "finale_accusation") {
+    const ackCount = Object.keys(room.actState.ackBy || {}).length;
+    if (room.actState.finaleAwaitingContinue) {
+      // Everyone still connected has already clicked "Continue" on the
+      // correct result - a departing straggler shouldn't be the only
+      // thing still blocking the party from moving on.
+      if (ackCount > 0 && ackCount >= totalPlayers) {
+        io.to(code).emit("finale:continueProgress", { ready: ackCount, total: totalPlayers });
+        fadeAndAdvanceAct(code);
+      }
+      return;
+    }
     const fa = INTERACTIONS.finaleAccusation || {};
     const sel = room.actState.finaleSelections || {};
     const allChosen = (fa.blankOrder || []).every((b) => !!sel[b]);
-    const ackCount = Object.keys(room.actState.ackBy || {}).length;
     if (allChosen && ackCount > 0 && ackCount >= totalPlayers) {
       io.to(code).emit("finale:submitProgress", { ready: ackCount, total: totalPlayers });
       evaluateFinaleSubmit(room, code);
@@ -2147,6 +2165,25 @@ io.on("connection", (socket) => {
     if (ackCount < totalPlayers) return;
 
     evaluateFinaleSubmit(room, code);
+  });
+
+  // The party-wide "we've read it, move on" click after a correct
+  // accusation - see evaluateFinaleSubmit for why this doesn't just
+  // auto-advance on a timer.
+  socket.on("finale:acknowledgeResult", () => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room) return;
+    const act = STORY.acts[room.actIndex];
+    if (!act || act.type !== "finale_accusation" || !room.actState.finaleAwaitingContinue) return;
+
+    room.actState.ackBy[socket.id] = true;
+    const totalPlayers = connectedPlayerCount(room);
+    const ackCount = Object.keys(room.actState.ackBy).length;
+    io.to(code).emit("finale:continueProgress", { ready: ackCount, total: totalPlayers });
+    if (ackCount >= totalPlayers) {
+      fadeAndAdvanceAct(code);
+    }
   });
 
   // A deliberate "not you" / "start a different game" click, distinct from

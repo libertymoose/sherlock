@@ -369,26 +369,48 @@ const LobbyPen = (() => {
     );
   }
 
+  // Identical styling to overworld.js's own drawNameLabel - same stroke-
+  // then-fill technique, same font/size - so a name reads exactly the
+  // same here as it will the moment the actual game starts.
+  function drawNameLabel(name, centerX, spriteTopY) {
+    if (!name) return;
+    ctx.save();
+    ctx.font = "bold 10px 'Inter', -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#2e222f";
+    ctx.fillStyle = "#ffffff";
+    const labelY = spriteTopY - 2;
+    ctx.strokeText(name, centerX, labelY);
+    ctx.fillText(name, centerX, labelY);
+    ctx.restore();
+  }
+
   function render() {
     if (!canvas || !ctx) return;
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = "#2e222f";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const entries = [{ isMe: true, x: me.x, y: me.y, dir: me.dir, moving: me.moving, frame: me.frame }];
+    const myRecord = (currentPlayers || []).find((p) => p.id === state.myId);
+    const entries = [{
+      isMe: true, x: me.x, y: me.y, dir: me.dir, moving: me.moving, frame: me.frame,
+      name: myRecord ? myRecord.name : null,
+    }];
     (currentPlayers || []).forEach((p) => {
       if (p.id === state.myId || !p.connected) return;
       const r = remote[p.id];
       if (!r) return;
       entries.push({
         isMe: false, x: r.dispX, y: r.dispY, dir: r.dir, moving: r.moving, frame: r.frame,
-        gender: p.gender, color: p.color,
+        gender: p.gender, color: p.color, name: p.name,
       });
     });
     entries.sort((a, b) => a.y - b.y);
     entries.forEach((e) => {
       if (e.isMe) drawCharacter(state.myGender, state.myColor, e.x, e.y, e.dir, e.moving, e.frame);
       else drawCharacter(e.gender || "male", e.color || "red", e.x, e.y, e.dir, e.moving, e.frame);
+      drawNameLabel(e.name, e.x, e.y - DRAW_SIZE);
     });
   }
 
@@ -610,6 +632,56 @@ socket.on("room:update", (data) => {
 
 document.getElementById("btn-start").addEventListener("click", () => {
   socket.emit("host:startGame");
+});
+
+// Invite link generator - the case code alone still works (typed into
+// the plain Join card), but the link already has it baked into ?code=,
+// which is what actually skips a new arrival straight to the invitation
+// screen instead of the raw Host/Join landing screen - see boot().
+function currentInviteLink() {
+  return `${location.origin}${location.pathname}?code=${state.roomCode || ""}`;
+}
+
+function showLobbyCopyFeedback(text) {
+  const el = document.getElementById("lobby-copy-feedback");
+  if (!el) return;
+  el.textContent = text;
+  clearTimeout(showLobbyCopyFeedback._t);
+  showLobbyCopyFeedback._t = setTimeout(() => { el.textContent = "\u00a0"; }, 2500);
+}
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    // Clipboard API can fail (no permission, insecure context) - fall
+    // back to the old select-and-copy trick rather than leaving the
+    // button silently do nothing.
+    try {
+      const tmp = document.createElement("textarea");
+      tmp.value = text;
+      tmp.style.position = "fixed";
+      tmp.style.opacity = "0";
+      document.body.appendChild(tmp);
+      tmp.select();
+      document.execCommand("copy");
+      document.body.removeChild(tmp);
+      return true;
+    } catch (e2) {
+      return false;
+    }
+  }
+}
+
+document.getElementById("btn-copy-code").addEventListener("click", async () => {
+  const ok = await copyToClipboard(state.roomCode || "");
+  showLobbyCopyFeedback(ok ? "Code copied." : "Couldn't copy, here it is above.");
+});
+
+document.getElementById("btn-copy-invite-link").addEventListener("click", async () => {
+  const ok = await copyToClipboard(currentInviteLink());
+  showLobbyCopyFeedback(ok ? "Invite link copied." : "Couldn't copy, here's the code above.");
 });
 
 socket.on("lobby:move", (data) => LobbyPen.onRemoteMove(data));
@@ -1823,7 +1895,15 @@ function splitToFit(container, text, className) {
 
   if (fitsAlone(text)) return [makeVnLine(text, className)];
 
-  const sentences = (text.match(/[^.!?]+[.!?]+(\s+|$)|[^.!?]+$/g) || [text])
+  // Split on sentence-ending punctuation, but let a closing quote mark
+  // (straight or curly) ride along with it rather than being treated as
+  // the start of a new "sentence" on its own - without this, any line
+  // that closes a quote right at a sentence boundary (extremely common
+  // in this project's dialogue, "...made him redo it." She chuckles. "We
+  // all knew...") got the closing quote split off into its own stray
+  // fragment, which is exactly the "floating quotation mark" bug reported
+  // throughout Act 3's dialogue-heavy content.
+  const sentences = (text.match(/[^.!?]+[.!?]+["\u2019\u201d]?(\s+|$)|[^.!?]+$/g) || [text])
     .map((s) => s.trim())
     .filter(Boolean);
   if (sentences.length > 1) {
@@ -2934,7 +3014,10 @@ function renderBoard(zoneKeys) {
   poolEl.innerHTML = "";
   zoneEl.innerHTML = "";
 
-  suspectPoolData.forEach((person) => {
+  const sorted = [...suspectPoolData].sort((a, b) =>
+    String(a.name || "").localeCompare(String(b.name || ""))
+  );
+  sorted.forEach((person) => {
     const inZone = zoneKeys.includes(person.key);
     const card = buildPortraitCard(person);
     (inZone ? zoneEl : poolEl).appendChild(card);
@@ -3175,11 +3258,26 @@ socket.on("finale:result", ({ correct, text }) => {
   }
   if (btn) {
     if (correct) {
-      btn.disabled = true;
-      btn.textContent = "Case closed...";
+      // Deliberately not an auto-advance timer - this is the game's
+      // climax, the party gets to sit with it as long as they want.
+      // The same button that submitted the case now moves everyone on,
+      // once everyone's actually ready, same ack-gated pattern as every
+      // other reveal/cutscene "I'm Ready" button in the game.
+      btn.disabled = false;
+      btn.textContent = "Continue";
+      btn.onclick = () => {
+        btn.disabled = true;
+        btn.textContent = "Waiting for the rest of the table...";
+        socket.emit("finale:acknowledgeResult");
+      };
     } else {
       btn.textContent = "Present Your Case";
       updateFinaleSubmitEnabled();
     }
   }
+});
+
+socket.on("finale:continueProgress", ({ ready, total }) => {
+  const progress = document.getElementById("finale-progress");
+  if (progress) progress.textContent = ready > 0 ? `${ready} / ${total} ready to continue` : "";
 });

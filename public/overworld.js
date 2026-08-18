@@ -1524,12 +1524,23 @@ window.Overworld = (function () {
             if (!r) return;
             const img = getImg(r.src);
             if (!img) return;
-            bctx.drawImage(
-              img, r.sx, r.sy, TILE, TILE,
-              t.x * TILE - originPxX - contentLeft,
-              t.y * TILE - originPxY - contentTop,
-              TILE, TILE
-            );
+            const dx = t.x * TILE - originPxX - contentLeft;
+            const dy = t.y * TILE - originPxY - contentTop;
+            // A handful of real NPCs (e.g. the tavern's seated pair) have a
+            // genuine Tiled horizontal-flip bit on their tiles - one of a
+            // pair authored facing the other, not a default-orientation
+            // sprite. t.flip carries that forward (see the map-build
+            // tooling that produces this data); mirror just this tile
+            // within the buffer rather than dropping the flip entirely.
+            if (t.flip) {
+              bctx.save();
+              bctx.translate(dx + TILE, dy);
+              bctx.scale(-1, 1);
+              bctx.drawImage(img, r.sx, r.sy, TILE, TILE, 0, 0, TILE, TILE);
+              bctx.restore();
+            } else {
+              bctx.drawImage(img, r.sx, r.sy, TILE, TILE, dx, dy, TILE, TILE);
+            }
           });
           // Fixed draw size (WORLD_CHAR_SIZE), matching every other NPC -
           // never shrinks/grows with worldScale beyond the normal player/NPC

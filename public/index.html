@@ -101,30 +101,40 @@
 
   <!-- SCREEN: Lobby (the gala's waiting room) -->
   <section id="screen-lobby" class="screen">
-    <div class="seal">&#9993;</div>
-    <p class="eyebrow">House Duskmere</p>
-    <p class="subtitle">The gala is gathering.</p>
-    <p class="hint-text" id="guest-count-text">Guests arrived: 0</p>
+    <div class="lobby-layout">
+      <div class="lobby-pen-col">
+        <div class="lobby-pen-wrap">
+          <canvas id="lobby-pen-canvas"></canvas>
+        </div>
+        <p class="hint-text">Walk around with WASD or the arrow keys while you wait.</p>
+      </div>
 
-    <div class="lobby-pen-wrap">
-      <canvas id="lobby-pen-canvas"></canvas>
+      <div class="lobby-info-col">
+        <div class="seal">&#9993;</div>
+        <p class="eyebrow">House Duskmere</p>
+        <p class="subtitle">The gala is gathering.</p>
+        <p class="hint-text" id="guest-count-text">Guests arrived: 0</p>
+
+        <div class="player-roster" id="player-roster"></div>
+
+        <div id="host-controls" class="host-controls hidden">
+          <button id="btn-start" class="btn btn-primary">Begin the Gala</button>
+        </div>
+        <p id="waiting-text" class="hint-text">The evening is about to begin...</p>
+
+        <div class="lobby-invite-box">
+          <p class="lobby-invite-label">Case code</p>
+          <div class="room-code" id="room-code-display">-----</div>
+          <div class="lobby-invite-actions">
+            <button id="btn-copy-code" class="btn btn-secondary">Copy Code</button>
+            <button id="btn-copy-invite-link" class="btn btn-secondary">Copy Invite Link</button>
+          </div>
+          <p class="hint-text" id="lobby-copy-feedback">&nbsp;</p>
+        </div>
+
+        <button id="btn-leave-lobby" class="btn btn-secondary">Not you? Leave this game</button>
+      </div>
     </div>
-    <p class="hint-text">Walk around with WASD or the arrow keys while you wait.</p>
-
-    <div class="player-roster" id="player-roster"></div>
-
-    <div id="host-controls" class="host-controls hidden">
-      <button id="btn-start" class="btn btn-primary">Begin the Gala</button>
-    </div>
-    <p id="waiting-text" class="hint-text">The evening is about to begin...</p>
-
-    <details class="lobby-code-details">
-      <summary>Case code (for reference)</summary>
-      <div class="room-code" id="room-code-display">-----</div>
-      <p class="hint-text">Share this code, or the invite link that already contains it, with anyone still joining.</p>
-    </details>
-
-    <button id="btn-leave-lobby" class="btn btn-secondary" style="margin-top:16px">Not you? Leave this game</button>
   </section>
 
   <!-- SCREEN: Game -->
