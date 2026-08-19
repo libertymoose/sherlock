@@ -522,6 +522,30 @@ input[type="text"]:focus {
   margin: 8px 0 24px;
 }
 
+/* Case Closed body text - now real paragraphs (see renderFinal in
+   client.js), each line from the source data is its own <p>. */
+#end-body p {
+  margin: 0 0 14px;
+}
+#end-body p:last-child {
+  margin-bottom: 0;
+}
+/* The hidden EPILOGUE letters - deliberately plain bold, same color as
+   the rest of the text, on first glance. A permanent color or highlight
+   change would make the sequence jump out immediately; this should read
+   as normal prose on a casual pass. The hover glow is a fallback for
+   anyone who suspects something and starts poking at the text, without
+   giving it away to someone just reading normally. */
+#end-body strong {
+  font-weight: 700;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+#end-body strong:hover {
+  color: var(--candle-bright);
+  text-shadow: 0 0 8px rgba(var(--candle-rgb), 0.7);
+  cursor: default;
+}
+
 /* The lobby's hint lines sit directly on the dark page background, not
    inside a light card, so they need the light text color, not the dark
    "text on a tan card" one --parchment-dim gets reassigned to for this
@@ -705,16 +729,6 @@ input[type="text"]:focus {
   width: auto;
   margin-top: 0;
   padding: 0 22px;
-}
-
-.final-word {
-  font-family: 'Inter', -apple-system, sans-serif;
-  font-size: 44px;
-  letter-spacing: 0.15em;
-  text-align: center;
-  color: var(--candle-bright);
-  margin: 20px 0;
-  text-transform: uppercase;
 }
 
 .feedback {

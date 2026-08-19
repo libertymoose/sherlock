@@ -253,7 +253,7 @@ function buildActPayloadForPlayer(room, socketId) {
   }
 
   if (act.type === "final") {
-    return { ...base, body: act.body, finalWord: act.finalWord };
+    return { ...base, body: act.body };
   }
 
   if (act.type === "puzzle_group") {

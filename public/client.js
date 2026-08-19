@@ -1179,8 +1179,14 @@ function renderSplitPuzzle(container, act) {
 
 function renderFinal(act) {
   document.getElementById("end-title").textContent = act.title;
-  document.getElementById("end-body").innerHTML = `<p>${act.body}</p>`;
-  document.getElementById("final-word").textContent = act.finalWord;
+  // Was a single <p> with the whole body crammed in - newlines in the
+  // source text did nothing. Split on \n into real paragraphs, same
+  // convention as renderFinaleAccusation's intro and passage text.
+  document.getElementById("end-body").innerHTML = String(act.body || "")
+    .split("\n")
+    .filter((l) => l.trim().length)
+    .map((l) => `<p>${l}</p>`)
+    .join("");
   showScreen("screen-end");
 }
 

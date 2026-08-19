@@ -1,20 +1,84 @@
-# Handover — A Study in Boralus, picking up after v133
+# Handover — A Study in Boralus, picking up after v135
 
 This replaces the earlier handover from v122 (v123's own testing pass
 hadn't happened yet when this was written). Paste this as the first
-message in a new chat, then attach the v133 zip.
+message in a new chat, then attach the v135 zip.
 
 ## Where things actually stand
 
-- **v133 fixes a real, disclosed-as-a-judgment-call scale bug** on the
-  two "stands behind a counter" NPCs (the tavern bartender, the glass
-  workshop's shopkeeper) - see "v133" below. Also confirmed the card-
-  game group merge from v132 renders at the correct size, no further
-  splitting needed.
-- v123 through v132 remain otherwise as documented.
+- **v135 removes NIGHTSHADE entirely** and adds a hover glow to the
+  hidden EPILOGUE letters as a fallback affordance. The hidden-letters
+  mechanic from v134 is now the only Discord hook on this screen.
+- v123 through v134 remain otherwise as documented.
 - Packaged and validated (JSON parse, `node --check`, CSS braces,
-  em-dash grep, all clean). No collision touched this round.
-- Keep incrementing normally (v134 next) from here.
+  em-dash grep, all clean, confirmed zero remaining references to
+  NIGHTSHADE/finalWord anywhere in the project).
+- Keep incrementing normally (v136 next) from here.
+
+## v135: NIGHTSHADE removed, hover glow added
+
+- Removed `finalWord` from the `final` act in `story.json`, the
+  `#final-word` element from `index.html`, its display line from
+  `renderFinal()` in `client.js`, its now-dead CSS rule, and the
+  `finalWord` field from the server's act payload builder - a full
+  removal, not just hiding it.
+- The old "Return to Discord and type it in to close out the night."
+  line specifically referenced typing NIGHTSHADE, so it's gone too.
+  Replaced with a plain "Take your findings back to Discord." - still
+  nudges the party toward the actual next step without spoiling that
+  there's a hidden mechanic to find. The hidden EPILOGUE letters
+  themselves are still genuinely hidden - no hint text points at them.
+- **Added a hover glow to `#end-body strong`** as a fallback for anyone
+  who suspects something's there and starts poking at the text - the
+  letters stay plain bold by default (matching v134's original "should
+  read as normal prose on a casual pass" reasoning) and only pick up
+  the theme's candle-glow color/shadow on hover. Doesn't change what a
+  casual reader sees, only rewards someone already looking closely.
+
+## v134: Case Closed line breaks + hidden EPILOGUE letters
+
+### Real bug found: line breaks never worked here
+`renderFinal()` in `client.js` was wrapping the whole body in one single
+`<p>` tag with no newline handling at all - unlike every other render
+function in the game (`renderFinaleAccusation`'s intro, the passage
+text), which all split on `\n` into real paragraphs. Any newlines in
+this act's body text were always silently discarded. Fixed to match the
+same convention as everywhere else. Added light paragraph spacing
+(`#end-body p`) so the now-real line breaks actually read as separate
+beats rather than a single dense block.
+
+### Hidden EPILOGUE letters
+Elle's ask: bold one letter at a time, in order, spelling EPILOGUE
+across the passage. Verified programmatically rather than by eye (easy
+to miscount by hand across 14 lines) - extracted every `<strong>` letter
+from the final text and confirmed it reads exactly `EPILOGUE`.
+
+Tried word-initial letters first (bolding the first letter of a chosen
+word reads far cleaner than a bold letter buried mid-word) - confirmed
+by direct search that a fully word-initial solution doesn't exist for
+this specific text (nothing in the back half starts with O, G, or a
+second U-bearing word early enough to leave room for what follows).
+Used a hybrid instead: word-initial wherever the text actually allows it
+(E in "Everyone", P in "past", I in "I'll", G in "go", E in "either" -
+5 of 8), and the shortest, most natural-looking word available for the
+rest (L is the second letter of "I'll" itself, right next to the I; O is
+the second letter of "Corwin"; U is the third letter of "You've").
+Nothing in the source prose was altered to make room for this - only
+existing letters got wrapped in `<strong>`.
+
+Styled `#end-body strong` as plain bold with no color change -
+deliberately, since a color shift would make the sequence jump out
+immediately on a casual read and defeat the "hidden until you're
+looking for it" point of the puzzle.
+
+**Left unchanged, worth confirming:** `NIGHTSHADE` (the `final-word`
+element) and the "Return to Discord and type it in" line are separate,
+static UI pieces from the body text, untouched this round. Elle's new
+body text doesn't reference Discord at all (the earlier draft's closing
+line did) - worth confirming whether NIGHTSHADE-as-typed-command and the
+new hidden `!EPILOGUE` letters are meant to coexist as two separate
+Discord hooks, or whether this is heading toward replacing one with the
+other. Not assumed either way, flagging only.
 
 ## v133: Bust-only NPCs were rendering as giant floating heads
 
