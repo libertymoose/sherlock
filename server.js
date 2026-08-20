@@ -1899,6 +1899,18 @@ io.on("connection", (socket) => {
     if (!def) return;
     if (room.collectedPickups[objectId]) return; // someone else already got it
 
+    // Generic gate: some items (the Herbalist's plant specimens, so far)
+    // shouldn't be collectable until a specific party-wide fact is known -
+    // here, having actually been sent out to gather them. Told, not just
+    // silently ignored, so it doesn't read as a broken interaction.
+    if (def.requiresFact && !room.knownFacts[def.requiresFact]) {
+      socket.emit("inventory:pickupDenied", {
+        objectId,
+        text: def.requiresFactDeniedText || "Not yet. There's nothing to gain from picking this before you know what you're looking for.",
+      });
+      return;
+    }
+
     room.collectedPickups[objectId] = true;
     getInventory(room, socket.id).push({
       itemId: lookupId,
@@ -1949,7 +1961,7 @@ io.on("connection", (socket) => {
     if (itemId === puzzle.correctItemId) status = "correct";
     else if ((puzzle.harmlessItemIds || []).includes(itemId)) status = "harmless";
 
-    room.cauldron = { status, submittedItemId: itemId, heldBy: socket.id };
+    room.cauldron = { status, submittedItemId: itemId, heldBy: socket.id, ackBy: {} };
 
     const reactionKey =
       status === "correct" ? "cauldronCorrect" : status === "harmless" ? "cauldronHarmless" : "cauldronWrong";
@@ -1962,8 +1974,31 @@ io.on("connection", (socket) => {
       lines: reaction.lines || [],
     });
     socket.emit("inventory:state", buildInventoryState(room, socket.id));
+    // Advancing used to fire immediately here, right alongside the result
+    // broadcast - the fade-to-black could land before the client had even
+    // finished its own reveal animation, cutting the herbalist's praise
+    // off before anyone could read it. Now it waits on cauldron:acknowledge,
+    // same party-wide ready pattern as every other "read this, then
+    // continue" moment in the game.
+  });
 
-    if (status === "correct" && act.completionMode === "cauldron" && !room.actState.transitioning) {
+  // The correct result needs everyone to actually read the herbalist's
+  // reaction and choose to move on, not get swept into the next act the
+  // instant the answer lands - same pattern as act:acknowledgeReveal, just
+  // scoped to the cauldron's own state since this act's type is "explore",
+  // not "reveal".
+  socket.on("cauldron:acknowledge", () => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !room.cauldron || room.cauldron.status !== "correct") return;
+    const act = STORY.acts[room.actIndex];
+    if (!act || act.completionMode !== "cauldron") return;
+
+    room.cauldron.ackBy[socket.id] = true;
+    const totalPlayers = connectedPlayerCount(room);
+    const ackCount = Object.keys(room.cauldron.ackBy).length;
+    io.to(code).emit("cauldron:ackProgress", { ackCount, totalPlayers });
+    if (ackCount >= totalPlayers && !room.actState.transitioning) {
       fadeAndAdvanceAct(code);
     }
   });
@@ -2004,12 +2039,41 @@ io.on("connection", (socket) => {
 
   // A player joining mid-puzzle (reconnect, or arriving at the cauldron
   // after someone else already threw something in) needs to see whatever
-  // the current shared result is, not always start from "idle".
+  // the current shared result is, not always start from "idle". Was only
+  // sending the status string with nothing to actually render - the
+  // client had no listener for it at all, so this never did anything.
+  // Sends the same title/lines cauldron:result does, plus this player's
+  // own ack state and the party's live progress for a correct result, so
+  // reopening the modal mid-puzzle looks identical to having been there
+  // for the original result.
   socket.on("cauldron:requestState", () => {
     const code = socket.data.roomCode;
     const room = rooms[code];
-    if (!room || !room.cauldron) return;
-    socket.emit("cauldron:currentState", { status: room.cauldron.status });
+    if (!room || !room.cauldron) {
+      socket.emit("cauldron:currentState", { status: "idle" });
+      return;
+    }
+    const { status, submittedItemId } = room.cauldron;
+    if (status === "idle" || !status) {
+      socket.emit("cauldron:currentState", { status: "idle" });
+      return;
+    }
+    const puzzle = INTERACTIONS.cauldronPuzzle || {};
+    const reactionKey =
+      status === "correct" ? "cauldronCorrect" : status === "harmless" ? "cauldronHarmless" : "cauldronWrong";
+    const reaction = puzzle[reactionKey] || {};
+    const payload = {
+      status,
+      itemId: submittedItemId,
+      title: reaction.title || "The Herbalist",
+      lines: reaction.lines || [],
+    };
+    if (status === "correct") {
+      payload.acked = !!room.cauldron.ackBy[socket.id];
+      payload.ackCount = Object.keys(room.cauldron.ackBy).length;
+      payload.totalPlayers = connectedPlayerCount(room);
+    }
+    socket.emit("cauldron:currentState", payload);
   });
 
   socket.on("evidence:requestState", () => {

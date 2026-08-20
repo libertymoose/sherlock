@@ -81,6 +81,14 @@ window.Overworld = (function () {
   // was 27px tall at draw size 46; the new base sheets are 22px tall), so
   // on-screen height stays consistent with everything else.
   const PLAYER_DRAW_SIZE = 50;
+  // The player sprite sheet has real transparent headroom baked in above
+  // the head (measured directly: content starts 34% of the way down each
+  // 64px cell), unlike NPC sprites which crop much tighter (~9%). Left
+  // uncorrected, name labels anchored to the raw sprite's top edge floated
+  // noticeably farther from the player's own head than from any NPC's -
+  // this is the on-screen pixel offset needed to compensate, applied only
+  // to player name labels below (NPC labels are already correctly close).
+  const PLAYER_HEAD_PADDING = PLAYER_DRAW_SIZE * RENDER_SCALE * 0.34;
   const WORLD_CHAR_SIZE = 22; // NPC on-map footprint
   const CRITTER_DRAW_SIZE = 24; // small ambient sprites (dungeon mice), noticeably smaller than a player/NPC. Calibrated up from an earlier 12 - the mouse art's real non-transparent content is only ~16x9px within its 32x32 canvas, so 12 rendered it almost invisible
   const CRITTER_FRAME_MS = 220; // shared clock, all critters of the same look stay in sync - fine for an ambient idle loop
@@ -1165,6 +1173,21 @@ window.Overworld = (function () {
     const scaledTile = TILE * worldScale;
     const worldW = mapData.width * scaledTile;
     const worldH = mapData.height * scaledTile;
+    // Some maps have real empty padding around their actual playable area
+    // (the herbalist's swamp exterior, for one - content only fills a
+    // portion of the declared grid). Clamping to the full declared width/
+    // height would let the camera drift into that padding at the true map
+    // edges and show it as blank void. cameraBounds (optional, tile units,
+    // set once from the real content's own min/max extent) lets the clamp
+    // track the actual content instead - every map without it keeps
+    // clamping to the full grid exactly as before.
+    const cb = mapData.cameraBounds;
+    const clampMinX = cb ? cb.minX * scaledTile : 0;
+    const clampMinY = cb ? cb.minY * scaledTile : 0;
+    const clampMaxX = cb ? (cb.maxX + 1) * scaledTile : worldW;
+    const clampMaxY = cb ? (cb.maxY + 1) * scaledTile : worldH;
+    const clampW = clampMaxX - clampMinX;
+    const clampH = clampMaxY - clampMinY;
     // Clamp the camera to the map bounds so the void beyond the edge is never
     // visible, that void reading as "walking off the map" even when collision
     // was correctly stopping the player right at the boundary.
@@ -1176,16 +1199,16 @@ window.Overworld = (function () {
       camX = me.x * worldScale - w / 2;
       camY = me.y * worldScale - h / 2;
     }
-    camX = Math.max(0, Math.min(worldW - w, camX));
-    camY = Math.max(0, Math.min(worldH - h, camY));
-    if (worldW < w) camX = (worldW - w) / 2;
+    camX = Math.max(clampMinX, Math.min(clampMinX + clampW - w, camX));
+    camY = Math.max(clampMinY, Math.min(clampMinY + clampH - h, camY));
+    if (clampW < w) camX = clampMinX + (clampW - w) / 2;
     // Top-align rather than vertically center when the map is shorter
     // than the viewport. Centering left dead black space above the
     // content (the top of a room's back wall should sit flush with the
     // top of the screen), and pushed everything down far enough that
     // actors placed further down the map (Voss's walk-in mark, for
     // instance) could end up below the visible area entirely.
-    if (worldH < h) camY = 0;
+    if (clampH < h) camY = clampMinY;
 
     const startCol = Math.max(0, Math.floor(camX / scaledTile));
     const endCol = Math.min(mapData.width - 1, Math.ceil((camX + w) / scaledTile));
@@ -1441,7 +1464,7 @@ window.Overworld = (function () {
       y: me.y + (stagedScene ? stagedScene.playerSortBoost : 0),
       draw: () => {
         const pos = drawPlayer(me.gender, me.color, me.x, me.y, camX, camY, me.dir, me.moving, animFrame, worldScale);
-        if (myName) drawNameLabel(myName, pos.x, pos.y);
+        if (myName) drawNameLabel(myName, pos.x, pos.y + PLAYER_HEAD_PADDING);
       },
     });
 
@@ -1450,7 +1473,7 @@ window.Overworld = (function () {
         y: p.y + (stagedScene ? stagedScene.playerSortBoost : 0),
         draw: () => {
           const pos = drawPlayer(p.gender || "male", p.color || "red", p.x, p.y, camX, camY, p.dir || "down", p.moving, animFrame, worldScale);
-          if (p.name) drawNameLabel(p.name, pos.x, pos.y);
+          if (p.name) drawNameLabel(p.name, pos.x, pos.y + PLAYER_HEAD_PADDING);
         },
       });
     });
@@ -1502,7 +1525,37 @@ window.Overworld = (function () {
       // behind the furniture. Sort key has to use the same tile-quantized
       // convention as everything else; anchorY itself still drives the
       // actual draw position below, unaffected.
-      const sortTileY = Math.max(...cutout.tiles.map((t) => t.y));
+      //
+      // Still not enough on its own for a character seated AT a table:
+      // the table's own furniture tiles (its base/legs) often run a row or
+      // two further down the same columns the character is standing in,
+      // giving the table a genuinely larger bottom-of-run sort key even
+      // after the fix above - the table would still draw after (on top
+      // of) the character it belongs to. A character always reads as "at"
+      // whatever furniture directly shares their own footprint, so their
+      // sort key is bumped up to match the tallest bottom-of-run among any
+      // "sorted" furniture layer occupying the same columns, within a
+      // couple of rows of where they're already standing - close enough to
+      // be the table they're sitting at, not some unrelated far-off prop
+      // that happens to share a column.
+      let sortTileY = Math.max(...cutout.tiles.map((t) => t.y));
+      const cutoutCols = new Set(cutout.tiles.map((t) => t.x));
+      mapData.layers.forEach((l) => {
+        if (l.kind !== "sorted" || !l.dense || l === layer) return;
+        cutoutCols.forEach((x) => {
+          for (let y = sortTileY + 2; y >= sortTileY - 1; y--) {
+            if (y < 0 || y >= mapData.height) continue;
+            if (l.data[y * mapData.width + x]) {
+              // walk to the bottom of this run, same convention as the
+              // main floor/furniture sort-key pass above
+              let bottom = y;
+              while (bottom + 1 < mapData.height && l.data[(bottom + 1) * mapData.width + x]) bottom++;
+              if (bottom > sortTileY) sortTileY = bottom;
+              break;
+            }
+          }
+        });
+      });
       drawList.push({
         y: sortTileY * TILE + TILE,
         draw: () => {

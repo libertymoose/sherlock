@@ -24,7 +24,7 @@
 }
 
 /* Out-of-game palette (Nyx), lobby and landing screens only */
-#screen-invite, #screen-landing, #screen-lobby {
+#screen-landing, #screen-lobby {
   --ink: #34202f;
   --ink-surface: #e7e1e5;
   --ink-surface-2: #603654;
@@ -38,6 +38,24 @@
   --focus-ring: #50a978;
   --candle-rgb: 80,169,120;
   --parchment-rgb: 195,247,208;
+}
+
+/* The invite flow (the invitation card itself, and the landing screen
+   once someone's arrived via an invite link rather than the host's own
+   Host/Join entry) should read as part of the game, not as a separate
+   light "landing page" - same dark in-game palette every Act screen
+   already uses. Host mode keeps the light Nyx cards above untouched. */
+#screen-landing.invite-mode {
+  --ink: #2e222f;
+  --ink-surface: #3e3546;
+  --ink-surface-2: #625565;
+  --parchment: #ffffff;
+  --parchment-dim: #9babb2;
+  --blood: #ea4f36;
+  --success: #1ebc73;
+  --border-line: #484a77;
+  --focus-ring: #5fff94;
+  --parchment-rgb: 255,255,255;
 }
 
 * { box-sizing: border-box; }
@@ -262,6 +280,10 @@ html, body {
   max-width: 560px;
   margin: 0 auto;
 }
+.landing-bento.invite-mode .card-wide {
+  max-width: 640px;
+  margin: 0 auto;
+}
 .landing-bento.invite-mode .character-options {
   flex: 1 1 240px;
   text-align: center;
@@ -296,14 +318,20 @@ html, body {
    than left to grow with content, so a long roster or extra copy can't
    push the whole screen into a vertical scroll the way the earlier
    stacked-single-column version did. */
+.lobby-header {
+  text-align: center;
+  margin-bottom: 18px;
+}
+.lobby-header .subtitle { margin-bottom: 8px; }
+
 .lobby-layout {
   display: grid;
   grid-template-columns: 1.3fr 1fr;
   gap: 28px;
   align-items: stretch;
-  height: calc(100vh - 140px);
-  min-height: 420px;
-  max-height: 760px;
+  height: calc(100vh - 260px);
+  min-height: 380px;
+  max-height: 640px;
 }
 
 .lobby-pen-col {
@@ -337,12 +365,7 @@ html, body {
   padding-right: 4px;
 }
 
-/* Everything above used to size itself for a single centered column
-   filling most of the page - shrink the vertical margins now that it's
-   sharing a fixed-height sidebar instead. */
-.lobby-info-col .seal { margin-bottom: 8px; }
-.lobby-info-col .subtitle { margin-bottom: 12px; }
-.lobby-info-col .player-roster { margin: 14px 0; max-width: 100%; }
+.lobby-info-col .player-roster { margin: 0 0 14px; max-width: 100%; }
 .lobby-info-col .host-controls { margin-top: 12px; }
 .lobby-info-col #btn-leave-lobby { margin-top: auto; }
 
@@ -771,19 +794,81 @@ input[type="text"]:focus {
   font-weight: 600;
 }
 
-.finale-tray-wrap {
+/* The pixel panel wrapping the tab strip and word-bank options -
+   panel_finale.png's own header bar happens to be the exact same green
+   as --candle already, so it blends in without any tinting needed.
+   Asymmetric slice: the top 14px captures the full header bar as one
+   stretchable strip, the other three sides are the thin border. */
+.finale-panel {
   margin-top: 22px;
+  border-image-source: url('/assets/ui/panel_finale.png');
+  border-image-slice: 14 5 5 5 fill;
+  border-image-width: 30px 10px 10px 10px;
+  border-image-repeat: stretch;
+  border-style: solid;
+  border-width: 30px 10px 10px 10px;
+  background: transparent;
+  image-rendering: pixelated;
+  padding: 4px 10px 14px;
 }
-.finale-tray-section {
-  margin-bottom: 18px;
-}
-.finale-tray-label {
-  color: var(--candle);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 12px;
-  margin: 0 0 8px;
+.finale-panel-title {
+  position: relative;
+  top: -22px;
   text-align: center;
+  color: #1c3327;
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+
+.finale-tabs-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: -8px 0 14px;
+}
+.finale-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-style: solid;
+  border-image-source: url('/assets/ui/tab_inactive.png');
+  border-image-slice: 6 fill;
+  border-image-width: 6px;
+  border-image-repeat: stretch;
+  border-width: 6px;
+  background: transparent;
+  image-rendering: pixelated;
+  color: #1c3327;
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 14px 10px;
+  cursor: pointer;
+}
+.finale-tab.active {
+  border-image-source: url('/assets/ui/tab_active.png');
+  color: #16281d;
+}
+.finale-tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(28,51,39,0.25);
+}
+.finale-tab.filled .finale-tab-dot {
+  background: #1c3327;
+}
+
+.finale-tab-content {
+  min-height: 46px;
 }
 .finale-tray-row {
   display: flex;
@@ -1087,6 +1172,32 @@ input[type="text"]:focus {
   font-size: 14px;
 }
 
+/* A brief, self-dismissing message (e.g. a denied pickup) - same dark
+   pill styling as the rest of the in-game HUD, centered low in the
+   viewport so it doesn't collide with the top HUD row or the interact
+   button at the bottom. */
+.explore-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%);
+  z-index: 6;
+  max-width: 80%;
+  text-align: center;
+  background: rgba(12,14,22,0.88);
+  border: 1px solid rgba(var(--accent-btn-rgb),0.4);
+  border-radius: 16px;
+  padding: 8px 16px;
+  color: var(--parchment);
+  font-size: 14px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.explore-toast.visible {
+  opacity: 1;
+}
+
 .hud-icon {
   width: auto;
   height: 16px;
@@ -1140,24 +1251,18 @@ input[type="text"]:focus {
 
 /* One fixed dialogue-box height, used everywhere - illustrated portraits,
    NPC sprite portraits, cutout-based Act 3 portraits, and the no-portrait
-   (vn-compact) case alike. Previously this was two different sizes (210px
-   for illustrated portraits, 130px for sprite portraits) plus a third,
-   unstyled fallback for no-portrait dialogue that just inherited the 210px
-   base - three effectively different box sizes in practice. 170px is the
-   middle ground between the old 210 and 130, tall enough that a 180px
-   illustrated portrait still reads fine slightly cropped, short enough that
-   sprite/cutout portraits aren't swimming in empty space. */
-/* Bumped from 170px - even modest one-sentence intro text (the common
-   case for on-map document popups) was triggering pagination's word-by-
-   word fallback split and leaving most of the visible panel empty below
-   just one short line. 260px gives real multi-line room before anything
-   needs to paginate at all. */
+   (vn-compact) case alike. History: started at 170px, bumped to 260px to
+   fix short intro text triggering pagination too early, then brought back
+   down here after 260px read as "huge and ridiculously tall" in practice.
+   190px is the current compromise; the real fix for cramped text is the
+   trimmed internal padding below, which reclaims usable lines without
+   growing the box itself. */
 .vn-portrait-frame {
   flex-shrink: 0;
   padding: 3px;
   background: transparent;
   box-sizing: border-box;
-  height: 260px;
+  height: 190px;
 }
 
 #vn-portrait {
@@ -1181,9 +1286,9 @@ input[type="text"]:focus {
      portrait, width-minus-portrait when one's shown). */
   flex: 1 1 auto;
   min-width: 0;
-  height: 260px;
+  height: 190px;
   box-sizing: border-box;
-  padding: 8px 14px;
+  padding: 6px 14px;
   background: transparent;
   display: flex;
   flex-direction: column;
@@ -1194,13 +1299,6 @@ input[type="text"]:focus {
    narration, the Skip Step notice, etc). No special sizing needed here
    anymore - the base .vn-text-frame rule above already fills the fixed
    panel width correctly whether or not a portrait is present. */
-
-/* Every illustrated-portrait dialogue box is 210px, every walking-sprite
-   one is 130px - two sizes, each internally consistent, not the old
-   inconsistent per-NPC drift. Portraits were removed project-wide (Act 1
-   and Act 3 alike) in favour of each NPC's own walking sprite, so in
-   practice almost everything now uses the smaller size; the 210px path
-   stays for non-NPC portrait-style images (the planted blade, etc). */
 
 .vn-body {
   flex: 1;
@@ -1214,7 +1312,7 @@ input[type="text"]:focus {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  padding-bottom: 22px;
+  padding-bottom: 14px;
 }
 
 #vn-dialogue-set,
@@ -1449,6 +1547,28 @@ input[type="text"]:focus {
   font-size: 12px;
   font-weight: 700;
   text-align: center;
+}
+
+/* The "Captain Thorne" reopen button - only ever shown after someone's
+   closed her evidence-complete pop-up without submitting the ready
+   vote, so there's always a way back to it. A gentle pulse (not a hard
+   flash) is enough to catch the eye without nagging. */
+.hud-bang {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 50%;
+  background: var(--blood);
+  color: #fff;
+  font-weight: 800;
+  font-size: 12px;
+  animation: hud-bang-pulse 1.8s ease-in-out infinite;
+}
+@keyframes hud-bang-pulse {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.12); }
 }
 
 .item-grid {
@@ -1776,7 +1896,8 @@ input[type="text"]:focus {
 }
 
 .vote-progress-warning {
-  color: #c0392b;
+  color: #ff8a75;
+  text-shadow: 0 0 2px #2a120c, 0 1px 1px #2a120c, 0 -1px 1px #2a120c, 1px 0 1px #2a120c, -1px 0 1px #2a120c;
   font-weight: bold;
 }
 
@@ -1833,6 +1954,7 @@ input[type="text"]:focus {
   border: 2px dashed rgba(var(--candle-rgb), 0.4);
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.15);
+  overflow: hidden;
 }
 .cauldron-art {
   width: 256px;

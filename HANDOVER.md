@@ -1,19 +1,217 @@
-# Handover — A Study in Boralus, picking up after v135
+# Handover — A Study in Boralus, picking up after v136
 
 This replaces the earlier handover from v122 (v123's own testing pass
 hadn't happened yet when this was written). Paste this as the first
-message in a new chat, then attach the v135 zip.
+message in a new chat, then attach the v136 zip.
 
 ## Where things actually stand
 
-- **v135 removes NIGHTSHADE entirely** and adds a hover glow to the
-  hidden EPILOGUE letters as a fallback affordance. The hidden-letters
-  mechanic from v134 is now the only Discord hook on this screen.
-- v123 through v134 remain otherwise as documented.
+- **v136 combines two things**: the Finale word-bank's pixel panel/tabs
+  rework (built right after v135, see its own section below) and the
+  full v135 bug-testing pass Elle sent afterward - roughly 25 items
+  spanning Act 1 through the Herbalist and the ending text. See "The
+  v135 bug-testing pass" section below for the full list; two items
+  needed a real correction mid-pass after direct feedback (the guild
+  hall desk, the herbalist camera), both called out explicitly there.
 - Packaged and validated (JSON parse, `node --check`, CSS braces,
-  em-dash grep, all clean, confirmed zero remaining references to
-  NIGHTSHADE/finalWord anywhere in the project).
-- Keep incrementing normally (v136 next) from here.
+  em-dash grep, all clean). BFS reachability re-confirmed on every
+  touched map - the handful of flagged results (bartender behind his own
+  counter, three market sellers behind their stalls, locked flavor-only
+  doors) are pre-existing and intentional, not caused by anything this
+  round.
+- The Finale panel still hasn't been seen in an actual browser (no
+  rendering tool in this environment) - worth an early look.
+- Keep incrementing normally (v137 next) from here.
+
+## The v135 bug-testing pass
+
+## v136 part 1: Finale word-bank rebuilt as a pixel panel with tabs
+
+Elle sent three CraftPix UI packs (`craftpix-net-994534` fantasy icons,
+`craftpix-net-556632` basic icons, `craftpix-net-255216` basic RPG UI)
+asking whether the finale's plain CSS-box word-bank tray could get the
+same pixel-panel treatment the dialogue box and Evidence Table already
+have. The two icon packs are item/skill icons, not panel chrome - not
+used here, worth keeping for later if individual accent icons are ever
+wanted. The RPG UI pack had real reusable panel/button art.
+
+- **New assets** (`public/assets/ui/`): `panel_finale.png` (cropped from
+  the pack's `Inventory.png`, a blank bordered panel with a green header
+  bar - genuinely lucky, the header's exact color is `rgb(80,169,120)`,
+  identical to this project's own `--candle`, so it blends in with zero
+  tinting needed), `tab_inactive.png`/`tab_active.png` (cropped from
+  `Buttons.png`'s existing blank-pill button family - the same raised-
+  vs-flush 4-state button set already used for the pack's own labeled
+  buttons like AGAIN/NEXT/RESTART, just without baked-in text so this
+  project's own labels sit on top).
+- **Tabs replace the old stacked sections.** Previously all 4 word-bank
+  categories (Who/Poison/Motive/Opportunity) rendered as 4 stacked rows
+  at once. Now one tab per category, only the active tab's row shows.
+  Tab switching is deliberately local, per-player UI state only
+  (`finaleState.activeTab` in `client.js`) - never sent over the socket.
+  The actual selections underneath stay synced for the whole party
+  exactly as before; anyone can be looking at a different tab than
+  everyone else with no effect on shared state.
+- **Each tab shows a small dot once that category has a pick** (`.finale-
+  tab-dot`, filled when `finaleState.selections[blankKey]` is set), so
+  the party can see which categories still need attention without
+  clicking through all four. Updates on both local picks and incoming
+  `finale:state` broadcasts from other players.
+- **Present Your Case stays the standard `.btn.btn-primary`**, unchanged
+  - deliberately not reskinned to the new pack's button art, since
+  consistency with every other CTA button in the game (Continue, Begin
+  the Gala, etc) matters more than a piecemeal pixel-art upgrade limited
+  to one screen.
+- Both new border-image elements (`.finale-panel`, `.finale-tab`) follow
+  the exact same convention already established for `.pixel-panel-
+  dialogue` - explicit companion `border-style`/`border-width` alongside
+  the `border-image-*` properties, plus `image-rendering: pixelated`.
+  The tab pills specifically use `border-image` rather than a flat
+  stretched background, since label lengths vary a lot ("Who" vs
+  "Opportunity") and a flat stretch would visibly distort the pill's
+  rounded corners at very different widths - border-image slicing
+  preserves the corners regardless of how wide the label pushes the tab.
+
+**Still waiting on:** Elle's v135 bug-testing pass, to be combined with
+this into one delivery.
+
+## v136 part 2: the full v135 bug-testing pass
+
+### Layout and screens
+- **Lobby rearranged** to match the reference layout - the header (seal,
+  title, guest count) now spans full width above the pen/sidebar instead
+  of being stacked inside the sidebar column.
+- **Invitation screen and post-invite character creation now use the
+  dark in-game palette** instead of the light landing-page cards, scoped
+  so host-mode Host/Join is untouched. Character-creation card width
+  capped so it doesn't stretch edge-to-edge.
+- **Dialogue box brought back down** from an over-corrected 260px to a
+  compact 190px, with trimmed internal padding reclaiming real text
+  space without the box itself ballooning again.
+- **Space/F now actually triggers "Pick up"** when it's the visible
+  action, instead of just closing the popup.
+- **Player name-label distance fixed with a real measurement**: player
+  sprites have 34% headroom baked into the sheet vs ~9% for NPCs -
+  exactly why names floated farther from the head. Compensated in both
+  the main engine and the lobby pen.
+
+### Act 1-3 map/data bugs
+- **Ashgate's chest**: never actually had a sprite placed, only the
+  interact marker existed. Found the real chest art (already used
+  elsewhere in this map for the staircase) and placed it, clearing the
+  decorative wall-bleed tiles that would've covered it.
+- **Point the Finger error text**: now matches Thorne's exact red/glow
+  styling.
+- **Thorne's popup**: real line breaks (was `.textContent`, same class
+  of bug fixed elsewhere), plus a pulsing "!" reopen button in the HUD
+  if closed without voting ready, resetting cleanly between acts.
+- **Guild Hall dragon skeleton**: added the same Y-sort layer-grouping
+  fix already used for the Mage Tower's dragon - the spine was split
+  across 5 layers with no shared sort key, so parts of it could drop
+  behind other room content.
+- **Guild Hall desk - corrected after initial mis-fix.** First pass
+  wrongly assumed the small writing-desk near the door was "the" desk
+  and relocated it, which Elle caught: there's already a real central
+  desk (with book/inkwell) inside the dragon coil. Reverted the
+  relocation, restored the original small desk exactly as authored, and
+  pointed the interact object at the real central desk instead.
+- **Guild Hall upstairs access removed.**
+- **The Fruit Seller**: was unreachable - her interact point sat inside
+  the stall's own solid collision block, dead center, nowhere near the
+  nearest walkable tile. Moved the interact point to the walkable edge.
+  Checked for a reported "insanely large" sizing bug specifically and
+  couldn't reproduce one in the data (drawScale, content dimensions all
+  came back normal) - flagging as possibly resolved now that she's
+  actually reachable, worth a fresh look.
+- **"A Table of Adventurers" renamed to "Adventurer"**, and its "split in
+  half, flipped wrong" render was a real bug: the cutout was combining
+  two *different*, unrelated tileset columns instead of mirroring one
+  character. Rebuilt using one column mirrored via the flip system,
+  confirmed clean with a render.
+- **Tavern "characters below tables" - real engine bug, not a data
+  problem.** Re-checked the actual authored layer order and full tile
+  data against the real Tiled source again (both matched exactly, as
+  before) - the bug was in the sort-key calculation itself. The earlier
+  fix (tile-quantized sort keys) wasn't accounting for furniture directly
+  sharing a character's own footprint - a table's base often sits a row
+  or two further down the same columns than the character sitting at it,
+  giving the table a larger "draws on top" key even after that fix.
+  Extended the sort-key logic to also check for exactly that. Verified
+  computationally across all 12 tavern NPCs: every one's sort key
+  increased as expected, meaning they'll now draw in front of the
+  furniture they're at. This is a general engine fix, not tavern-
+  specific - benefits any map with cutouts near furniture.
+
+### The Herbalist
+- **Missing from the interior - real cause found.** She had a valid
+  `look`, a valid manifest entry, valid files, a walkable position - but
+  no `type: "npc"` field, which is what the client's `initNpcStates()`
+  gates on before creating any render state at all. Without it she was
+  skipped entirely, not just mis-rendered. Swept the whole project for
+  the same gap - nothing else affected.
+- **Door/window endless animation loop**: this map had 37 animated tiles
+  and zero `animationZones` to gate them, so everything (including the
+  door/window tiles) just looped forever ambiently. Removed the 31
+  door/window entries specifically, left the cauldron's own steam/bubble
+  animation (6 entries) intact.
+- **Camera scrolling off into blank space - corrected after initial
+  mis-fix.** First pass shrank the whole map with `tileRenderScale`,
+  which Elle correctly rejected - she wanted normal scrolling preserved,
+  just no blank void at the true edges. Reverted the shrink. Real cause:
+  the map has genuine empty padding around its actual content (content
+  only fills tiles 15-42 horizontally, 1-26 vertically, out of a
+  declared 48x32 grid) - the camera was clamping to the full declared
+  grid, letting it drift into that real padding. Added a `cameraBounds`
+  field (computed from the actual non-empty tile extent) and taught the
+  camera clamp to use it when present - every other map, with no
+  `cameraBounds` set, keeps clamping to its full grid exactly as before.
+- **Cauldron scrollbar**: the smoke overlay (220x220px) had no
+  `overflow: hidden` on its much smaller (256x128px) stage container, so
+  it visually inflated the modal's content height and forced a
+  scrollbar. Clipped it to the stage.
+- **Plant pickup gating**: added a `requiresFact` field to all 6
+  specimen items (monkshood, foxglove, nightshade, oleander, hemlock,
+  marigold), wired the herbalist's reveal dialogue to teach that fact
+  the moment she actually sends the party out, and added a generic
+  server-side gate check on pickup - denying with a real reason instead
+  of a silent no-op. Added a proper toast notification client-side for
+  the denial (there was no toast/banner UI in the project before this;
+  built one, styled to match the existing HUD pill language).
+- **Cauldron success flow - real sequencing bug found.** The correct
+  result and the fade-to-black used to fire in the same instant server-
+  side, ahead of the client's own 1.8s reveal delay - the fade could
+  land before the herbalist's praise text was even shown. Removed the
+  auto-advance entirely; added a proper party-wide "Continue" button
+  (same acknowledge-and-wait pattern as `act:acknowledgeReveal` elsewhere
+  in the game, just scoped to the cauldron's own state since this act's
+  type is `explore`, not `reveal`) with live "X / Y ready" progress text.
+- **Cauldron mid-puzzle resync fixed.** `cauldron:requestState` was only
+  ever sending a bare status string, and the client had no listener for
+  the response at all - reopening the modal after someone else had
+  already thrown something in, or reconnecting mid-puzzle, silently did
+  nothing and left the modal on its default idle state regardless of
+  reality. Server now sends the full result (title, lines, and for a
+  correct result, this player's own ack state plus the party's live
+  progress) matching what a fresh `cauldron:result` carries. Client-side,
+  extracted the tint/title/lines/button rendering that `cauldron:result`
+  already did into one shared `renderCauldronResult()` function, used by
+  both the fresh-submission reveal (with its dramatic delay) and this
+  resync path (immediate, no delay/smoke).
+
+### Case Closed
+- **Line breaks reduced** - merged several short, closely-related beats
+  into shared paragraphs (9 paragraphs now, down from 14) without
+  touching any of the actual sentences.
+- **Hidden phrase extended to `!EPILOGUE`** (bang-prefix, matching real
+  Discord bot command syntax) rather than plain `EPILOGUE`. The `!` was
+  already sitting right there in `"Clever!"`, positioned before the
+  first bolded letter - just needed the same `<strong>` treatment as the
+  rest. Verified programmatically: extracting every bolded character in
+  order gives exactly `!EPILOGUE`.
+- The "Take your findings back to Discord" wording/rewording request
+  from the original list has not been revisited this round - the current
+  text still just says that plainly. Worth a decision on exact phrasing
+  next time this screen comes up.
 
 ## v135: NIGHTSHADE removed, hover glow added
 

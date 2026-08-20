@@ -406,11 +406,12 @@ const LobbyPen = (() => {
         gender: p.gender, color: p.color, name: p.name,
       });
     });
+    const DRAW_SIZE_HEAD_PADDING = DRAW_SIZE * 0.34; // same measured baked-in headroom fix as overworld.js
     entries.sort((a, b) => a.y - b.y);
     entries.forEach((e) => {
       if (e.isMe) drawCharacter(state.myGender, state.myColor, e.x, e.y, e.dir, e.moving, e.frame);
       else drawCharacter(e.gender || "male", e.color || "red", e.x, e.y, e.dir, e.moving, e.frame);
-      drawNameLabel(e.name, e.x, e.y - DRAW_SIZE);
+      drawNameLabel(e.name, e.x, e.y - DRAW_SIZE + DRAW_SIZE_HEAD_PADDING);
     });
   }
 
@@ -541,6 +542,7 @@ document.getElementById("btn-join").addEventListener("click", () => {
 // --- Invitation screen (arrivals via a shared ?code=XXXX link) ---
 document.getElementById("btn-accept-invite").addEventListener("click", () => {
   document.getElementById("landing-bento").classList.add("invite-mode");
+  document.getElementById("screen-landing").classList.add("invite-mode");
   document.getElementById("landing-invite-action").classList.remove("hidden");
   showScreen("screen-landing");
 });
@@ -758,6 +760,12 @@ socket.on("act:show", (act) => {
   if (!act) return;
   currentAct = act;
   showScreen("screen-game");
+
+  // A leftover reopen-Thorne prompt from a previous act shouldn't follow
+  // the party into the next one.
+  thorneMessagePending = false;
+  document.getElementById("btn-reopen-thorne").classList.add("hidden");
+  document.getElementById("modal-thorne").classList.add("hidden");
 
   // The cutscene fade-to-black only ever gets cleared by its own button
   // being clicked. If the host force-advances past a cutscene mid-fade
@@ -1027,11 +1035,12 @@ function renderGroupPuzzle(container, act) {
 // Suspect Board), then presented together with one submit. WHO wrong gets
 // that suspect's own defense line from the server; anything else wrong
 // gets Hook's vague count, never which ones specifically.
-let finaleState = { act: null, selections: {} };
+let finaleState = { act: null, selections: {}, activeTab: null };
 
 function renderFinaleAccusation(container, act) {
   finaleState.act = act;
   finaleState.selections = act.selections || {};
+  finaleState.activeTab = (act.blankOrder || [])[0] || null;
 
   if (act.introThorne) {
     const intro = document.createElement("div");
@@ -1049,10 +1058,32 @@ function renderFinaleAccusation(container, act) {
   passageBox.id = "finale-passage";
   container.appendChild(passageBox);
 
-  const trayWrap = document.createElement("div");
-  trayWrap.className = "finale-tray-wrap";
-  trayWrap.id = "finale-tray-wrap";
-  container.appendChild(trayWrap);
+  // The pixel panel: a title strip (the art's own green header bar),
+  // a row of tabs (one per blank - Who/Poison/Motive/Opportunity), and
+  // a body showing only the active tab's word-bank options. Which tab
+  // is open is purely local per-player UI state, never sent over the
+  // socket - the actual selections underneath stay synced regardless of
+  // which tab anyone happens to be looking at.
+  const panel = document.createElement("div");
+  panel.className = "finale-panel";
+  panel.id = "finale-panel";
+
+  const title = document.createElement("div");
+  title.className = "finale-panel-title";
+  title.textContent = "Present Your Case";
+  panel.appendChild(title);
+
+  const tabsRow = document.createElement("div");
+  tabsRow.className = "finale-tabs-row";
+  tabsRow.id = "finale-tabs-row";
+  panel.appendChild(tabsRow);
+
+  const tabContent = document.createElement("div");
+  tabContent.className = "finale-tab-content";
+  tabContent.id = "finale-tab-content";
+  panel.appendChild(tabContent);
+
+  container.appendChild(panel);
 
   const submitBtn = document.createElement("button");
   submitBtn.className = "btn btn-primary";
@@ -1071,6 +1102,7 @@ function renderFinaleAccusation(container, act) {
   feedback.id = "finale-feedback";
   container.appendChild(feedback);
 
+  renderFinaleTabs();
   renderFinaleTray();
   renderFinalePassage();
 }
@@ -1097,41 +1129,68 @@ function renderFinalePassage() {
     .join("");
 }
 
-function renderFinaleTray() {
+// The tab strip itself - one pill button per blank, showing which tab is
+// currently open (tab_active.png) versus not (tab_inactive.png), plus a
+// small dot once that category has a pick, so the party can see at a
+// glance which tabs still need attention without clicking through all
+// of them.
+function renderFinaleTabs() {
   const act = finaleState.act;
-  const wrap = document.getElementById("finale-tray-wrap");
-  if (!wrap || !act) return;
-  wrap.innerHTML = "";
+  const row = document.getElementById("finale-tabs-row");
+  if (!row || !act) return;
+  row.innerHTML = "";
 
   (act.blankOrder || []).forEach((blankKey) => {
     const blankDef = act.blanks && act.blanks[blankKey];
     if (!blankDef) return;
 
-    const section = document.createElement("div");
-    section.className = "finale-tray-section";
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = "finale-tab";
+    if (finaleState.activeTab === blankKey) tab.classList.add("active");
+    if (finaleState.selections[blankKey]) tab.classList.add("filled");
 
-    const label = document.createElement("p");
-    label.className = "finale-tray-label";
+    const label = document.createElement("span");
     label.textContent = blankDef.label || blankKey;
-    section.appendChild(label);
+    tab.appendChild(label);
 
-    const row = document.createElement("div");
-    row.className = "finale-tray-row";
+    const dot = document.createElement("span");
+    dot.className = "finale-tab-dot";
+    tab.appendChild(dot);
 
-    (blankDef.options || []).forEach((opt) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "finale-chip";
-      if (finaleState.selections[blankKey] === opt.id) btn.classList.add("active");
-      btn.textContent = opt.text;
-      btn.onclick = () => socket.emit("finale:select", { blank: blankKey, optionId: opt.id });
-      row.appendChild(btn);
-    });
+    tab.onclick = () => {
+      finaleState.activeTab = blankKey;
+      renderFinaleTabs();
+      renderFinaleTray();
+    };
+    row.appendChild(tab);
+  });
+}
 
-    section.appendChild(row);
-    wrap.appendChild(section);
+function renderFinaleTray() {
+  const act = finaleState.act;
+  const content = document.getElementById("finale-tab-content");
+  if (!content || !act) return;
+  content.innerHTML = "";
+
+  const blankKey = finaleState.activeTab;
+  const blankDef = act.blanks && act.blanks[blankKey];
+  if (!blankDef) return;
+
+  const row = document.createElement("div");
+  row.className = "finale-tray-row";
+
+  (blankDef.options || []).forEach((opt) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "finale-chip";
+    if (finaleState.selections[blankKey] === opt.id) btn.classList.add("active");
+    btn.textContent = opt.text;
+    btn.onclick = () => socket.emit("finale:select", { blank: blankKey, optionId: opt.id });
+    row.appendChild(btn);
   });
 
+  content.appendChild(row);
   updateFinaleSubmitEnabled();
 }
 
@@ -2014,9 +2073,18 @@ function advanceVnPageOrClose() {
     vnPageIndex += 1;
     showVnPage(vnPageIndex);
   } else {
-    // Already on the last page - the interact key/button reaching here
-    // (rather than being free to open something new) means "I'm done
-    // reading", so close it rather than doing nothing.
+    // Already on the last page. If this is a document popup, that's
+    // exactly when showVnPage() reveals the "Pick up" button - the
+    // keyboard shortcut should do the same thing the visible button
+    // does, not silently close the panel out from under it.
+    const takeBtn = document.getElementById("btn-document-take");
+    if (takeBtn && !takeBtn.classList.contains("hidden")) {
+      takeBtn.click();
+      return;
+    }
+    // Otherwise the interact key/button reaching here (rather than being
+    // free to open something new) means "I'm done reading", so close it
+    // rather than doing nothing.
     const panelOpen = !document.getElementById("vn-panel").classList.contains("hidden");
     if (panelOpen) closeVnPanel();
   }
@@ -2240,8 +2308,34 @@ document.getElementById("btn-document-take").addEventListener("click", () => {
   activeDocumentEntry = null;
 });
 
+let toastHideTimer = null;
+function showToast(text) {
+  const el = document.getElementById("explore-toast");
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove("hidden");
+  // Force a reflow so the browser sees "hidden removed, not yet visible"
+  // as a real state before adding "visible" - otherwise both classes
+  // landing in the same frame skips the opacity transition entirely.
+  void el.offsetWidth;
+  el.classList.add("visible");
+  if (toastHideTimer) clearTimeout(toastHideTimer);
+  toastHideTimer = setTimeout(() => {
+    el.classList.remove("visible");
+    setTimeout(() => el.classList.add("hidden"), 260);
+  }, 2600);
+}
+
 socket.on("map:objectRemoved", (data) => {
   Overworld.removeObject(data.objectId);
+});
+
+// A pickup can be denied (the Herbalist's plants, before she's actually
+// sent the party out for them) - the object stays on the map, so no
+// map:objectRemoved follows. Surface the reason rather than leaving the
+// player wondering why nothing happened when they picked it up.
+socket.on("inventory:pickupDenied", (data) => {
+  showToast(data.text || "You can't take that yet.");
 });
 
 // Pressure-plate doors: the server decides open/closed (based on who's
@@ -2383,6 +2477,8 @@ function resetCauldronResultUI() {
   document.getElementById("cauldron-result").classList.add("hidden");
   document.getElementById("cauldron-hint").classList.remove("hidden");
   document.getElementById("cauldron-tray").classList.remove("hidden");
+  document.getElementById("btn-cauldron-continue").classList.add("hidden");
+  document.getElementById("cauldron-ack-progress").classList.add("hidden");
 }
 
 function renderCauldronTray() {
@@ -2431,6 +2527,47 @@ cauldronDropZone.addEventListener("drop", (e) => {
   socket.emit("cauldron:submit", { itemId });
 });
 
+// Shared by the fresh-submission reveal and the mid-puzzle resync below -
+// paints the tint, title, lines, and correct set of buttons for whatever
+// result data it's given. Doesn't touch the smoke overlay or animation
+// speed itself; callers handle that part since the two cases want
+// different timing around it (a dramatic pause vs an instant catch-up).
+function renderCauldronResult(data) {
+  const art = document.getElementById("cauldron-art");
+  art.classList.remove("cauldron-tint-green", "cauldron-tint-red", "cauldron-tint-blue");
+  const tintClass =
+    data.status === "correct" ? "cauldron-tint-green" : data.status === "harmless" ? "cauldron-tint-blue" : "cauldron-tint-red";
+  art.classList.add(tintClass);
+
+  document.getElementById("cauldron-hint").classList.add("hidden");
+  document.getElementById("cauldron-tray").classList.add("hidden");
+  document.getElementById("cauldron-result").classList.remove("hidden");
+  document.getElementById("cauldron-result-title").textContent = data.title || "The Herbalist";
+  document.getElementById("cauldron-result-text").textContent = (data.lines || []).join("\n\n");
+  document.getElementById("btn-cauldron-again").classList.toggle("hidden", data.status === "correct");
+
+  const continueBtn = document.getElementById("btn-cauldron-continue");
+  continueBtn.classList.toggle("hidden", data.status !== "correct");
+  const progressEl = document.getElementById("cauldron-ack-progress");
+  if (data.status === "correct") {
+    if (data.acked) {
+      continueBtn.disabled = true;
+      continueBtn.textContent = "Waiting for the rest of the table...";
+    } else {
+      continueBtn.disabled = false;
+      continueBtn.textContent = "Continue";
+    }
+    const ackCount = data.ackCount || 0;
+    const totalPlayers = data.totalPlayers || 1;
+    if (ackCount > 0 && ackCount < totalPlayers) {
+      progressEl.textContent = `${ackCount} / ${totalPlayers} ready to go`;
+      progressEl.classList.remove("hidden");
+    } else {
+      progressEl.classList.add("hidden");
+    }
+  }
+}
+
 // The 1.8s delay lets the smoke overlay actually read as "something is
 // happening" before the result underneath it is revealed, rather than the
 // colour change and the herbalist's line landing the instant you drop the
@@ -2439,21 +2576,46 @@ socket.on("cauldron:result", (data) => {
   setTimeout(() => {
     document.getElementById("cauldron-smoke").classList.add("hidden");
     startCauldronAnimation(90);
-    const art = document.getElementById("cauldron-art");
-    art.classList.remove("cauldron-tint-green", "cauldron-tint-red", "cauldron-tint-blue");
-    const tintClass =
-      data.status === "correct" ? "cauldron-tint-green" : data.status === "harmless" ? "cauldron-tint-blue" : "cauldron-tint-red";
-    art.classList.add(tintClass);
-
-    document.getElementById("cauldron-result").classList.remove("hidden");
-    document.getElementById("cauldron-result-title").textContent = data.title || "The Herbalist";
-    document.getElementById("cauldron-result-text").textContent = (data.lines || []).join("\n\n");
-    document.getElementById("btn-cauldron-again").classList.toggle("hidden", data.status === "correct");
+    renderCauldronResult(data);
   }, 1800);
+});
+
+// Reopening the modal mid-puzzle (or reconnecting) needs to land on
+// whatever the shared state actually is right now, not always "idle" -
+// this used to be sent by the server with nothing listening for it on
+// the client at all, so it silently did nothing.
+socket.on("cauldron:currentState", (data) => {
+  stopCauldronAnimation();
+  if (!data || data.status === "idle") {
+    resetCauldronResultUI();
+    renderCauldronTray();
+    startCauldronAnimation(90);
+    return;
+  }
+  document.getElementById("cauldron-smoke").classList.add("hidden");
+  startCauldronAnimation(90);
+  renderCauldronResult(data);
 });
 
 document.getElementById("btn-cauldron-again").addEventListener("click", () => {
   socket.emit("cauldron:reset");
+});
+
+document.getElementById("btn-cauldron-continue").addEventListener("click", () => {
+  const btn = document.getElementById("btn-cauldron-continue");
+  btn.disabled = true;
+  btn.textContent = "Waiting for the rest of the table...";
+  socket.emit("cauldron:acknowledge");
+});
+
+socket.on("cauldron:ackProgress", ({ ackCount, totalPlayers }) => {
+  const el = document.getElementById("cauldron-ack-progress");
+  if (ackCount >= totalPlayers) {
+    el.classList.add("hidden");
+    return;
+  }
+  el.textContent = `${ackCount} / ${totalPlayers} ready to go`;
+  el.classList.remove("hidden");
 });
 
 socket.on("cauldron:reset", () => {
@@ -2886,22 +3048,41 @@ document.getElementById("btn-ready-check").addEventListener("click", () => {
 // from here, no separate desk walk required. The desk (modal-ready-check)
 // still works too, same vote, same progress counter, for anyone who closed
 // this pop-up first.
+let thorneMessagePending = false; // true once shown, false once this player has voted ready
 function openThorneModal(text) {
-  document.getElementById("thorne-message-text").textContent = text || "";
+  document.getElementById("thorne-message-text").innerHTML = String(text || "")
+    .split("\n")
+    .filter((l) => l.trim().length)
+    .map((l) => `<p>${l}</p>`)
+    .join("");
   const btn = document.getElementById("btn-thorne-ready");
   btn.disabled = false;
   btn.textContent = "I'm Ready. Continue";
   document.getElementById("thorne-ready-progress").textContent = "";
   document.getElementById("modal-thorne").classList.remove("hidden");
+  thorneMessagePending = true;
+  document.getElementById("btn-reopen-thorne").classList.add("hidden");
 }
 function closeThorneModal() {
   document.getElementById("modal-thorne").classList.add("hidden");
+  // Closing without having voted ready shouldn't lose the message - leave
+  // a way back to it rather than making the player re-trigger the event
+  // (which they can't; it only fires once, when the last evidence lands).
+  if (thorneMessagePending) {
+    document.getElementById("btn-reopen-thorne").classList.remove("hidden");
+  }
 }
 document.getElementById("btn-close-thorne").addEventListener("click", closeThorneModal);
+document.getElementById("btn-reopen-thorne").addEventListener("click", () => {
+  document.getElementById("btn-reopen-thorne").classList.add("hidden");
+  document.getElementById("modal-thorne").classList.remove("hidden");
+});
 document.getElementById("btn-thorne-ready").addEventListener("click", () => {
   const btn = document.getElementById("btn-thorne-ready");
   btn.disabled = true;
   btn.textContent = "Waiting for the rest of the table...";
+  thorneMessagePending = false;
+  document.getElementById("btn-reopen-thorne").classList.add("hidden");
   socket.emit("evidenceRoom:ready");
 });
 socket.on("thorne:message", ({ text }) => openThorneModal(text));
@@ -3231,6 +3412,7 @@ socket.on("board:result", (data) => {
 
 socket.on("finale:state", ({ selections }) => {
   finaleState.selections = selections || {};
+  renderFinaleTabs();
   renderFinaleTray();
   renderFinalePassage();
   const feedback = document.getElementById("finale-feedback");

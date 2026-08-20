@@ -101,6 +101,13 @@
 
   <!-- SCREEN: Lobby (the gala's waiting room) -->
   <section id="screen-lobby" class="screen">
+    <div class="lobby-header">
+      <div class="seal">&#9993;</div>
+      <p class="eyebrow">House Duskmere</p>
+      <p class="subtitle">The gala is gathering.</p>
+      <p class="hint-text" id="guest-count-text">Guests arrived: 0</p>
+    </div>
+
     <div class="lobby-layout">
       <div class="lobby-pen-col">
         <div class="lobby-pen-wrap">
@@ -110,11 +117,6 @@
       </div>
 
       <div class="lobby-info-col">
-        <div class="seal">&#9993;</div>
-        <p class="eyebrow">House Duskmere</p>
-        <p class="subtitle">The gala is gathering.</p>
-        <p class="hint-text" id="guest-count-text">Guests arrived: 0</p>
-
         <div class="player-roster" id="player-roster"></div>
 
         <div id="host-controls" class="host-controls hidden">
@@ -163,6 +165,7 @@
       </div>
       <div class="explore-viewport" id="explore-viewport">
         <canvas id="explore-canvas"></canvas>
+        <div id="explore-toast" class="explore-toast hidden"></div>
         <div id="explore-progress" class="explore-progress-hud">
           <img src="/assets/ui/icons/info.png" class="hud-icon" alt="Clues found" />
           <span id="explore-progress-count">0</span>
@@ -178,6 +181,9 @@
           </button>
           <button id="btn-open-vote" class="inventory-btn hidden" aria-label="Point the Finger">
             <img src="/assets/ui/icons/info.png" class="hud-icon" alt="Point the Finger" />
+          </button>
+          <button id="btn-reopen-thorne" class="inventory-btn hidden" aria-label="Captain Thorne">
+            <span class="hud-bang">!</span>
           </button>
         </div>
         <button id="btn-interact" class="btn btn-primary interact-btn hidden">Examine</button>
@@ -370,6 +376,8 @@
         <p class="section-label" id="cauldron-result-title"></p>
         <p class="hint-text" id="cauldron-result-text"></p>
         <button id="btn-cauldron-again" class="btn btn-secondary hidden">Try Again</button>
+        <button id="btn-cauldron-continue" class="btn btn-primary hidden">Continue</button>
+        <p class="hint-text hidden" id="cauldron-ack-progress"></p>
       </div>
     </div>
   </div>
@@ -383,7 +391,7 @@
     <div class="pixel-panel pixel-panel-popup modal-box">
       <button id="btn-close-thorne" class="pixel-close-btn" aria-label="Close"></button>
       <h3 class="pixel-panel-title">Captain Thorne</h3>
-      <p class="hint-text" id="thorne-message-text" style="margin-top:0"></p>
+      <div class="hint-text" id="thorne-message-text" style="margin-top:0"></div>
       <button id="btn-thorne-ready" class="btn btn-primary js-continue-btn">I'm Ready. Continue</button>
       <p class="hint-text" id="thorne-ready-progress"></p>
     </div>
