@@ -244,9 +244,13 @@ function buildActPayloadForPlayer(room, socketId) {
       zone: act.zone,
       video: act.video || null,
       playerMarks: act.playerMarks || [],
+      playerWalkPath: act.playerWalkPath || null,
       actors: act.actors || [],
       dialogue: act.dialogue || [],
+      fadeIn: !!act.fadeIn,
       fadeOut: !!act.fadeOut,
+      cameraCenter: act.cameraCenter || null,
+      playerSortBoost: act.playerSortBoost || 0,
       nextActEyebrow: act.nextActEyebrow || null,
       nextActTitle: act.nextActTitle || null,
     };
@@ -1073,9 +1077,30 @@ io.on("connection", (socket) => {
     const room = rooms[code];
     if (!room || room.hostSocketId !== socket.id) return;
     room.started = true;
-    room.actIndex = 0;
-    sendActToRoom(code);
+    // Every other chapter transition gets a real, dedicated black title
+    // card (eyebrow + title + a party-wide ready button, no body text)
+    // before its content loads - chapter 1 was the one exception, jumping
+    // straight into "The Gala" with no card of its own. actIndex stays at
+    // -1 (no real story act yet) until everyone's acknowledged this card;
+    // game:acknowledgeStart is what actually loads act 0.
+    room.actIndex = -1;
+    room.gameStartAck = {};
+    io.to(code).emit("game:titleCard", { eyebrow: "Act I", title: "The Gala" });
     broadcastRoomState(code);
+  });
+
+  socket.on("game:acknowledgeStart", () => {
+    const code = socket.data.roomCode;
+    const room = rooms[code];
+    if (!room || !room.started || room.actIndex !== -1) return;
+    room.gameStartAck[socket.id] = true;
+    const totalPlayers = connectedPlayerCount(room);
+    const ackCount = Object.keys(room.gameStartAck).length;
+    io.to(code).emit("game:titleCardProgress", { acknowledged: ackCount, total: totalPlayers });
+    if (ackCount >= totalPlayers) {
+      room.actIndex = 0;
+      sendActToRoom(code);
+    }
   });
 
   // Pre-game waiting room only: no map, no collision, just live position

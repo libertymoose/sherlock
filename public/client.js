@@ -1358,7 +1358,19 @@ function refreshInteractButtonLabel() {
     if (DUNGEON_ZONES.has(Overworld.getZone())) {
       btn.textContent = "Continue";
     } else {
-      btn.textContent = obj.interaction.targetZone === "estate" ? "Exit" : "Enter";
+      // Was hardcoded to only say "Exit" when targetZone === "estate" -
+      // correct for the original estate/interior maps, but wrong for
+      // every Act 3 building, whose own exits target a town zone
+      // (guild_hall_exterior, town_exterior, training_ground etc.), not
+      // literally "estate". That made every one of those read "Enter"
+      // on the way OUT of a building. Determined from the object's own
+      // name instead, which every map already labels consistently as
+      // one or the other ("Outside", "Exit", "Back to...", "Out to...",
+      // "A Way Out" for exits; "Manor Stairs", "Guild Hall Entrance",
+      // "The Tavern" etc. for entrances) - matches actual intent on
+      // every zone_exit object in the project, not just estate's.
+      const isExitLike = /^(outside|exit|back to|out to|out through|a way out)\b/i.test(obj.name || "");
+      btn.textContent = isExitLike ? "Exit" : "Enter";
     }
   } else if (obj && obj.interaction && obj.interaction.kind === "candle") {
     btn.textContent = candleLitState[obj.interaction.candleId] ? "Extinguish" : "Light";
@@ -1470,6 +1482,13 @@ async function enterExplore(act) {
 // explore act, but freezes the local player at a fixed mark instead of
 // giving them movement, plays a scripted walk-in for the named actors,
 // then hands off to a VN dialogue sequence once everyone's arrived.
+// A scene can optionally also walk the real players themselves along a
+// route (act.playerWalkPath) - the cave shortcut's single-file crossing,
+// so far the only user of this - in which case there's no static mark at
+// all, just the route's own starting point, and every player runs the
+// exact same deterministic path with a staggered start (by party index)
+// so it reads as one line of people rather than everyone snapping to
+// their own spot at once.
 async function enterStagedScene(act) {
   document.getElementById("btn-interact").classList.add("hidden");
   updateZoneLabel("");
@@ -1479,7 +1498,11 @@ async function enterStagedScene(act) {
 
   const myIndex = Math.max(0, currentPlayers.findIndex((p) => p.id === socket.id));
   const marks = act.playerMarks || [];
-  const myMark = marks.length ? marks[myIndex % marks.length] : null;
+  const walkPath = act.playerWalkPath || null;
+  // With a walk path and no explicit marks, everyone starts at the
+  // route's own first waypoint rather than needing a redundant separate
+  // mark list that would just have to match it anyway.
+  const myMark = marks.length ? marks[myIndex % marks.length] : (walkPath ? walkPath.waypoints[0] : null);
 
   const canvas = document.getElementById("explore-canvas");
   await Overworld.init({
@@ -1519,8 +1542,16 @@ async function enterStagedScene(act) {
   if (act.video) {
     showStagedSceneVideoPrompt(act);
   } else {
+    const myWalkPath = walkPath
+      ? {
+          waypoints: walkPath.waypoints.slice(1), // first point is the starting mark, not a leg to walk
+          speedTilesPerSec: walkPath.speedTilesPerSec,
+          startDelayMs: myIndex * (walkPath.staggerMs != null ? walkPath.staggerMs : 500),
+        }
+      : null;
     Overworld.beginStagedScene({
       myMark,
+      myWalkPath,
       actors: act.actors || [],
       cameraCenter: act.cameraCenter || null,
       playerSortBoost: act.playerSortBoost || 0,
@@ -1592,7 +1623,7 @@ function finishStagedScene(act) {
   }
 }
 
-function showStagedSceneReadyButton(nextActEyebrow, nextActTitle) {
+function showStagedSceneReadyButton(nextActEyebrow, nextActTitle, ackEvent = "act:acknowledgeReveal") {
   if (nextActEyebrow || nextActTitle) {
     const header = document.createElement("div");
     header.id = "staged-scene-next-act-label";
@@ -1609,10 +1640,24 @@ function showStagedSceneReadyButton(nextActEyebrow, nextActTitle) {
   btn.onclick = () => {
     btn.disabled = true;
     btn.textContent = "Waiting for the rest of the table...";
-    socket.emit("act:acknowledgeReveal");
+    socket.emit(ackEvent);
   };
   document.body.appendChild(btn);
 }
+
+// The very first thing a party sees after "Begin the Gala" - a real,
+// dedicated title card (same look as every later chapter transition:
+// black background, eyebrow + title + a party-wide ready button, no
+// body text) rather than jumping straight into "The Gala" reveal with
+// no card of its own. Uses the exact same DOM/visual path as chapter
+// transitions, just triggered from game start instead of a staged
+// scene's fadeOut, and acknowledged via its own event since there's no
+// real story act yet for act:acknowledgeReveal to check against.
+socket.on("game:titleCard", ({ eyebrow, title }) => {
+  showScreen("screen-game");
+  document.getElementById("cutscene-fade-overlay").classList.add("visible");
+  showStagedSceneReadyButton(eyebrow, title, "game:acknowledgeStart");
+});
 
 window.addEventListener("resize", () => {
   if (!document.getElementById("explore-frame").classList.contains("hidden")) {
@@ -1765,6 +1810,8 @@ async function handleObjectInteract(obj) {
     }
   } else if (kind === "cauldron_puzzle") {
     openCauldronModal();
+  } else if (kind === "open_board") {
+    openBoardModal();
   } else if (kind === "open_vote") {
     openVoteModal();
   } else if (kind === "candle") {

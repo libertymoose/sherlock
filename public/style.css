@@ -366,17 +366,38 @@ html, body {
 }
 
 .lobby-info-col .player-roster { margin: 0 0 14px; max-width: 100%; }
-.lobby-info-col .host-controls { margin-top: 12px; }
-.lobby-info-col #btn-leave-lobby { margin-top: auto; }
+/* margin-top: auto lives here (the first element of the bottom cluster:
+   host-controls/waiting-text, invite box, leave button) rather than on
+   the leave button alone, so the whole cluster travels down and lands
+   together, flush with the pen box's bottom edge - matching the design
+   reference. Previously only the leave button had this, which detached
+   it from the rest and left a large gap above it.
+   Both host-controls and waiting-text get it (never both visible at
+   once - see client.js's isMeHost toggle) so this works for the host
+   and for regular players alike. */
+.lobby-info-col .host-controls { margin-top: auto; }
+.lobby-info-col #waiting-text { margin-top: auto; }
+.lobby-info-col #btn-leave-lobby { margin-top: 0; }
 
 .lobby-invite-box {
   width: 100%;
-  background: var(--ink-surface);
+  /* Deliberately NOT var(--ink-surface) - that resolves to the light Nyx
+     card color here, but this box needs to read as the darker in-game
+     panel color (matching the Act reveal screens), not another light
+     lobby card. Hardcoded to the in-game --ink-surface value. */
+  background: #3e3546;
   border: 1px solid rgba(var(--candle-rgb),0.18);
   border-radius: var(--radius);
   padding: 16px;
   margin: 16px 0;
   text-align: center;
+}
+.lobby-invite-box .lobby-invite-label {
+  /* The label text was tuned dark-on-light for the old light card
+     background; force light text now that the box itself is dark.
+     The case code number itself already uses --candle-bright, which is
+     identical across both palettes, so it needs no change here. */
+  color: var(--parchment);
 }
 .lobby-invite-label {
   color: var(--parchment-dim);

@@ -1,29 +1,661 @@
-# Handover — A Study in Boralus, picking up after v136
+# Handover — A Study in Boralus, picking up after v144
 
-This replaces the earlier handover from v122 (v123's own testing pass
-hadn't happened yet when this was written). Paste this as the first
-message in a new chat, then attach the v136 zip.
+This replaces the earlier handover from v122. Paste this as the first
+message in a new chat, then attach the v144 zip.
 
 ## Where things actually stand
 
-- **v136 combines two things**: the Finale word-bank's pixel panel/tabs
-  rework (built right after v135, see its own section below) and the
-  full v135 bug-testing pass Elle sent afterward - roughly 25 items
-  spanning Act 1 through the Herbalist and the ending text. See "The
-  v135 bug-testing pass" section below for the full list; two items
-  needed a real correction mid-pass after direct feedback (the guild
-  hall desk, the herbalist camera), both called out explicitly there.
+- **v144 is a follow-up bug-fix pass**, picking up the two items v143
+  couldn't resolve (Glassmaker reachability and his animation gap) plus
+  a fresh report on his animation specifically. The parishioner sizing
+  report is still open - see "v144" below for exactly why, and what's
+  needed to close it out.
 - Packaged and validated (JSON parse, `node --check`, CSS braces,
-  em-dash grep, all clean). BFS reachability re-confirmed on every
-  touched map - the handful of flagged results (bartender behind his own
-  counter, three market sellers behind their stalls, locked flavor-only
-  doors) are pre-existing and intentional, not caused by anything this
-  round.
-- The Finale panel still hasn't been seen in an actual browser (no
-  rendering tool in this environment) - worth an early look.
-- Keep incrementing normally (v137 next) from here.
+  em-dash grep, BFS reachability, all clean).
+- Keep incrementing normally (v145 next) from here.
 
-## The v135 bug-testing pass
+## v144: Glassmaker reachability and animation, root-caused and fixed
+
+Elle reported the Glassmaker still couldn't be reached by walking (not
+just "interact doesn't fire" - literally couldn't get close), plus a
+specific animation gap ("something missing on top of his head when he
+turns back to the furnace"). Rendered the actual map (tiles + collision
+composited together, not just read numbers) to see what a player
+actually sees, rather than trusting the raw grid alone - this is what
+found both real bugs.
+
+**Reachability, root-caused:** his registered interact position (9, 6)
+sat on a walkable tile, but that tile is visually *inside* the
+furnace's stonework - nowhere a player would ever think to walk. His
+actual visible sprite (the animated cutout) stands a full row further
+south, right at the workbench - and that tile (row 7) was collision-
+blocked. Players were walking up to where they could see him, hitting
+an invisible wall, and never reaching the tile the game was actually
+checking proximity against. Fixed by opening collision at (9-10, 7) and
+moving the interactable to (9, 7), matching where he visibly stands.
+Confirmed with a fresh composite render (his marker and his visible
+feet now land on the same open tile) and a full BFS reachability sweep.
+
+**Animation gap, root-caused:** his sprite cutout only ever captured a
+2-tile-tall block (map rows 5-6). Checked the source spritesheet
+directly against every stage of his 33-frame work cycle (sitting,
+turning to the furnace with the pipe raised, the glass bulb growing,
+turning back) and found real content above *and* below that captured
+block for several stages - the raised pipe/head during the "turning to
+the furnace" frames (rows 12-17 of the cycle) sits one tile above what
+was captured, and his feet/shadow sit one tile below, in *every* stage.
+That upper-row content was still being drawn, just as an ordinary
+animated map tile completely separate from his cutout - and once
+separated from the rest of his body by the cutout's own Y-sort logic,
+it now had no vertical run beneath it and sorted as pure background,
+drawing *behind* his own body instead of on top of it. Invisible, not
+missing - exactly matching "something's not there when he turns back."
+
+Per your instruction, fixed this the way you asked rather than patching
+around it: pulled all four extra tiles (top row and bottom row, both
+columns) directly into the cutout itself, so the whole 4-row block
+renders as one coherent draw call using the same animated-tile lookup,
+instead of some of it being handled by Tiled's separate per-tile
+animation system. Recomputed the crop bounds properly too - not
+guessed, taken as the true pixel union across all 33 animation frames
+(the same standard already used elsewhere in this project for anything
+with an extended-reach animation, like a sword swing), so nothing in
+any stage of his cycle clips again. Confirmed by rendering sample
+frames across the full cycle, including the previously-broken "pipe
+raised" stage - the top of his hair and the glowing glass tip both draw
+correctly now, in every frame.
+
+**Parishioners - genuinely still open, and here's exactly why.** Went
+back through this map's data specifically looking for a reason two
+parishioners would render larger than a third. Found none: all three
+parishioner cutouts use the same fixed draw-height formula every other
+cutout NPC in the game uses, their aspect ratios are within a few
+percent of each other (0.77-0.82), and none of them has a `drawScale`
+override (the mechanism this project already uses when something
+genuinely does need to render bigger, like the Blacksmith). Based on
+the data alone, there's no reason these three should look different
+sizes on screen right now. Two honest possibilities: either this was
+already resolved by unrelated work between when that screenshot was
+taken and now, or the "large" objects in that screenshot are actually
+the big decorative ghost/dragon statue figures on either side of the
+pews (background art, not parishioners at all, and not sized via this
+same system). A fresh screenshot of the current build would settle it
+either way - not fixing blind against a screenshot that may already be
+stale.
+
+## v143: bug-fix pass from live testing (on top of v142)
+
+Elle tested v137 live and reported ten issues. Checked each directly
+against the current (v142) codebase before touching anything, since
+v137 predates v142's tavern fix - none of the ten turned out to already
+be fixed by that work, all ten were still live.
+
+**Fixed:**
+
+- **Lobby case-code box background.** `.lobby-invite-box` was using
+  `var(--ink-surface)`, which resolves to the light Nyx card color in
+  the lobby - looked like a separate pale card floating on the dark
+  page, not matching the darker in-game panel color from the reference
+  screenshot. Hardcoded that box specifically to the in-game
+  `--ink-surface` value (`#3e3546`) rather than following the lobby's
+  light theme, and lightened its label text to match.
+- **Lobby layout - case code box and Begin button not aligned to the
+  pen's bottom edge.** Only the Leave button had `margin-top: auto`,
+  which pushed it alone to the bottom while the roster and everything
+  above it (host controls, invite box) stayed packed at the top -
+  leaving a large gap. Moved `margin-top: auto` to the host-controls/
+  waiting-text block instead (whichever is visible - they're never both
+  shown at once), so the whole bottom cluster travels down and lands
+  together, flush with the pen box's bottom edge.
+- **Players not appearing in the "Means and Opportunity, Interrupted"
+  cutscene.** Found a real gap in `player:changeZone`'s rejoin guard:
+  when a player's stored zone already matched the target zone (e.g. the
+  last player to visit the Evidence Table upstairs, right before this
+  same-zone cutscene fires), the server skipped resending them a fresh
+  `zone:roster`, leaving their view of who else is in the room stale.
+  Fixed by always sending the roster on zone entry, not just on a real
+  zone change. This is a genuine, general fix, not scene-specific - it
+  protects every same-zone reload in the game, not only this one scene.
+  **Flagging honestly: this could not be tested in true multiplayer
+  here, so this is the most likely cause based on direct code reading,
+  not a confirmed-live fix. Worth being first checked in the next live
+  session.**
+- **Commodore not visible during the Frame-Up cutscene.** His scripted
+  walk ended at `[12, 9]`, well outside the camera frame (centered on
+  `[12, 5]`, where the desk and Thorne actually are). Moved his endpoint
+  to `[12, 6]`, right at the desk, confirmed walkable.
+- **Guild Hall: extra desk removed.** Both the redundant desk object
+  (`flavor_guild_hall_desk`, "The Desk") and its underlying tile art (a
+  3x3 furniture block in the `Objects5` layer at the same position) are
+  gone. The real desk, under the dragon skeleton, is untouched.
+- **Guild Hall: the board split into two real interact points, per
+  Elle's direction.** Rather than relabeling the existing vote trigger
+  as "the board" (which would have made a walk-up object named "The
+  Board" silently open the wrong thing), added a genuinely new
+  interaction kind (`open_board`, opens the same Means/Opportunity panel
+  the HUD button already does) and placed it as **"The Evidence"** at
+  the desk (11, 12) - right where the old duplicate desk used to be, now
+  freed up. The existing vote trigger was kept in place and renamed to
+  **"The Vote"** at (9, 12), no behavior change. Both confirmed walkable
+  and reachable.
+- **"Exit" vs "Enter" labeling, fixed project-wide, not just Guild
+  Hall.** The button text was hardcoded to say "Exit" only when a
+  zone_exit's `targetZone` was literally `"estate"` - correct for the
+  original estate/manor exits, but wrong for every Act 3 building, whose
+  exits target a town zone instead (`guild_hall_exterior`,
+  `town_exterior`, `training_ground`, etc.), so they all read "Enter" on
+  the way out. Re-derived the label from each object's own name instead
+  (things named "Outside," "Exit," "Back to...," "Out to...," "A Way
+  Out" read as exits; everything else - "Manor Stairs," "Guild Hall
+  Entrance," "The Tavern," and so on - stays "Enter"). Checked this
+  against every `zone_exit` object in the project before shipping:
+  fixes Guild Hall, Blacksmith, Chapel, Glass Workshop, the Tavern, and
+  Training Ground's own "Back to the Guild Hall," without touching the
+  dungeon (which already overrides to "Continue" regardless, untouched)
+  or any of the correctly-labeled entrances.
+- **Chapel: plants and stained glass behind the priest getting cut off.**
+  This turned out to be the same root cause already found and fixed in
+  the tavern this same round (see v142) but not yet swept into other
+  maps: `chapel_interior`'s `Walls` and `Walls_top` layers are both
+  full-width background wall art tagged `sorted` (competing for Y-sort
+  priority against nearby low-numbered rows) instead of `floor` (a
+  static backdrop that never fights for priority). Confirmed by direct
+  occupancy check before touching anything - `Walls` is 100% occupied
+  across rows 0-5, `Walls_top` 100% occupied across rows 13-16, both
+  clear signs of architecture, not furniture. Reclassified both to
+  `floor`, same fix already proven on the tavern and the manor before
+  it. This was on the v142 "found but not yet fixed" list for exactly
+  this map - now done.
+
+**Investigated, not fixed - genuinely unresolved, flagging rather than
+guessing:**
+
+- **Glassmaker still not interactable.** Checked his dialogue wiring
+  end to end (map object, `two_stage_dialogue` interaction, server
+  handler, both surface and reveal entries in `interactions.json`) and
+  it's all correctly present - he should always have *something* to say,
+  even before his trigger fact is known. Checked collision around him
+  too; he's standing on open floor with a walkable approach. Nothing
+  found that would explain a dead interact button. This needs a fresh
+  screenshot or a live repro to chase further rather than a guess.
+- **Missing animation tiles in the Glass Workshop.** Not chased down yet
+  - didn't want to spend the remaining budget guessing at which of the
+  8 tilesets this map references might be affected without a specific
+  symptom to check against (the tavern had a similar, confirmed gap of
+  entirely un-uploaded tileset PNGs this same project - worth checking
+  `glass_workshop`'s own tileset files exist under
+  `public/assets/mapsrc/glass_workshop/` next, same way that was
+  diagnosed there).
+- **Front parishioners too large.** Genuinely inconclusive. The sprite
+  cutout system normalizes every cutout to the same fixed render height
+  regardless of its own crop box dimensions, so a simple size/aspect
+  difference between parishioners shouldn't produce this on its own -
+  which means if it's real, something else is off (a bad crop that only
+  captured part of a figure, similar to the tavern's earlier "giant
+  head" bug, is the leading guess but unconfirmed). Needs a closer look
+  at the actual crop data with a live screenshot in hand before
+  touching it, rather than an unverified fix.
+
+## v142: the tavern's real root cause, found
+
+Elle asked directly whether the tavern NPCs were actually fixed, given
+they'd come up in every single bug-testing round, and floated rebuilding
+the room from scratch. Worth being straight about this: every earlier
+fix (the flip-bit bug in v129, the merged-two-characters bug in v132,
+the giant-head bust-NPC bug in v133, the below-table sort-key bug in
+v136) was real and correctly diagnosed at the time - but none of them
+were tested live before the next round, and this round's investigation
+found a genuinely different, bigger bug underneath all of them that
+none of the earlier passes had touched.
+
+**Re-verified the v136 sort-key fix mathematically first**, since it
+was shipped untested. Simulated the exact same logic the game runs and
+checked every one of the tavern's 12 NPCs against every "sorted" layer
+in the room, not just the narrow window the fix itself checks - and
+found 10 of 12 still had furniture that would out-sort them, contrary
+to what the earlier verification (which only checked "did the number
+change," not "is it actually now correct") had shown.
+
+**Root cause: `Walls_top1` was misclassified.** Checked its actual tile
+occupancy directly rather than assuming - it's fully occupied across
+the *entire width* of the room at rows 16 through 18. Rendered it in
+isolation to confirm: it's not furniture at all, it's the room's own
+back wall and baseboard. Because it was tagged "sorted" (competing for
+Y-sort priority against players, same as furniture) instead of "floor"
+(a static backdrop that never fights for priority), and its "bottom of
+run" reached row 18, *any* character standing anywhere in the room with
+a smaller row number - which is most of the room - was sorting behind
+the entire wall, not just its own nearby furniture. This is almost
+certainly what's been reading as "NPCs bugging out and hidden" across
+multiple rounds, distinct from (and underneath) every other bug already
+fixed.
+
+Reclassified `Walls_top1` from `sorted` to `floor` (matching the exact
+same fix already used successfully elsewhere in this project for
+decorative wall trim, e.g. the manor's own `Walls`/`Walls2` layers).
+Re-ran the full 12-NPC verification afterward: 8 of 12 immediately came
+back clean. Two of the remaining four turned out to be a second,
+smaller instance of the same root cause - `Furniture3` on the 2nd
+floor... 
+
+**Checked the 2nd floor too, found the identical bug.** `Walls_top1`
+there is fully occupied at rows 0 and 14-16 (top and bottom walls,
+joined by a single-tile support beam) - reached a bottom-of-run of 16
+out of 17 total rows, while the floor's only NPC sits at row 7.
+`Walls_top2` was also suspiciously wide (24 of 26 columns at rows 8-10,
+immediately next to that same NPC) - almost certainly another wall
+segment, not furniture, given real furniture doesn't typically span
+that much of a room's width. Reclassified both.
+
+**Swept every other map with cutout NPCs for the same pattern**
+(any "sorted" layer with a row that's 90%+ occupied across the map's
+full width, a strong signal of a wall rather than individual furniture)
+- found similar full-width wall layers in `blacksmith_interior`,
+`chapel_interior`, `glass_workshop`, and both `mage_tower` floors.
+**Not yet investigated or fixed** - none of these have been reported
+as currently broken, and given the Saturday timeline, chasing bugs
+nobody's hit yet felt like the wrong priority over verifying the one
+actually reported. Worth checking this same pattern first if any of
+those rooms come up in a future round, rather than starting from the
+merge/size/flip-bug checklist again.
+
+**Final state, re-verified with a tighter, more meaningful check** (only
+counting furniture within plausible visual-overlap distance of a
+character, not "anywhere in the same column at any distance," which was
+producing false positives): **10 of 12 tavern NPCs are now fully clean.**
+The remaining two ("A Sleeping Drunk" and "the Draenei/San'layn pair")
+were checked directly with a render - the "remaining" furniture flagged
+for them is a separate, unrelated table elsewhere in the room that
+doesn't actually visually overlap either character, confirmed by eye,
+not just by the numbers.
+
+**On "should we start from scratch":** no - the underlying architecture
+(tile-based Y-sort plus the sprite-cutout system) is the same one
+working correctly in every other room in the game. The tavern took
+several rounds because it's genuinely the busiest, most furniture-dense
+room in the project, and it had four distinct, unrelated bugs stacked
+on top of each other (flip corruption, a bad character merge, oversized
+busts, and now this wall misclassification) - not one bug that kept
+surviving fixes. This round's finding was the last and biggest of them,
+not evidence the approach itself doesn't work.
+
+**Not yet tested live** - same caveat as everything else touched this
+week. High confidence based on direct measurement and visual spot-
+checks, but this specifically deserves to be the first thing looked at
+in Saturday's pass, given the history.
+
+## v141: one consistent title pattern across all five chapters
+
+v140 flagged a real split rather than guessing which way to resolve it:
+chapters 2 and 5 had the title card announce the chapter's puzzle name
+while a separate intro card carried its own distinct scene title, but
+chapters 3 and 4 just reused one title straight through everywhere.
+Elle confirmed she prefers the distinct-title version. Applied it to the
+two chapters that didn't have it yet:
+
+- **Chapter 3's intro card** ("Corwin brings you to the Guild Hall...")
+  retitled from "Means and Opportunity" to **"The Guild Hall"** - names
+  the actual place, same convention "The Cells" already uses for
+  chapter 2. The title card and the puzzle itself both stay "Means and
+  Opportunity," unchanged.
+- **Chapter 4's intro card** ("Corwin leads you off the road and into
+  the swamp...") retitled from "The Herbalist" to **"Into the Swamp"** -
+  a journey/arrival beat, same shape as chapter 5's "Behind the Garden
+  Wall." The title card and puzzle both stay "The Herbalist," unchanged.
+
+No body text, chapter numbers, or anything else touched - this was
+purely the two `title` fields. Every chapter now reads the same way:
+title card announces the chapter's puzzle name, the intro card in
+between has its own distinct scene-specific title, the puzzle itself
+matches the title card. Confirmed by re-running the same sequence check
+from v140 - full breakdown below.
+
+```
+[game start] -> Act I title card
+Ch1: The Gala / The Investigation Begins (intro) -> Investigate the Estate (puzzle) -> ...
+Ch2: Act II title card "The Dungeons" -> The Cells (intro) -> The Dungeons (puzzle)
+Ch3: Act III title card "Means and Opportunity" -> The Guild Hall (intro) -> Means and Opportunity (puzzle)
+Ch4: Act IV title card "The Herbalist" -> Into the Swamp (intro) -> The Herbalist (puzzle)
+Ch5: Act V title card "The Finale" -> Behind the Garden Wall (intro) -> The Finale (puzzle)
+```
+
+Chapter 1 is the one natural exception, kept as-is (two intro cards
+sharing the chapter's own opening rather than a single distinct-title
+one) - it's the chapter without a preceding title card of its own to
+announce a separate name against, so the pattern doesn't quite apply
+there the same way.
+
+## v140: Act number consistency, checked programmatically
+
+Elle asked to confirm every Act number and title lines up across every
+title card and intro card. Rather than eyeball the sequence again after
+getting it wrong once already (see v138/v139), wrote a small script to
+check it directly: every act's own `chapter` field, whether the number
+ever goes backward or skips, and whether every title card's announced
+number matches what the very next act actually displays.
+
+**Found two real bugs**, both the same shape: a closing cutscene tagged
+with the chapter it was *about to announce* instead of the chapter it
+was *actually finishing*.
+
+- `"Out of the Sewers"` was tagged chapter 3, but it's the cutscene that
+  closes chapter 2 (`"The Dungeons"`) - same role "Means and Opportunity,
+  Interrupted" plays for chapter 1, and that one was already correctly
+  tagged chapter 1, not chapter 2. Fixed to chapter 2.
+- `"The Tunnel Back"` and `"Through the Tunnels"` were both tagged
+  chapter 5, but they close chapter 4 (`"The Herbalist"`). Fixed both to
+  chapter 4.
+
+Neither was visibly broken before this - `staged_scene` acts don't show
+their own chapter eyebrow during play, so nothing was actually on
+screen showing the wrong number. But it's real data inconsistency all
+the same (fails the exact check being asked for here, and would bite
+the moment anything else ever reads `act.chapter` for these two scenes),
+so worth fixing regardless of whether it was currently visible.
+
+Re-ran the check after fixing: chapter numbers now climb cleanly
+(I -> I -> II -> III -> IV -> V, every act, no skips or reversals), and
+every title card's announced number now matches the next act's own
+number exactly, 4 for 4.
+
+**One thing surfaced, not changed - a genuine judgment call worth a
+quick decision:** titles don't follow one single rule the same way
+numbers now do, and it's a real but*intentional*-looking split:
+
+- Chapters 3 and 4 reuse one title straight through (title card, intro
+  card, and puzzle are all "Means and Opportunity" / all "The
+  Herbalist").
+- Chapters 2 and 5 instead have the title card announce the chapter's
+  puzzle name ("The Dungeons", "The Finale") while a separate intro card
+  in between carries its own distinct scene title ("The Cells", "Behind
+  the Garden Wall").
+
+Both patterns are internally consistent with themselves, and the second
+one is used identically in two different chapters now, so it doesn't
+read as a mistake - but it does mean the game doesn't follow one single
+title convention throughout. Didn't force these into uniform matching
+strings unilaterally, since that would mean either flattening two
+evocative scene-specific titles into duplicates of their chapter's
+puzzle name, or renaming puzzle titles instead - a real content
+tradeoff, not a bug fix. Flagging for a decision rather than guessing.
+
+## v139: title card vs intro card, actually correct this time
+
+v138's audit treated "title card" as satisfied by the small persistent
+"Act N" eyebrow every act already shows, and let a couple of chapters'
+inline intro text stand in for a real "intro card." Elle sent two direct
+screenshots clearing this up - they're two completely different, both
+genuinely necessary screens:
+
+- **Title card**: black background, nothing but the eyebrow ("ACT III"),
+  the title, and a single "I'm Ready. Continue" button. No body text at
+  all. This already existed as its own mechanism
+  (`showStagedSceneReadyButton`), just wasn't being shown at every
+  transition.
+- **Intro card**: the normal in-game dark panel, same eyebrow + title,
+  but with real narrative body paragraphs underneath, its own "I'm
+  Ready. Continue" button, and a live "X / Y ready" progress line. This
+  is a full `reveal`-type act - a separate screen the party clicks
+  through, not text folded into the puzzle screen that follows it.
+
+Re-checked every chapter against that precise definition and found two
+real, genuine gaps (not the one I'd dismissed before):
+
+- **The game had no title card at all before Chapter 1.** Every later
+  chapter gets one automatically (a `staged_scene`'s fadeOut with
+  `nextActEyebrow`/`nextActTitle` triggers it), but the very first thing
+  anyone ever saw was "The Gala" reveal directly - no black card first.
+  This needed genuinely new plumbing, since the existing mechanism only
+  ever fires off the back of a staged scene's own fadeOut, and there
+  isn't one before the game has even started. Added it properly: on
+  `host:startGame`, the server now holds `actIndex` at `-1` (an already-
+  established "not really started yet" sentinel elsewhere in this
+  codebase, not something new I invented) and broadcasts a
+  `game:titleCard` event ("Act I" / "The Gala") synced the same
+  party-wide-ready way every other transition already works, only
+  loading the real act 0 once everyone's clicked through. Client-side,
+  reused the exact same title-card rendering function chapter
+  transitions already use (just made its acknowledgment event
+  configurable, since there's no real "current act" yet for the
+  existing `act:acknowledgeReveal` handler to check against) - so this
+  is visually and behaviorally identical to every other title card, not
+  a new one-off look.
+- **Chapter 5's Finale had no intro card either** - it only had inline
+  text (`introThorne` in `interactions.json`) shown as part of the same
+  screen as the accusation puzzle itself, which is exactly the pattern
+  I'd wrongly treated as "close enough" in v138. Added a real, separate
+  `reveal` act, "Behind the Garden Wall," carrying the actual narrative
+  beat (climbing out of the tunnel, Thorne waiting, "might as well hear
+  what you've got"). Trimmed the old inline `introThorne` down to a
+  short one-line bridge ("Lay it out for her, then...") so the same beat
+  doesn't play twice in a row - the full version now lives in the real
+  card, the puzzle screen just picks up from there.
+
+### The full sequence now, chapter by chapter
+```
+[game start] -> Act I title card
+Ch1: intro card, intro card -> puzzle -> evidence_room -> cutscene -> Act II title card
+Ch2: Act II title card -> intro card -> puzzle -> cutscene -> Act III title card
+Ch3: Act III title card -> intro card -> puzzle -> cutscene -> Act IV title card
+Ch4: Act IV title card -> intro card -> puzzle -> cutscene, cutscene -> Act V title card
+Ch5: Act V title card -> intro card -> puzzle -> final
+```
+Every chapter now has a genuine, separate title card *and* a genuine,
+separate intro card, matching the two example screenshots exactly.
+Chapter 1's second intro card and the extra `evidence_room` step are
+still deliberately left as-is (real, working, tested content that adds
+depth rather than breaking the pattern) - flagged again here in case
+that read differently once the actual definitions were corrected, but
+the reasoning from v138 still holds under the corrected definitions too.
+
+**Not yet tested live** - the new pre-game title card in particular is
+genuinely new plumbing (the only piece of this whole sequence that
+wasn't just rearranging existing, already-working mechanisms), worth
+being first on the list for Saturday's live pass.
+
+## v138: story structure audit against title/intro/puzzle/cutscene
+
+Checked every act in `story.json` end to end against the requested
+rhythm. Two real bugs found and fixed, one real content gap filled, and
+a few deliberate non-changes explained below rather than silently left
+unaddressed.
+
+### Fixed
+- **"The Maid Returns" mislabeled its own transition.** Its
+  `nextActEyebrow`/`nextActTitle` said "Act III / The Herbalist's Hut",
+  but the act it actually transitions into is chapter 4's "The
+  Herbalist" - a real off-by-one in the chapter number, plus a title
+  that didn't match the real next act's title at all. Now correctly
+  reads "Act IV / The Herbalist".
+- **Chapter 2 had no intro card at all** - every other chapter has a
+  dedicated `reveal` beat before its puzzle; chapter 2 jumped straight
+  from the "Act II" title card into "The Dungeons" explore act, with
+  nothing but a brief mechanical one-liner ("get back together, get out
+  of the dungeons") and no bridge from actually being arrested at the
+  end of the previous scene. Added a short new reveal, "The Cells",
+  narrating the walk down and the party being split into separate
+  cells - picks up directly from Thorne's "take them down to the cells"
+  line, sets mood before the mechanical explore-act intro takes over.
+
+### Checked, confirmed already fine, no change needed
+- **Chapter 1's opening has no title card before it** - true, but
+  every reveal and explore act already shows its own persistent "Act
+  N" eyebrow automatically (confirmed directly in the render code, not
+  assumed), independent of the separate, more dramatic full-screen
+  transition card shown at `staged_scene` handoffs. Chapter 1's very
+  first screen ("The Gala") already displays "Act I" as part of its
+  normal heading the instant it loads. Building a whole new synced
+  pre-game title-card screen just to add a redundant, more dramatic
+  version of information that's already visible felt like the wrong
+  trade against a Saturday deadline - flagging this explicitly as a
+  conscious call, not an oversight, in case the dramatic full-screen
+  version specifically is wanted later.
+- **Chapter 5's puzzle (the Finale accusation) has no separate intro
+  card either** - checked its own inline intro text
+  (`finaleAccusation.introThorne` in `interactions.json`) and it
+  already covers this beat properly ("Captain Thorne is waiting when
+  you climb out from behind the garden wall..."), same pattern every
+  explore act already uses (an inline intro paragraph rather than a
+  separate reveal screen). Didn't add a redundant standalone card on
+  top of already-good existing content.
+- **Chapter 1 has two reveal cards in a row before its puzzle** ("The
+  Gala" then "The Investigation Begins") rather than one. Both are
+  short, serve genuinely different narrative beats (the murder's
+  discovery, then Thorne's recruitment briefing), and neither reads as
+  padding - left alone rather than force a merge that would lose one of
+  the two.
+- **Chapter 1 has an extra `evidence_room` act (the Suspect Board)
+  between its puzzle and its cutscene** - real, working, tested content,
+  not a stray leftover. Reads as an extension of the puzzle phase for
+  that chapter rather than a violation of the pattern - left alone.
+- **Chapter 4/5's cutscene is two `staged_scene` acts back to back**
+  (the Herbalist's Hut farewell, then the cave crossing from v137)
+  rather than one - this was built exactly this way at Elle's own
+  request last round (a fade-to-black between two connected beats), so
+  it's treated as one conceptual "Cutscene" step for this audit, not
+  a second violation stacked on top of the first.
+
+### The full sequence now, chapter by chapter
+```
+Ch1: [game start] -> reveal, reveal -> explore -> evidence_room -> staged_scene -> [Act II card]
+Ch2: [Act II card] -> reveal -> explore -> staged_scene -> [Act III card]
+Ch3: [Act III card] -> reveal -> explore -> staged_scene -> [Act IV card]
+Ch4: [Act IV card] -> reveal -> explore -> staged_scene, staged_scene -> [Act V card]
+Ch5: [Act V card] -> finale_accusation (own inline intro) -> final
+```
+
+## v137: the cave shortcut, and a real staged-scene engine gap found along the way
+
+### The new scene, in two parts
+Elle's ask: an automated cutscene, not a walkable map (it's a brief
+crossing, not content to explore), covering the Herbalist's Hut farewell
+through to arriving at the Finale. Built as two consecutive
+`staged_scene` acts, same pattern as every other scripted beat in the
+game:
+
+1. **"The Tunnel Back"** (kept the existing title) - in the Herbalist's
+   Hut, `playerMarks` around the herbalist/cauldron. Hook and the
+   Herbalist both get a line praising the result, she sends the party
+   out the back door ("I don't need the whole swamp road seeing who's
+   been through my door tonight"), Hook mentions the smuggler's cave
+   shortcut - reusing and extending the geography he'd already
+   described in the old placeholder text (runs under the swamp road,
+   comes up behind the estate wall), so nothing about the world's own
+   logic changed, just where it's said. `fadeOut: true`, no title card
+   (chains straight into part two).
+2. **"Through the Tunnels"** - the actual cave map, converted from
+   Elle's `Cave2.tmj`/`.tmx` export. `fadeIn: true` to pick up from part
+   one's fade-out. No dialogue, no NPCs - just the party crossing single
+   file, then `fadeOut: true` into a real title card (`Act V` / `The
+   Finale`) leading into the accusation.
+
+### A real, general engine feature had to be built for this
+The existing staged-scene system (`playerMarks`) only ever supported
+**static** positions - every player teleports to a fixed spot and
+stands there while NPC "actors" do the moving. There was no way to
+script the *players themselves* walking anywhere. Rather than fake this
+with generic NPC stand-ins (which wouldn't show anyone's own chosen
+character), built real support for it:
+
+- New `playerWalkPath` field on a staged scene: a list of tile
+  waypoints, a walk speed, and a stagger delay.
+- Client-side, each player runs the exact same deterministic route
+  through their own local `updateStagedScene` loop, offset by
+  `partyIndex * staggerMs` - since it's the same data on every client,
+  everyone's timing lines up naturally into a single-file line without
+  needing any new server-side sync.
+- The walk drives the same `me.x/me.y/me.dir/me.moving` fields normal
+  WASD movement already uses, so the existing throttled position
+  broadcaster picks it up for free - every other client sees party
+  members crossing the cave exactly like any other player movement,
+  no new rendering path needed.
+- No `cameraCenter` set for this scene specifically, so the existing
+  "no composed tableau, just follow the local player" fallback camera
+  behaviour does the right thing automatically as they walk.
+- This is a general capability now, not cave-specific - any future
+  staged scene can use `playerWalkPath` the same way.
+
+### The cave map itself
+Converted from the real Tiled source (`Cave2.tmj`, infinite/chunked
+format, same chunk-merge technique used for the tavern/dungeon
+interiors before). Real animation data extracted from both the inline
+tileset definitions and the one separate `.tsx` file
+(`Water_detilazation2.tsx`) - 661 animated tiles available in the pack,
+scoped down to the 259 actually placed in this specific map, matching
+how every other map's animations dict is scoped. Collision was
+rasterized directly from Elle's own `WALK` polygon object (point-in-
+polygon test per tile) rather than guessed, so the walkable area matches
+her authored path exactly. The walk route's 7 waypoints were checked
+against that same collision grid and confirmed to all fall on walkable
+tiles before being written into the act data.
+
+**Not yet visually confirmed end-to-end in a live session** - the map
+render itself was checked (clean, no scrambled tiles), the waypoints
+were checked against collision, and the walk-path code was written to
+mirror the already-working actor-animation pattern closely, but nobody
+has actually watched the full two-scene sequence play out live yet.
+Given the Saturday deadline, this is the single highest-value thing to
+test first.
+
+### A real pre-existing bug found and fixed: staged scenes were never getting fadeIn/cameraCenter/playerSortBoost
+While wiring the new scene, found that `fadeIn`, `cameraCenter`, and
+`playerSortBoost` are all read by the client for every staged scene, but
+the server's payload builder never actually included any of the three -
+confirmed by direct search, zero matches anywhere in `server.js` before
+this fix. Practical effect: **every staged scene in the entire game,
+including already-shipped ones** ("Means and Opportunity, Interrupted",
+"Out of the Sewers", "The Maid Returns") has been silently skipping its
+fade-up and its composed camera angle - the fade-to-black overlay was
+always being cleared instantly regardless of `fadeIn: true` being set in
+the data, and the camera was always just following the local player
+instead of showing the intended tableau. Fixed by adding all three
+fields to the server's `staged_scene` payload.
+
+**This is a real behaviour change for scenes Elle has already seen and
+tested**, not just new-scene plumbing - those three existing cutscenes
+will now visibly fade in and use their composed camera framing for the
+first time, which is the originally-intended look but will read as
+different from what's already been approved. Worth flagging explicitly
+during Saturday's pass rather than assuming it's just the new content
+that changed.
+
+---
+
+## Priority list for Saturday (Thursday -> Saturday turnaround)
+
+Roughly in order of what actually threatens "perfected by Saturday" if
+skipped, not just chronological order:
+
+1. **Play the new cave sequence live, start to finish, with a full
+   party (not solo).** This is genuinely unverified beyond static
+   checks - the single-file walk timing, the camera follow during the
+   walk, and the fade-in/fade-out handoff between the two scenes all
+   need real eyes on them before anything else here matters. If the
+   stagger timing feels off (`staggerMs: 550` is a first guess, not
+   tuned), that's a one-line change once seen live.
+2. **Confirm the three existing staged scenes still look right** now
+   that `fadeIn`/`cameraCenter`/`playerSortBoost` actually reach the
+   client for the first time. Given this is a genuine behaviour change
+   on already-approved content, it needs a deliberate look, not an
+   assumption that "fixed" means "still fine."
+3. **A full run-through of Act 4 through the end** (Herbalist ->
+   farewell -> cave -> Finale -> Case Closed) in one sitting, the kind
+   of continuous playtest that catches sequencing issues individual
+   fixes can't.
+4. Everything from the last two bug-fix rounds (v135/v136) that's
+   already shipped and validated but still deserves a live look given
+   how much changed: the Finale's tabbed panel (never actually seen
+   rendered), the tavern furniture/Y-sort fix, the Guild Hall corrections,
+   the Herbalist camera bounds.
+5. Lower stakes, fine to leave for after Saturday if time runs out: the
+   still-open "Take your findings back to Discord" rewording, the
+   `fighter3`/`fighter4` placeholder idle art, Reyes/Kestrel/Nell's
+   placeholder portraits, and any UI chrome polish.
+
+Given the timeline, the honest recommendation is to spend Friday almost
+entirely on live playtesting rather than new work - nearly everything
+above is "verify," not "build," and that's where the real risk sits
+before Saturday.
 
 ## v136 part 1: Finale word-bank rebuilt as a pixel panel with tabs
 

@@ -723,6 +723,41 @@ window.Overworld = (function () {
   function updateStagedScene(dt) {
     if (!stagedScene) return;
     let allArrived = true;
+
+    if (stagedScene.myWalk && !stagedScene.myWalk.arrived) {
+      const w = stagedScene.myWalk;
+      allArrived = false;
+      if (w.delayRemaining > 0) {
+        w.delayRemaining -= dt * 1000;
+      } else {
+        const target = w.points[w.index];
+        const ddx = target.x - me.x;
+        const ddy = target.y - me.y;
+        const dist = Math.hypot(ddx, ddy);
+        const step = w.speed * dt;
+        if (Math.abs(ddx) > Math.abs(ddy)) me.dir = ddx > 0 ? "right" : "left";
+        else if (ddy !== 0) me.dir = ddy > 0 ? "down" : "up";
+        if (dist <= step) {
+          me.x = target.x;
+          me.y = target.y;
+          w.index++;
+          if (w.index >= w.points.length) {
+            w.arrived = true;
+            me.moving = false;
+          }
+        } else {
+          me.x += (ddx / dist) * step;
+          me.y += (ddy / dist) * step;
+          me.moving = true;
+        }
+      }
+      animTimer += dt;
+      if (animTimer > 1 / WALK_FPS) {
+        animTimer = 0;
+        animFrame++;
+      }
+    }
+
     stagedScene.actors.forEach((a) => {
       if (a.arrived) return;
       a.delayRemaining -= dt * 1000;
@@ -767,8 +802,17 @@ window.Overworld = (function () {
 
     if (stagedScene) {
       updateStagedScene(dt);
-      me.moving = false;
       animClock += dt * 1000;
+      // A scripted walk (see beginStagedScene's myWalkPath) drives me.x/y/
+      // dir/moving itself, same fields normal WASD movement uses - so the
+      // existing throttled broadcaster picks it up for free and every
+      // other client sees it exactly like any other player movement.
+      // Without an active walk, stay frozen in place at the mark as before.
+      if (stagedScene.myWalk && !stagedScene.myWalk.arrived) {
+        maybeSendPosition();
+      } else {
+        me.moving = false;
+      }
       return;
     }
 
@@ -1821,7 +1865,7 @@ window.Overworld = (function () {
     // Positions are set locally only; the caller is responsible for
     // broadcasting the local player's mark via the normal player:move
     // event so other clients see them standing in the right spot too.
-    beginStagedScene({ myMark, actors, onArrived, cameraCenter, playerSortBoost }) {
+    beginStagedScene({ myMark, myWalkPath, actors, onArrived, cameraCenter, playerSortBoost }) {
       if (myMark) {
         me.x = myMark[0] * TILE + TILE / 2;
         me.y = myMark[1] * TILE + TILE / 2;
@@ -1829,9 +1873,27 @@ window.Overworld = (function () {
         me.moving = false;
       }
 
+      let myWalk = null;
+      if (myWalkPath && myWalkPath.waypoints && myWalkPath.waypoints.length) {
+        // Starting tile is the player's own current position (their mark,
+        // or wherever they already are) - waypoints after that are the
+        // route. speedTilesPerSec and startDelayMs are per-scene tuning;
+        // startDelayMs is what actually staggers the party into a single-
+        // file line, since every player independently runs this same
+        // deterministic path from the same act data.
+        myWalk = {
+          points: myWalkPath.waypoints.map((wp) => ({ x: wp[0] * TILE + TILE / 2, y: wp[1] * TILE + TILE / 2 })),
+          index: 0,
+          speed: (myWalkPath.speedTilesPerSec || 2.2) * TILE,
+          delayRemaining: myWalkPath.startDelayMs || 0,
+          arrived: false,
+        };
+      }
+
       stagedScene = {
         arrivedFired: false,
         onArrived,
+        myWalk,
         // Per-scene, not a blanket constant: the manor cutscene's marks
         // sit right in a furniture-heavy area around the desk, where the
         // player's real (low) y value loses against nearby furniture's
