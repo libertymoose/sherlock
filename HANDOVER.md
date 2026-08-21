@@ -1,18 +1,211 @@
-# Handover — A Study in Boralus, picking up after v144
+# Handover — A Study in Boralus, picking up after v146
 
 This replaces the earlier handover from v122. Paste this as the first
-message in a new chat, then attach the v144 zip.
+message in a new chat, then attach the v146 zip.
 
 ## Where things actually stand
 
-- **v144 is a follow-up bug-fix pass**, picking up the two items v143
-  couldn't resolve (Glassmaker reachability and his animation gap) plus
-  a fresh report on his animation specifically. The parishioner sizing
-  report is still open - see "v144" below for exactly why, and what's
-  needed to close it out.
+- **v146 covers a full tavern interior rebuild from the real source .tmx**,
+  a confirmed chapel parishioner placement bug, a project-wide latent-data
+  fix, and Act 3 portrait/exterior verification. See "v146" below for the
+  full breakdown.
+- **One open item, fix ready but not yet applied**: the chapel's three
+  parishioners render oversized relative to the priest/monks because
+  they're bust-only crops (seated, upper body) stretched to the same
+  fixed character height used for full standing figures. A `drawScale`
+  correction (~0.6) is worked out and about to be applied - check the
+  next delivery for whether this landed, since this doc was written
+  right as that fix was going in.
 - Packaged and validated (JSON parse, `node --check`, CSS braces,
-  em-dash grep, BFS reachability, all clean).
-- Keep incrementing normally (v145 next) from here.
+  em-dash grep, BFS reachability across every touched map, all clean).
+- Keep incrementing normally (v147 next) from here.
+
+## v146
+
+### Tavern interior (`tavern_1st_floor.json`) - full rebuild from the real source
+
+Elle provided the actual `.tmx` and its tileset PNGs, which made this a
+real fix instead of more guessing. Parsed the infinite-map chunks directly,
+confirmed the origin offset (-11,-10, matching this file's 26x20
+dimensions exactly), and cross-referenced the TMX's own `NPCs` object
+group (real names, real bounding boxes) against every character tile
+cluster in the `Characters1/2/3` layers.
+
+Found real, confirmed bugs, not guesses:
+- **"Adventurers planning" was missing two of its three people** - only
+  the seated planner was ever registered; the knight and the thinker
+  existed as dead, unregistered tiles that never went through the
+  cutout system at all (same class of bug as below).
+- **"Card game" was missing its dwarf** - same pattern, one of three
+  people never registered.
+- **The draenei and San'layn were showing the wrong art at swapped
+  positions** - one position had the correct (flipped) San'layn slot but
+  was rendering the draenei's tiles instead, and the true draenei
+  position wasn't rendering anyone.
+- **The bartender had a leftover `drawScale: 0.5`**, rendering him at
+  half the height of every other NPC in the room. Removed.
+- **6 of 12 NPCs had zero animation data** despite using tiles from
+  dedicated `Animation_*.png` source sheets - real frame sequences
+  existed in the art, just never got extracted into the map's
+  `animations` dict. Replaced entirely with the TMX's own authoritative
+  `<animation>` definitions (no more inferring frame layouts by eye).
+
+First attempt merged each multi-person scene (adventurers, card game,
+drinkers) into one combined cutout per name, matching the original
+12-object structure - this was wrong, since scaling a 3-person spread
+down to one NPC's fixed height just crushed everyone into an overlapping
+pile. Caught this from a render, split back into one cutout per
+individual character (17 total now), each independently sized from its
+own alpha-trimmed content bounds. Confirmed by rendering the actual
+tables: the adventurers' table now shows all three people distinctly
+seated, the card table shows three separate players, the draenei and
+San'layn sit together correctly.
+
+### Chapel (`chapel_interior.json`) - real placement bug found and fixed
+
+Cross-referenced against the real chapel `.tmx`. `flavor_parishioner_3`
+was sitting a full tile to the left of its true position (x12-14 instead
+of the correct x13-15) - every other character (both other parishioners,
+the priest, all 4 monks) matched the source exactly. Fixed the tile
+positions, anchor, and map-linear `index` field, confirmed with a render.
+
+**Separately diagnosed, fix designed but not yet applied**: all three
+parishioners still read as oversized next to the priest and monks. Root
+cause isn't a data bug like the above - it's that the parishioners are
+captured as bust-only crops (seated, shoulders-up) while the priest and
+monks are captured as full standing figures, and both get stretched to
+the same fixed on-screen character height. The parishioners' small crop
+gets inflated disproportionately as a result. Fix is a `drawScale`
+correction on the three parishioner cutouts, sized to preserve their
+true proportion relative to the monks (same asset pack, same native
+pixel scale) - worked out but not yet written to the file as of this
+delivery.
+
+### Project-wide latent bug found and fixed: sprite cutout `index` field
+
+While rebuilding the tavern, noticed the `index` field on cutout tiles
+is meant to be the tile's position in the map's own flat array
+(`y * width + x`) - used for door/gating-state lookups - not a local
+tileset index. Every NPC rebuilt this session (the tavern's 17, plus the
+glassblower fix from a few rounds back) had this wrong, computed as
+`gid - firstgid` instead. Had zero visible effect currently (none of the
+affected layers use gating), but swept the whole project and corrected
+every instance (102 total) for correctness going forward. Flagged in
+case this pattern shows up again in future map work - the two fields are
+easy to conflate.
+
+### Verified clean, no changes needed
+
+- **Market exterior (`town_exterior.json`)**: checked all 11 named NPCs
+  against the real TMX (name, position, animation) - all correct. The
+  two that looked static (witch seller, guy eating chicken) are
+  correctly static per the source data itself, confirmed byte-for-byte
+  against the TMX's own animation definitions.
+- **Tavern's exterior building**: rendered in isolation, roof correctly
+  caps the walls, sign/balcony/ivy all layer correctly.
+- **Act 3 portraits**: searched the entire project (`interactions.json`,
+  `story.json`, every map file) for any active `portrait` field - none
+  found. This already appears to be off everywhere; worth confirming
+  against whatever build gets tested next, since this project has hit
+  the "fixed here, not sure what's live" gap more than once this
+  session (see the cave map and herbalist note from earlier rounds).
+
+## v145
+
+### UI/UX pass
+
+- **Lobby**: removed the separate "Copy Code" button entirely, keeping
+  just "Copy Invite Link". Clicking it now shows a checkmark on the
+  button itself (swaps in for the label text for 2s, then reverts) -
+  no more separate feedback line below the box. The Case Code box wraps
+  tightly now that that line is gone. Root-caused the lingering
+  scroll-on-page issue from a previous pass: `.lobby-layout`'s height
+  calc (`100vh - 260px`) was undercounting the page's real chrome
+  (header, hint lines, `#app`'s own padding) by close to 150px on
+  typical viewports. Corrected the math and gave the lobby its own
+  tighter bottom padding via a new `#app.app-lobby` class, toggled the
+  same way `#app.app-wide` already was for the game screen.
+- **Invitation screen**: reskinned onto the game's own wood-framed
+  parchment panel art (`panel_dialogue.png`, the same border-image the
+  in-game dialogue boxes use) instead of the plain dark settings-card
+  look, and extended the copy to be more theatrical, per request.
+- **Character creation**: the "Your Name" input was practically
+  invisible (an 8%-opacity tint on a light card, with matching
+  low-contrast text) - given real contrast instead (solid light fill,
+  dark ink text). Shrunk the "Join the Gala" box, removed the dead space
+  above its button (the shared `.error-text`'s reserved height plus the
+  default button margin, neither of which this one-line confirmation
+  card needed), and added real spacing above it from the character
+  card.
+- **The Frame-Up cutscene**: Thorne shifted from x=13 to x=12.5,
+  centering her in the red chair, which the map data confirms spans
+  tiles 12-13. Voss given a `sortBoost` so he renders in front of the
+  desk instead of behind it, and his walk-in slowed (1600ms default ->
+  4500ms). Found and fixed the actual cause of leftover interact
+  tooltips bleeding into the cutscene: `enterStagedScene` was hiding the
+  interact button once on entry, but never clearing the underlying
+  `isNearInteractable`/`currentNearbyObj`/`activeVnObjId` state - so
+  closing a leftover dialogue panel, or a candle-state broadcast
+  arriving mid-scene, could resurrect the old prompt. Now cleared
+  explicitly alongside the button hide.
+
+### Guild Hall desk & walkability pass
+
+Driven by two rounds of Elle's own annotated screenshots, the second
+pass measured pixel-precisely against the actual uploaded image (not
+eyeballed) to get exact tile coordinates for every red/yellow/purple
+region:
+
+- Walkable area reshaped to match Elle's traced path: several rows at
+  the top (1-3) sealed back up, the bottom hallway narrowed to specific
+  gaps rather than being fully open edge-to-edge, and a new path opened
+  through cols 12-16/rows 8-10 past the dragon's tail.
+- The two interact points moved twice this round, ending at the exact
+  tiles Elle marked: **"The Evidence"** at (9,6) and **"The Vote"** at
+  (10,6), sitting directly on the desk itself (the drawer box and the
+  open book respectively). Since the desk stays solid furniture, carved
+  a one-row walkable approach strip directly in front (row 7) so there's
+  always a tile to interact from - same pattern as every other
+  "interact with something sitting on a solid surface" spot in the
+  project.
+
+### Root-cause investigation pass
+
+- **Guild Hall layering ("periodically incorrect")**: found a real bug,
+  not a guess. `guild_hall_ground.json` had a `layerGroups` entry
+  lumping all five `Objects1`-`Objects5` layers into one shared Y-sort
+  key - correct for a single structure split across purpose-named
+  layers (a roof + walls), wrong here, since these five layers actually
+  hold five *unrelated* furniture pieces (bookshelves, the side
+  boards, the desk, the dragon skeleton, the stool), each already fully
+  self-contained within its own layer. The grouping meant the desk or
+  bookshelf could get dragged into sorting against the dragon's tail or
+  the bench several rows away, purely from sharing a layer-name prefix -
+  exactly the intermittent symptom reported, since it only misfires
+  when the player's position falls between an object's real depth and
+  the group's borrowed one. Removed the grouping. Fixes both the live
+  player and the Maid's "The Maid Returns" cutscene, since both read the
+  same map data. Checked every other map's `layerGroups` for the same
+  overbroad pattern - none found, the other three are legitimate
+  single-structure splits.
+- **Herbalist's Hut - "nowhere to read the note"**: the note itself
+  (`prop_victim_notes` in `herbalist_interior.json`) was always
+  correctly wired - it's the one object that actually unlocks the
+  herbalist's real dialogue via `learnsFact: "read_victim_notes"`. The
+  bug: it sits on bare floor with zero visual representation. `"note"`-
+  kind objects are deliberately excluded from the generic interact-dot
+  marker project-wide, on the assumption they always sit on some
+  existing visible prop (a door, a plant) - this one doesn't, so it was
+  genuinely undiscoverable even though mechanically reachable. Added
+  `showMarker: true`, the documented opt-in for exactly this case.
+- **"No cave map"**: could not reproduce. `cave_shortcut.json` exists,
+  every one of its 11 referenced tileset PNGs is present on disk, it
+  renders as a complete cave scene when composited directly, and every
+  waypoint in its walk path is open and mutually BFS-connected. Best
+  guess, stated plainly rather than invented as a fix: this file made it
+  into a working session's files at some point but was never actually
+  included in a zip that got tested live. It's included in this
+  delivery either way - worth a fresh look once it's live.
 
 ## v144: Glassmaker reachability and animation, root-caused and fixed
 

@@ -138,6 +138,11 @@ function showScreen(id) {
   document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   document.getElementById("app").classList.toggle("app-wide", id === "screen-game");
+  // Tighter bottom padding while the lobby is active - the lobby is meant
+  // to fit inside one viewport with no scroll, unlike every other screen
+  // which is free to run long. See .lobby-layout's height calc below for
+  // the other half of this fix.
+  document.getElementById("app").classList.toggle("app-lobby", id === "screen-lobby");
   if (id === "screen-game" && typeof Overworld !== "undefined" && Overworld.resize) {
     // container size just changed; let the canvas catch up once the browser has laid it out
     requestAnimationFrame(() => Overworld.resize());
@@ -644,12 +649,14 @@ function currentInviteLink() {
   return `${location.origin}${location.pathname}?code=${state.roomCode || ""}`;
 }
 
-function showLobbyCopyFeedback(text) {
-  const el = document.getElementById("lobby-copy-feedback");
-  if (!el) return;
-  el.textContent = text;
-  clearTimeout(showLobbyCopyFeedback._t);
-  showLobbyCopyFeedback._t = setTimeout(() => { el.textContent = "\u00a0"; }, 2500);
+// Shows a checkmark on the copy button itself (swapping icon opacity, not a
+// separate line of text below it) for a couple seconds, then reverts. Kept
+// as its own small state machine rather than reusing the old text-feedback
+// approach, since the visual is now owned entirely by the button.
+function showCopyButtonCheck(btn) {
+  btn.classList.add("copied");
+  clearTimeout(btn._copiedTimer);
+  btn._copiedTimer = setTimeout(() => btn.classList.remove("copied"), 2000);
 }
 
 async function copyToClipboard(text) {
@@ -676,14 +683,9 @@ async function copyToClipboard(text) {
   }
 }
 
-document.getElementById("btn-copy-code").addEventListener("click", async () => {
-  const ok = await copyToClipboard(state.roomCode || "");
-  showLobbyCopyFeedback(ok ? "Code copied." : "Couldn't copy, here it is above.");
-});
-
-document.getElementById("btn-copy-invite-link").addEventListener("click", async () => {
+document.getElementById("btn-copy-invite-link").addEventListener("click", async (e) => {
   const ok = await copyToClipboard(currentInviteLink());
-  showLobbyCopyFeedback(ok ? "Invite link copied." : "Couldn't copy, here's the code above.");
+  if (ok) showCopyButtonCheck(e.currentTarget);
 });
 
 socket.on("lobby:move", (data) => LobbyPen.onRemoteMove(data));
@@ -1492,6 +1494,16 @@ async function enterExplore(act) {
 async function enterStagedScene(act) {
   document.getElementById("btn-interact").classList.add("hidden");
   updateZoneLabel("");
+  // Hiding the button alone isn't enough - closeVnPanel() and the
+  // candle:state broadcast both read this leftover proximity state from
+  // whatever the player was standing near right before the cutscene
+  // started, and can resurrect the old interact prompt (wrong object,
+  // wrong label) mid-scene. Staged scenes have no interactables of their
+  // own, so there's nothing this should ever reflect until the player is
+  // back in a real explore act.
+  isNearInteractable = false;
+  currentNearbyObj = null;
+  activeVnObjId = null;
 
   const zoneId = act.zone || "estate";
   socket.emit("player:changeZone", { zone: zoneId, x: 0, y: 0 });

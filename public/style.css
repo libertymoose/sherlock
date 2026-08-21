@@ -92,6 +92,16 @@ html, body {
   max-width: min(1500px, 96vw);
 }
 
+#app.app-lobby {
+  /* Was still using the shared 80px bottom padding meant for normal
+     scrollable screens. The lobby's own .lobby-layout height calc below
+     already budgets for a fixed amount of chrome above and below it, so
+     the two need to agree - this was a real mismatch (calc assumed far
+     less total chrome than the page actually had), which is why the
+     page still needed a scroll after the previous alignment pass. */
+  padding-bottom: 24px;
+}
+
 .screen { display: none; animation: fadeIn 0.5s ease; }
 .screen.active { display: block; }
 
@@ -255,10 +265,20 @@ html, body {
 }
 
 .invite-join-card {
-  max-width: 520px;
-  margin: 0 auto;
+  max-width: 420px;
+  margin: 28px auto 0;
+  padding: 20px 24px;
   text-align: center;
 }
+/* This card only ever shows a short one-line confirmation, not a
+   multi-line form - the shared .error-text's reserved 18px min-height
+   (there to stop error text from causing layout jump elsewhere) was
+   pure dead space here since an error on this screen is rare, and the
+   default .btn margin-top on top of that read as one big empty gap
+   before the button. Both trimmed down for this card specifically. */
+.invite-join-card .error-text { min-height: 0; margin-top: 0; }
+.invite-join-card .btn { margin-top: 12px; }
+.invite-join-card p { margin: 0 0 4px; }
 
 /* Default (host mode): options and avatar stacked exactly as before -
    this card sits in one half of a two-column bento next to Host/Join,
@@ -300,17 +320,45 @@ html, body {
   text-align: center;
 }
 
-/* Invitation screen - reuses .card/.seal/.eyebrow exactly as the
-   Host/Join cards do, just centered as a single standalone piece. */
+/* Invitation screen - was reusing the plain dark .card, which didn't
+   read as an invitation at all. Reskinned onto the same wood-framed
+   parchment panel art the in-game dialogue boxes use
+   (.pixel-panel-dialogue's border-image), so it actually looks like a
+   letter someone would send, not another settings-menu card. */
 .invite-card {
-  max-width: 480px;
+  max-width: 520px;
   margin: 0 auto;
   text-align: center;
 }
-.invite-card h2 { color: var(--parchment); }
-.invite-card .invite-italic {
+.invite-parchment {
+  border-image-source: url('/assets/ui/panel_dialogue.png');
+  border-image-slice: 10 fill;
+  border-image-width: 16px;
+  border-image-repeat: stretch;
+  background: transparent;
+  border-style: solid;
+  border-width: 16px;
+  border-radius: 0;
+  image-rendering: pixelated;
+  padding: 12px 8px;
+}
+.invite-eyebrow { color: #7a5a30; }
+.invite-heading {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 26px;
+  margin: 0 0 14px;
+  color: #3a2a1c;
+}
+.invite-body {
+  color: #4a3624;
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+.invite-italic {
   font-style: italic;
-  color: var(--parchment-dim);
+  color: #5f3828;
+  line-height: 1.6;
 }
 
 /* The lobby: pen on the left, all game info (roster, host controls,
@@ -329,9 +377,17 @@ html, body {
   grid-template-columns: 1.3fr 1fr;
   gap: 28px;
   align-items: stretch;
-  height: calc(100vh - 260px);
-  min-height: 380px;
-  max-height: 640px;
+  /* 260px was a rough guess that undercounted the real chrome above and
+     below this element (seal + eyebrow + subtitle + guest count above,
+     the "walk around" hint line below, plus #app's own top/bottom
+     padding) by well over 100px - the actual total is close to 345px.
+     That gap is exactly why the page still needed to scroll even after
+     the bottom cluster was aligned to the pen's bottom edge: the layout
+     box itself was being allowed to render taller than the viewport
+     actually had room for. */
+  height: calc(100vh - 345px);
+  min-height: 360px;
+  max-height: 620px;
 }
 
 .lobby-pen-col {
@@ -416,6 +472,25 @@ html, body {
   font-size: 13px;
   padding: 8px 10px;
 }
+.btn-copy-link {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  position: relative;
+}
+.btn-copy-link-check {
+  /* Hidden by default - the click handler adds .copied, which swaps this
+     in for the label text below rather than opening a separate line of
+     feedback text under the box. Reverts on its own after a couple
+     seconds (see showCopyButtonCheck in client.js). */
+  display: none;
+  color: var(--candle-bright);
+}
+.btn-copy-link.copied .btn-copy-link-text { display: none; }
+.btn-copy-link.copied .btn-copy-link-check { display: block; }
+.btn-copy-link.copied { border-color: var(--candle-bright); }
 
 @media (max-width: 760px) {
   /* Not enough width for a real two-column layout - stack instead,
@@ -490,18 +565,21 @@ input[type="text"] {
 
 /* The landing/lobby cards are light cream, a solid near-black fill (right
    for the dark in-game theme) reads as a jarring dark slab here instead.
-   A soft tint of the same ink color, plus dark text, keeps it readable
-   without breaking the warm parchment look. */
+   Previous values (a near-invisible 8% tint, 35% border) were too faint
+   to read as an actual input field against the card - it looked like
+   plain card background with barely a border, and typed text had almost
+   no contrast. Given real contrast instead: a distinctly lighter fill
+   than the card itself, a solid border, and dark text/placeholder. */
 #screen-landing input[type="text"],
 #screen-lobby input[type="text"] {
-  background: rgba(52, 32, 47, 0.08);
-  border: 1px solid rgba(52, 32, 47, 0.35);
-  color: var(--parchment-dim);
+  background: #faf7f5;
+  border: 1px solid rgba(52, 32, 47, 0.45);
+  color: #34202f;
 }
 
 #screen-landing input[type="text"]::placeholder,
 #screen-lobby input[type="text"]::placeholder {
-  color: rgba(52, 32, 47, 0.45);
+  color: rgba(52, 32, 47, 0.5);
 }
 
 input[type="text"]:focus {

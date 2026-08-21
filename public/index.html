@@ -32,16 +32,20 @@
        own Host/Join entry point and for anyone resuming a saved session.) -->
   <section id="screen-invite" class="screen">
     <div class="seal">&#9993;</div>
-    <div class="card invite-card">
-      <p class="eyebrow">House Duskmere</p>
-      <h2>You Are Cordially Invited</h2>
-      <p>
-        requests the pleasure of your company at a gala celebrating the
-        completion of the latest repairs to Tiragarde Sound.
+    <div class="invite-card invite-parchment">
+      <p class="eyebrow invite-eyebrow">House Duskmere</p>
+      <h2 class="invite-heading">You Are Cordially Invited</h2>
+      <p class="invite-body">
+        By lantern-light and old stone, House Duskmere throws open its
+        doors to mark the triumphant completion of repairs to Tiragarde
+        Sound, repairs paid for in coin, in labor, and in more than a
+        little blood since the Siege. Wine will flow. Music will play.
+        For one night, Boralus will forget the storm ever came.
       </p>
       <p class="invite-italic">
-        Tonight, at the Duskmere Estate.<br />
-        Champions of Azeroth are cordially invited.
+        Tonight, beneath the stars, at the Duskmere Estate.<br />
+        Champions of Azeroth, your company is not merely requested.<br />
+        It is required.
       </p>
       <button id="btn-accept-invite" class="btn btn-primary">Accept Invitation</button>
     </div>
@@ -128,10 +132,13 @@
           <p class="lobby-invite-label">Case code</p>
           <div class="room-code" id="room-code-display">-----</div>
           <div class="lobby-invite-actions">
-            <button id="btn-copy-code" class="btn btn-secondary">Copy Code</button>
-            <button id="btn-copy-invite-link" class="btn btn-secondary">Copy Invite Link</button>
+            <button id="btn-copy-invite-link" class="btn btn-secondary btn-copy-link">
+              <span class="btn-copy-link-text">Copy Invite Link</span>
+              <svg class="btn-copy-link-check" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                <polyline points="3,8.5 6.5,12 13,4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
           </div>
-          <p class="hint-text" id="lobby-copy-feedback">&nbsp;</p>
         </div>
 
         <button id="btn-leave-lobby" class="btn btn-secondary">Not you? Leave this game</button>
