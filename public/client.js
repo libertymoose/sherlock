@@ -1039,6 +1039,19 @@ function renderGroupPuzzle(container, act) {
 // gets Hook's vague count, never which ones specifically.
 let finaleState = { act: null, selections: {}, activeTab: null };
 
+// The five finalist suspects' real estate-map looks, and Hook/Thorne's -
+// same values already confirmed against estate.json's own npc objects and
+// the staged-scene actors that already use them elsewhere in the game.
+// Fixed left-to-right order, not derived from anything server-sent, since
+// this is purely a visual cast lineup, not gameplay state.
+const FINALE_SUSPECT_LOOKS = [
+  { name: "Steward Wren Ashby", look: "citizen1" },
+  { name: "Commodore Brannigan Voss", look: "fighter4" },
+  { name: "Merchant Odalys Kestrel", look: "citizen3" },
+  { name: "Architect Tobias Marrow", look: "citizen2" },
+  { name: "Lady Isobel Ashgate", look: "ashgate_fancy" },
+];
+
 function renderFinaleAccusation(container, act) {
   finaleState.act = act;
   finaleState.selections = act.selections || {};
@@ -1055,37 +1068,75 @@ function renderFinaleAccusation(container, act) {
     container.appendChild(intro);
   }
 
+  // The static cast portrait: a single non-interactive paint pass onto its
+  // own canvas (players in their real customization, suspects in their
+  // real estate-map looks, Hook and Thorne centered and apart from both
+  // groups), backed by a real crop of the estate's own front plaza. Not
+  // the live overworld - nothing here moves, so this is drawn once and
+  // left alone, same spirit as a printed cast photo rather than a scene.
+  const sceneWrap = document.createElement("div");
+  sceneWrap.className = "finale-scene-wrap";
+  const sceneCanvas = document.createElement("canvas");
+  sceneCanvas.id = "finale-cast-canvas";
+  sceneCanvas.className = "finale-cast-canvas";
+  sceneWrap.appendChild(sceneCanvas);
+  container.appendChild(sceneWrap);
+
+  const connectedPlayers = currentPlayers.filter((p) => p.connected !== false);
+  Overworld.renderFinaleCast(sceneCanvas, {
+    mapUrl: "/assets/maps/estate.json",
+    crop: { x: 39, y: 42, w: 22, h: 13 },
+    players: connectedPlayers.map((p) => ({ gender: p.gender, color: p.color })),
+    suspects: FINALE_SUSPECT_LOOKS,
+    hook: { look: "fighter3" },
+    thorne: { look: "fighter5" },
+  }).catch((err) => console.error("Finale cast render failed:", err));
+
+  // Pushback/reveal text (a wrong suspect's rebuttal, Thorne's eventual
+  // confirmation) lives here, above the book, text only - same element
+  // and id the existing finale:result/finale:state socket handlers
+  // already target, just repositioned in the new layout.
+  const feedback = document.createElement("p");
+  feedback.className = "feedback finale-pushback";
+  feedback.id = "finale-feedback";
+  container.appendChild(feedback);
+
+  // The book: two panes side by side at the bottom of the screen - the
+  // passage/blanks on the left, the word-bank tabs and options on the
+  // right. Same underlying data and socket events as before, just laid
+  // out as a book rather than a single stacked column.
+  const book = document.createElement("div");
+  book.className = "finale-book";
+  book.id = "finale-book";
+
+  const bookLeft = document.createElement("div");
+  bookLeft.className = "finale-book-left";
   const passageBox = document.createElement("div");
   passageBox.className = "fragment-card finale-passage";
   passageBox.id = "finale-passage";
-  container.appendChild(passageBox);
+  bookLeft.appendChild(passageBox);
+  book.appendChild(bookLeft);
 
-  // The pixel panel: a title strip (the art's own green header bar),
-  // a row of tabs (one per blank - Who/Poison/Motive/Opportunity), and
-  // a body showing only the active tab's word-bank options. Which tab
-  // is open is purely local per-player UI state, never sent over the
-  // socket - the actual selections underneath stay synced regardless of
-  // which tab anyone happens to be looking at.
-  const panel = document.createElement("div");
-  panel.className = "finale-panel";
-  panel.id = "finale-panel";
+  const bookRight = document.createElement("div");
+  bookRight.className = "finale-book-right finale-panel";
 
   const title = document.createElement("div");
   title.className = "finale-panel-title";
   title.textContent = "Present Your Case";
-  panel.appendChild(title);
+  bookRight.appendChild(title);
 
   const tabsRow = document.createElement("div");
   tabsRow.className = "finale-tabs-row";
   tabsRow.id = "finale-tabs-row";
-  panel.appendChild(tabsRow);
+  bookRight.appendChild(tabsRow);
 
   const tabContent = document.createElement("div");
   tabContent.className = "finale-tab-content";
   tabContent.id = "finale-tab-content";
-  panel.appendChild(tabContent);
+  bookRight.appendChild(tabContent);
 
-  container.appendChild(panel);
+  book.appendChild(bookRight);
+  container.appendChild(book);
 
   const submitBtn = document.createElement("button");
   submitBtn.className = "btn btn-primary";
@@ -1098,11 +1149,6 @@ function renderFinaleAccusation(container, act) {
   progress.className = "progress-text";
   progress.id = "finale-progress";
   container.appendChild(progress);
-
-  const feedback = document.createElement("p");
-  feedback.className = "feedback";
-  feedback.id = "finale-feedback";
-  container.appendChild(feedback);
 
   renderFinaleTabs();
   renderFinaleTray();

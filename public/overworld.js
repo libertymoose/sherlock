@@ -1778,7 +1778,143 @@ window.Overworld = (function () {
     rafId = requestAnimationFrame(loop);
   }
 
+  // A one-shot, non-interactive composite for the Finale: a static crop of
+  // a map's own tiles as backdrop, with the party (their real gender/color
+  // customization) on one side, the suspects (their real estate-map looks)
+  // on the other, and Hook/Thorne centered between both groups. Nothing
+  // here moves or animates once drawn - deliberately not the live game
+  // loop, a single paint pass onto its own canvas. Kept fully independent
+  // of the module's live `mapData`/`resolvedLayers` state (its own local
+  // map fetch, its own local tile resolver) so it can never interfere with
+  // whatever the main overworld was last doing, and so it works even if
+  // Overworld.init() was never called yet this session.
+  async function renderFinaleCast(canvasEl, opts) {
+    const localCtx = canvasEl.getContext("2d");
+    localCtx.imageSmoothingEnabled = false;
+
+    if (!Object.keys(BASE_MANIFEST).length || !Object.keys(NPC_MANIFEST).length) {
+      const [baseManifest, npcManifest] = await Promise.all([
+        loadJSON("/assets/characters/base/manifest.json"),
+        loadJSON("/assets/npcs/looks/manifest.json"),
+      ]);
+      BASE_MANIFEST = baseManifest;
+      NPC_MANIFEST = npcManifest;
+    }
+    const charSrcs = [];
+    Object.values(BASE_MANIFEST).forEach((genderSet) => {
+      Object.values(genderSet).forEach((entry) => charSrcs.push(entry.idle.src));
+    });
+    charSrcs.push(...allFrameSrcs(NPC_MANIFEST));
+    await Promise.all(charSrcs.map(loadImage));
+
+    const finaleMapData = await loadJSON(opts.mapUrl);
+    const tilesetSrcs = new Set(finaleMapData.tilesets.map((t) => t.image));
+    await Promise.all([...tilesetSrcs].map(loadImage));
+
+    const crop = opts.crop;
+    canvasEl.width = crop.w * TILE * RENDER_SCALE;
+    canvasEl.height = crop.h * TILE * RENDER_SCALE;
+
+    function localResolveGid(gid) {
+      for (const ts of finaleMapData.tilesets) {
+        if (gid >= ts.firstgid && gid <= ts.lastgid) {
+          const local = gid - ts.firstgid;
+          return {
+            src: ts.image,
+            sx: (local % ts.columns) * ts.tilewidth,
+            sy: Math.floor(local / ts.columns) * ts.tileheight,
+          };
+        }
+      }
+      return null;
+    }
+
+    // Flat blit, authored layer order, cropped to the window. No animation
+    // and no Y-sort math needed - nothing here ever moves, so draw order
+    // only has to match the map's own layer stack, not any live occupant.
+    finaleMapData.layers.forEach((layer) => {
+      if (!layer.dense || !layer.data) return;
+      for (let ty = 0; ty < crop.h; ty++) {
+        for (let tx = 0; tx < crop.w; tx++) {
+          const mapX = crop.x + tx;
+          const mapY = crop.y + ty;
+          if (mapX < 0 || mapY < 0 || mapX >= finaleMapData.width || mapY >= finaleMapData.height) continue;
+          const rawGid = layer.data[mapY * finaleMapData.width + mapX];
+          if (!rawGid) continue;
+          const { gid, hFlip, vFlip } = stripFlip(rawGid);
+          const r = localResolveGid(gid);
+          if (!r) continue;
+          const img = getImg(r.src);
+          if (!img) continue;
+          const dx = tx * TILE * RENDER_SCALE;
+          const dy = ty * TILE * RENDER_SCALE;
+          const size = TILE * RENDER_SCALE;
+          localCtx.save();
+          if (hFlip || vFlip) {
+            localCtx.translate(dx + (hFlip ? size : 0), dy + (vFlip ? size : 0));
+            localCtx.scale(hFlip ? -1 : 1, vFlip ? -1 : 1);
+            localCtx.drawImage(img, r.sx, r.sy, TILE, TILE, 0, 0, size, size);
+          } else {
+            localCtx.drawImage(img, r.sx, r.sy, TILE, TILE, dx, dy, size, size);
+          }
+          localCtx.restore();
+        }
+      }
+    });
+
+    function drawStaticActor(screenX, screenY, drawSize, frameSet, dirRow) {
+      const img = getImg(frameSet.src);
+      if (!img) return;
+      const cell = frameSet.cell;
+      const sy = Math.min(dirRow, (frameSet.rows || 1) - 1) * cell;
+      const size = drawSize * RENDER_SCALE;
+      localCtx.save();
+      localCtx.imageSmoothingEnabled = false;
+      localCtx.drawImage(img, 0, sy, cell, cell, screenX - size / 2, screenY - size, size, size);
+      localCtx.restore();
+    }
+
+    function drawPlayerActor(screenX, screenY, gender, color) {
+      const genderManifest = BASE_MANIFEST[gender] || BASE_MANIFEST.male;
+      const entry = genderManifest[color] || genderManifest.red;
+      if (!entry) return;
+      drawStaticActor(screenX, screenY, PLAYER_DRAW_SIZE, entry.idle, PLAYER_DIR_ROW.down);
+    }
+
+    function drawNpcActor(screenX, screenY, look) {
+      const entry = NPC_MANIFEST[look];
+      if (!entry) return;
+      drawStaticActor(screenX, screenY, WORLD_CHAR_SIZE, entry.idle, NPC_DIR_ROW.down);
+    }
+
+    // Players on the left third, suspects on the right third, Hook and
+    // Thorne centered between both groups and apart from them - matches
+    // the confirmed layout: neither ally is grouped with either side.
+    const baselineY = canvasEl.height * 0.78;
+    const players = opts.players || [];
+    const leftStartX = canvasEl.width * 0.06;
+    const leftEndX = canvasEl.width * 0.32;
+    players.forEach((p, i) => {
+      const t = players.length > 1 ? i / (players.length - 1) : 0.5;
+      drawPlayerActor(leftStartX + (leftEndX - leftStartX) * t, baselineY, p.gender, p.color);
+    });
+
+    const suspects = opts.suspects || [];
+    const rightStartX = canvasEl.width * 0.68;
+    const rightEndX = canvasEl.width * 0.94;
+    suspects.forEach((s, i) => {
+      const t = suspects.length > 1 ? i / (suspects.length - 1) : 0.5;
+      drawNpcActor(rightStartX + (rightEndX - rightStartX) * t, baselineY, s.look);
+    });
+
+    // Hook and Thorne, centered and clearly apart from both groups - not
+    // just a narrow gap either side of the exact middle.
+    if (opts.hook) drawNpcActor(canvasEl.width * 0.41, baselineY, opts.hook.look);
+    if (opts.thorne) drawNpcActor(canvasEl.width * 0.59, baselineY, opts.thorne.look);
+  }
+
   return {
+    renderFinaleCast,
     async init(opts) {
       canvas = opts.canvas;
       ctx = canvas.getContext("2d");

@@ -899,13 +899,72 @@ input[type="text"]:focus {
   font-weight: 600;
 }
 
+/* The static cast portrait up top - a single non-interactive paint pass,
+   not the live game canvas. Sized by aspect ratio (crop is 22x13 tiles)
+   rather than a fixed pixel height, so it scales cleanly with the panel
+   around it instead of clipping or leaving letterboxing on odd screens. */
+.finale-scene-wrap {
+  width: 100%;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-top: 14px;
+}
+.finale-cast-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 22 / 13;
+  image-rendering: pixelated;
+}
+
+/* Pushback/reveal text sits directly under the scene and above the book -
+   a wrong suspect's rebuttal, Thorne's eventual confirmation. Text only,
+   no portrait, per spec. Reuses .feedback's color states (correct/
+   incorrect classes already toggle from the same finale:result handler),
+   just recentered and spaced for this position instead of sitting at the
+   very bottom of the act. */
+.finale-pushback {
+  text-align: center;
+  min-height: 1.4em;
+  margin: 10px 0 0;
+  font-size: 15px;
+}
+
+/* The book: two panes side by side at the bottom of the screen. Left is
+   the passage/blanks (the actual accusation being built), right is the
+   word-bank tabs and options used to fill it. Stacks vertically below a
+   narrow viewport rather than squeezing two panes edge to edge. */
+.finale-book {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+  margin-top: 18px;
+}
+.finale-book-left,
+.finale-book-right {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.finale-book-left {
+  display: flex;
+  align-items: center;
+}
+.finale-book-left .finale-passage {
+  width: 100%;
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .finale-book {
+    flex-direction: column;
+  }
+}
+
 /* The pixel panel wrapping the tab strip and word-bank options -
    panel_finale.png's own header bar happens to be the exact same green
    as --candle already, so it blends in without any tinting needed.
    Asymmetric slice: the top 14px captures the full header bar as one
    stretchable strip, the other three sides are the thin border. */
 .finale-panel {
-  margin-top: 22px;
   border-image-source: url('/assets/ui/panel_finale.png');
   border-image-slice: 14 5 5 5 fill;
   border-image-width: 30px 10px 10px 10px;

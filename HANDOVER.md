@@ -1,45 +1,101 @@
-# Handover — A Study in Boralus, picking up after v148
+# Handover — A Study in Boralus, picking up after v149
 
 This replaces the earlier handover from v122. Paste this as the first
-message in a new chat, then attach the v148 zip.
+message in a new chat, then attach the v149 zip.
 
 ## Where things actually stand
 
-- **v147 was a bug-fix pass** driven entirely by Elle's live-tested
-  screenshots: real dialogue that had been silently overwritten during
-  the v146 tavern rebuild, a genuinely swapped-columns sprite, a missing
-  animation frame, a dragon skeleton split across two layers, and an
-  evidence object placement. See "v147" below for the full breakdown.
-- **v148 adds late-join**: a player can now connect with the room code
+- **The Finale revamp is built.** Static (non-walkable) estate backdrop -
+  a real crop of the front plaza from `estate.json`, not a placeholder
+  illustration - with the party on the left (their real gender/color
+  customization), the 5 suspects on the right (their real estate-map
+  looks), and Hook and Thorne centered between both groups, clearly
+  apart from each. The accusation "book" now sits at the bottom of the
+  screen as two side-by-side panes (passage/blanks on the left,
+  word-bank tabs and options on the right), and all pushback/reveal text
+  (wrong-suspect rebuttals, Thorne's confirmation) renders above the
+  book, text only, no portrait reaction. See "v149" below for the full
+  build notes, including a real spacing bug caught and fixed by mocking
+  the composite up with the actual sprite sheets before shipping it.
+- **v148 added late-join**: a player can connect with the room code
   after the game has already started and actually join, not just
-  reconnect to a seat that already existed. See "v148" below.
-- **The Finale revamp is designed but not yet built.** Full agreed spec:
-  static (non-walkable) estate backdrop, players on one side and the 5
-  suspects on the other (both rendered with their real sprites/looks,
-  not a placeholder illustration), Hook and Thorne centered and apart
-  from both groups, the accusation "book" moved to the bottom of the
-  screen as two side-by-side panes (blanks on the left, word-bank
-  options on the right), and all pushback/reveal text (wrong-suspect
-  rebuttals, Thorne's confirmation) rendered above the book, text only,
-  no portrait reaction. Confirmed reusable as-is: all of
-  `finale:select`/`finale:submit`/`finale:acknowledgeResult` and their
-  evaluation logic - this is a client-side rendering and layout rebuild,
-  not a server-side one. Suspect sprite `look` values already confirmed:
-  Voss=fighter4, Kestrel=citizen3, Marrow=citizen2, Ashgate=ashgate_fancy
-  (Ashby's still needs confirming), Hook=fighter3, Thorne=fighter5. This
-  is the next thing to build.
-- **One open item from v147, can't fully confirm without a fresh
+  reconnect to a seat that already existed.
+- **One open item from v147, still can't confirm without a fresh
   screenshot**: "the Maid clips through the rug" during her Act III
-  staged scene. Checked her scripted path and the rug's actual tile
-  extent - her endpoint sits just outside the rug, not overlapping it.
-  Her path does cross right through where the dragon skull used to sit
-  disconnected from its own spine (see the layer-split fix in v147
-  below), so there's a real chance this was the same bug wearing a
-  different description and is already fixed - but this needs eyes on
-  the actual next build to confirm, not another guess.
+  staged scene. There's a real chance this was the same disconnected-
+  dragon-skull bug already fixed that pass (her path crosses right
+  through where the skull used to sit), but this needs eyes on an
+  actual build to confirm, not another guess.
 - Packaged and validated (JSON parse, `node --check`, CSS braces,
-  em-dash grep, BFS reachability across every touched map, all clean).
-- Keep incrementing normally (v149 next) from here.
+  em-dash grep, all clean).
+- Keep incrementing normally (v150 next) from here.
+
+## v149
+
+### The Finale, rebuilt to spec
+
+Full agreed design (confirmed in an earlier session before this build
+started): static backdrop, players and suspects on opposite sides with
+their real sprites, Hook and Thorne centered and apart from both
+groups, the book moved to the bottom as two side-by-side panes, all
+pushback/reveal text above the book and text-only.
+
+**Server-side needed no changes at all.** `finale:select`,
+`finale:submit`, `finale:acknowledgeResult` and their evaluation logic
+were already exactly right - this was a client-side rendering and
+layout rebuild, not a data or logic one.
+
+**The static cast composite** (`Overworld.renderFinaleCast()`, new
+function in `overworld.js`) is deliberately independent of the module's
+live `mapData`/`resolvedLayers` state - its own local map fetch, its
+own local tile resolver, drawing onto its own canvas - so it can never
+interfere with whatever the main overworld was last doing, and works
+even if `Overworld.init()` hasn't run yet this session. It crops a
+fixed window from `estate.json` (`x:39, y:42, w:22, h:13`, the open
+brick plaza in front of the manor - found by rendering the whole map
+and looking for a clean, wide, open space) and flat-blits every dense
+tile layer in authored order, no animation and no Y-sort math needed
+since nothing in this scene ever moves. Players draw with their real
+`gender`/`color` via the same base manifest the live game uses; the 5
+suspects, Hook, and Thorne draw via the same NPC-look manifest, using
+each character's real look value already confirmed against
+`estate.json`'s own npc objects: Ashby=citizen1, Voss=fighter4,
+Kestrel=citizen3, Marrow=citizen2, Ashgate=ashgate_fancy,
+Hook=fighter3, Thorne=fighter5. Everything draws at a single static
+idle frame, facing down - there's no animation clock running here at
+all, matching "not really a live view, more of a static screenshot."
+
+**A real bug caught before shipping, not after:** rather than trust the
+layout math by eye, the actual composite was mocked up in Python using
+the real sprite sheets and the real manifest data before calling this
+done. The first pass showed Hook and Thorne sitting too close to the
+player and suspect clusters - readable, but not clearly "apart from
+both groups" the way the spec called for. Fixed by widening the group
+zones (players 6-32% of the canvas width, suspects 68-94%) and pushing
+Hook/Thorne further out from center (41%/59% instead of 44%/56%),
+confirmed by re-rendering the mockup and comparing side by side. The
+NPC sprites read cleanly at this size; the player idle sprites look a
+little indistinct in isolation at a distance, but that's the same
+mannequin-style idle frame already used everywhere in live gameplay,
+not something this pass introduced or should touch.
+
+**Client layout** (`renderFinaleAccusation` in `client.js`, fully
+rebuilt): static cast canvas on top, `#finale-feedback` directly below
+it as the pushback/reveal strip (same element id the existing
+`finale:state`/`finale:result` socket handlers already target, so
+those needed zero changes, just a new position in the DOM), then
+`.finale-book` as a two-pane flex row (`.finale-book-left` holds
+`#finale-passage`, `.finale-book-right` keeps the existing decorative
+panel/tabs/word-bank exactly as before, just re-homed). Stacks
+vertically under 640px rather than squeezing two panes edge to edge on
+a narrow screen.
+
+### Still open
+
+- The v147 Maid/rug item above, needs a live screenshot.
+- Everything else from the last handover (Ashby's suspect look was the
+  one unconfirmed value going into this pass - it's now confirmed as
+  citizen1, recorded above for anyone picking this up fresh).
 
 ## v148
 
