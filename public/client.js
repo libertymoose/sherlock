@@ -1085,7 +1085,7 @@ function renderFinaleAccusation(container, act) {
   const connectedPlayers = currentPlayers.filter((p) => p.connected !== false);
   Overworld.renderFinaleCast(sceneCanvas, {
     mapUrl: "/assets/maps/estate.json",
-    crop: { x: 39, y: 42, w: 22, h: 13 },
+    crop: { x: 39, y: 48, w: 22, h: 7 },
     players: connectedPlayers.map((p) => ({ gender: p.gender, color: p.color })),
     suspects: FINALE_SUSPECT_LOOKS,
     hook: { look: "fighter3" },

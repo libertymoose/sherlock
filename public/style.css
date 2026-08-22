@@ -913,7 +913,7 @@ input[type="text"]:focus {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 22 / 13;
+  aspect-ratio: 22 / 7;
   image-rendering: pixelated;
 }
 
@@ -930,20 +930,18 @@ input[type="text"]:focus {
   font-size: 15px;
 }
 
-/* The book: two panes side by side at the bottom of the screen. Left is
-   the passage/blanks (the actual accusation being built), right is the
-   word-bank tabs and options used to fill it. Stacks vertically below a
-   narrow viewport rather than squeezing two panes edge to edge. */
+/* The book: three full-width sections stacked top to bottom - map above
+   (already its own element), then the passage/blanks, then the word-bank
+   tabs and options below that. */
 .finale-book {
   display: flex;
+  flex-direction: column;
   gap: 16px;
-  align-items: stretch;
   margin-top: 18px;
 }
 .finale-book-left,
 .finale-book-right {
-  flex: 1 1 0;
-  min-width: 0;
+  width: 100%;
 }
 .finale-book-left {
   display: flex;
@@ -952,11 +950,6 @@ input[type="text"]:focus {
 .finale-book-left .finale-passage {
   width: 100%;
   margin: 0;
-}
-@media (max-width: 640px) {
-  .finale-book {
-    flex-direction: column;
-  }
 }
 
 /* The pixel panel wrapping the tab strip and word-bank options -
