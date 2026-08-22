@@ -976,30 +976,73 @@ io.on("connection", (socket) => {
     }
     const cleanName = String(name || "Detective").trim().slice(0, 24) || "Detective";
     if (room.started) {
-      // Not a new player joining mid-mystery - this is the fallback for
-      // a returning one whose automatic reconnect (player:rejoin, keyed
-      // on a token saved in that browser's own localStorage) can't run:
-      // a different device, a cleared browser, a lost tab. If their name
-      // matches an existing seat that's currently disconnected, treat
-      // this exactly like a rejoin - same seat, same inventory, same
-      // act - rather than leaving them locked out with no way back in
-      // except finding the original device again.
+      // First check: is this the fallback path for a returning player
+      // whose automatic reconnect (player:rejoin, keyed on a token saved
+      // in that browser's own localStorage) can't run - a different
+      // device, a cleared browser, a lost tab. If their name matches an
+      // existing seat that's currently disconnected, treat this exactly
+      // like a rejoin - same seat, same inventory, same act - rather
+      // than leaving them locked out with no way back in except finding
+      // the original device again.
       const oldId = Object.keys(room.players).find(
         (id) => !room.players[id].connected &&
           room.players[id].name.toLowerCase() === cleanName.toLowerCase()
       );
-      if (!oldId) {
-        cb && cb({ ok: false, error: "This game has already started. If you were already playing, rejoin with the same name you used before." });
+      if (oldId) {
+        const token = genToken();
+        remapSocketId(room, oldId, socket.id);
+        const player = room.players[socket.id];
+        player.connected = true;
+        player.token = token;
+        socket.data.roomCode = code;
+        socket.data.isHost = room.hostSocketId === socket.id;
+        socket.join(code);
+        cb && cb({ ok: true, code, token, started: true });
+        broadcastRoomState(code);
+        if (room.actIndex >= 0) {
+          const payload = buildActPayloadForPlayer(room, socket.id);
+          io.to(socket.id).emit("act:show", payload);
+          io.to(socket.id).emit("inventory:state", buildInventoryState(room, socket.id));
+          io.to(socket.id).emit("evidence:state", buildEvidenceState(room));
+          emitProgress(code);
+        }
         return;
       }
+
+      // Genuinely new player, joining after the game already began.
+      // Allowed at any point in the story - the party's evidence, board
+      // state, and shared progress all live on the room itself, not on
+      // any one player, so a latecomer isn't blocked by anything they
+      // missed. They get a fresh seat and an empty private inventory
+      // (evidence they didn't personally collect just isn't theirs to
+      // hold, the shared Evidence Table/board are unaffected).
+      //
+      // zone is deliberately left null rather than set to the act's zone
+      // here, and the socket isn't pre-joined to that zone's socket.io
+      // room either. act:show below drives the client's own
+      // enterExplore/enterStagedScene, which always positions a fresh
+      // player at that map's own spawn point (so this is what actually
+      // gets them "to the entrance" of wherever the story is) and calls
+      // player:changeZone the moment it loads, which is what does the
+      // real join (zone:playerEntered announce, roster sync, occupancy-
+      // gated doors). If this handler pre-set zone/room to match what
+      // that call is about to send, changeZone's own early-exit guard
+      // ("already in that zone's room") would fire and silently skip all
+      // of that setup for a player nobody else was ever told had arrived.
       const token = genToken();
-      remapSocketId(room, oldId, socket.id);
-      const player = room.players[socket.id];
-      player.connected = true;
-      player.token = token;
-      socket.data.roomCode = code;
-      socket.data.isHost = room.hostSocketId === socket.id;
+      room.players[socket.id] = {
+        id: socket.id,
+        name: cleanName,
+        gender: cleanGender(gender),
+        color: cleanColor(color),
+        connected: true,
+        zone: null,
+        token,
+      };
+      room.joinOrder.push(socket.id);
       socket.join(code);
+      socket.data.roomCode = code;
+      socket.data.isHost = false;
       cb && cb({ ok: true, code, token, started: true });
       broadcastRoomState(code);
       if (room.actIndex >= 0) {

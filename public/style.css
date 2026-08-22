@@ -360,6 +360,12 @@ html, body {
   color: #5f3828;
   line-height: 1.6;
 }
+.btn-invite-accept {
+  width: auto;
+  min-width: 200px;
+  padding-left: 32px;
+  padding-right: 32px;
+}
 
 /* The lobby: pen on the left, all game info (roster, host controls,
    invite tools) on the right. Height is capped to the viewport rather

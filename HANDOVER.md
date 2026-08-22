@@ -1,24 +1,162 @@
-# Handover — A Study in Boralus, picking up after v146
+# Handover — A Study in Boralus, picking up after v148
 
 This replaces the earlier handover from v122. Paste this as the first
-message in a new chat, then attach the v146 zip.
+message in a new chat, then attach the v148 zip.
 
 ## Where things actually stand
 
-- **v146 covers a full tavern interior rebuild from the real source .tmx**,
-  a confirmed chapel parishioner placement bug, a project-wide latent-data
-  fix, and Act 3 portrait/exterior verification. See "v146" below for the
-  full breakdown.
-- **One open item, fix ready but not yet applied**: the chapel's three
-  parishioners render oversized relative to the priest/monks because
-  they're bust-only crops (seated, upper body) stretched to the same
-  fixed character height used for full standing figures. A `drawScale`
-  correction (~0.6) is worked out and about to be applied - check the
-  next delivery for whether this landed, since this doc was written
-  right as that fix was going in.
+- **v147 was a bug-fix pass** driven entirely by Elle's live-tested
+  screenshots: real dialogue that had been silently overwritten during
+  the v146 tavern rebuild, a genuinely swapped-columns sprite, a missing
+  animation frame, a dragon skeleton split across two layers, and an
+  evidence object placement. See "v147" below for the full breakdown.
+- **v148 adds late-join**: a player can now connect with the room code
+  after the game has already started and actually join, not just
+  reconnect to a seat that already existed. See "v148" below.
+- **The Finale revamp is designed but not yet built.** Full agreed spec:
+  static (non-walkable) estate backdrop, players on one side and the 5
+  suspects on the other (both rendered with their real sprites/looks,
+  not a placeholder illustration), Hook and Thorne centered and apart
+  from both groups, the accusation "book" moved to the bottom of the
+  screen as two side-by-side panes (blanks on the left, word-bank
+  options on the right), and all pushback/reveal text (wrong-suspect
+  rebuttals, Thorne's confirmation) rendered above the book, text only,
+  no portrait reaction. Confirmed reusable as-is: all of
+  `finale:select`/`finale:submit`/`finale:acknowledgeResult` and their
+  evaluation logic - this is a client-side rendering and layout rebuild,
+  not a server-side one. Suspect sprite `look` values already confirmed:
+  Voss=fighter4, Kestrel=citizen3, Marrow=citizen2, Ashgate=ashgate_fancy
+  (Ashby's still needs confirming), Hook=fighter3, Thorne=fighter5. This
+  is the next thing to build.
+- **One open item from v147, can't fully confirm without a fresh
+  screenshot**: "the Maid clips through the rug" during her Act III
+  staged scene. Checked her scripted path and the rug's actual tile
+  extent - her endpoint sits just outside the rug, not overlapping it.
+  Her path does cross right through where the dragon skull used to sit
+  disconnected from its own spine (see the layer-split fix in v147
+  below), so there's a real chance this was the same bug wearing a
+  different description and is already fixed - but this needs eyes on
+  the actual next build to confirm, not another guess.
 - Packaged and validated (JSON parse, `node --check`, CSS braces,
   em-dash grep, BFS reachability across every touched map, all clean).
-- Keep incrementing normally (v147 next) from here.
+- Keep incrementing normally (v149 next) from here.
+
+## v148
+
+### Late joining
+
+A player can now join a room after the game has started, not just
+reconnect to a seat that already existed - `player:joinRoom` had exactly
+one path for `room.started`, and it only matched a disconnected seat by
+name; anyone else got a hard "this game has already started" error with
+no way in.
+
+Allowed at any point in the story, no cutoff - the party's evidence, the
+board, and shared progress all live on the room itself, not on any one
+player, so a latecomer isn't blocked by (or blocking) anything. They get
+a fresh seat, an empty private inventory (evidence they didn't personally
+collect just isn't theirs to hold; the shared Evidence Table and board
+are unaffected either way), and land at the entrance of whatever zone the
+story is currently in.
+
+That last part turned out to already be free: every zone entry, for any
+player, already goes through `enterExplore`/`enterStagedScene` on the
+client, which always positions a fresh player at that map's own `spawn`
+point via `Overworld.init`. Sending a late joiner the current act's
+payload (`act:show`, same as the existing reconnect path already sends)
+was enough - no new client code needed at all.
+
+One real trap along the way: the natural-looking first draft pre-set the
+new player's `zone` field and pre-joined their socket to that zone's
+socket.io room, on the assumption that would just save a step. It
+actually broke the join silently - `player:changeZone`'s own early-exit
+guard (`oldZone === zone && already in that room`) would then fire the
+instant the client's own `enterExplore` called `player:changeZone` a
+moment later, skipping the entire announce/roster/occupancy-door setup
+that handler is actually responsible for. The player would render into
+the map correctly for themselves, but nobody else in that zone would
+ever be told they'd arrived. Fixed by leaving `zone: null` and not
+pre-joining any zone room at all - `player:changeZone` does the real
+work exactly once, the same way it already does for every other kind of
+zone entry in the game.
+
+## v147
+
+### Real dialogue restored after being silently overwritten
+
+While rebuilding the tavern's 17 individual character cutouts last
+round, every NPC's `interaction` field got set to a placeholder
+`{"kind": "note", "text": name + "."}` - including three that already
+had real, load-bearing dialogue: `npc_bartender_tavern` and
+`npc_goblin_tavern` (both `two_stage_dialogue`, gated on
+`voss_empty_chair` / `ashgate_plant_question`, part of the Means and
+Opportunity clue chain) and `npc_gossip_guest` (a real one-shot
+dialogue). Restored all three to their correct interaction configs.
+Every other tavern NPC that only ever had flavor text now has an actual
+written line instead of just restating its own name.
+
+**Human Drinking removed entirely**, per explicit request, after
+repeated visual problems. His dialogue turned out to be real content
+(an alibi witness for Ashby, "buried in paperwork... talking about the
+books not adding up") - rather than lose it, reassigned it to
+`flavor_tavern_knight` ("A Weary Knight," who didn't have anything of
+his own yet, and the "weary" framing already fit). Retitled the
+dialogue entry to match; the actual lines are unchanged.
+
+### San'layn duplication and five other silent duplicates
+
+Root cause: the individual-cutout rebuild recorded only one layer name
+per character (taken from its first tile) instead of each tile's own
+true source layer - but six characters had tiles genuinely split across
+different layers in the original art. That mismatch meant some tiles
+never got zeroed out of the raw map data, so they kept rendering as
+frozen, unanimated duplicates underneath the live sprite. Found this by
+checking every registered cutout's tiles against what's *actually* at
+that position on every character layer right now (not trusting the
+recorded metadata), rather than re-deriving anything indirectly.
+Zeroed all 17 stray tiles empirically; confirmed no non-zero tiles
+remain anywhere on `Characters1/2/3`.
+
+### The market adventurer, split and flipped
+
+`npc_market_adventurer_lady`'s two tile columns were genuinely swapped
+left-for-right at all three rows (confirmed by rendering the broken
+composite, then the corrected one side by side). Swapped the gids back,
+recomputed her content bounds from the corrected crop.
+
+### The glassmaker, large on one half and tiny on the other
+
+Real gap, not a rendering issue: 7 of his 8 tiles have a full 33-frame
+animation, but one (the top-right corner) had no animation entry at
+all, so it stayed frozen on frame 0 while the rest of him cycled
+through motion. Reconstructed the missing sequence from the confirmed
++1 gid-offset pattern shared by every other left/right tile pair in his
+sheet, verified every generated frame resolves inside the correct
+tileset, and confirmed by rendering him at three different animation
+frames that he's now consistently one figure throughout.
+
+### The dragon skeleton, missing its own skull
+
+The spine (43 tiles, `Objects3`) and the skull (6 tiles) were on two
+different layers with no grouping between them, so the skull's Y-sort
+key was computed completely independently from the rest of the coil it
+belongs to - meaning it could (and did) end up hiding behind other
+content the spine itself wasn't hiding behind. Confirmed by rendering
+`Objects3` in total isolation: the coil was complete but genuinely
+had no head. Merged the skull's 6 tiles directly into `Objects3` (the
+layer it was always conceptually part of) rather than reach for
+`layerGroups`, since the two are one physical object and belong on one
+layer, not two coordinated ones. Re-rendered in isolation to confirm
+the skull now moves and sorts as a single connected piece with the rest
+of the spine.
+
+### Herbalist's note repositioned
+
+Moved onto the desk, matching the exact spot in Elle's screenshot
+(next to the mushroom plate and open book) rather than its earlier
+position over by the cauldron.
+
+### Guild Hall desk interact points nudged down half a tile
 
 ## v146
 
